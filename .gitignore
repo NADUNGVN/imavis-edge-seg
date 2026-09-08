@@ -1,0 +1,95 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing / typing / lint
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data (never commit raw/processed images/video)
+data/raw/
+data/interim/
+data/processed/
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.mp4
+*.avi
+*.tar
+*.tar.gz
+*.zip
+*.7z
+!docs/**/*.png
+
+# Keep data documentation and empty structure
+!data/README.md
+!data/manifests/.gitkeep
+
+# Outputs, experiments, model artifacts
+outputs/
+external/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.hef
+*.ckpt
+*.h5
+*.npz
+
+# Logs
+*.log
+logs/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# OS
+desktop.ini
+
+# Local hardware / device notes that may contain private paths
+docs/HARDWARE_PROFILE.local.md
+
+# Temporary
+tmp/
+temp/
+.cache/

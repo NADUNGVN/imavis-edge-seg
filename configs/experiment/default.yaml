@@ -1,0 +1,39 @@
+experiment_id: pace_seg_dev_smoke
+seed: 0
+
+supernet:
+  levels: [tiny, small, medium, large]
+  num_classes: 19
+  compiler_safe_ops_only: true
+
+search:
+  objective: measured_latency_energy
+  target_backends: [tensorrt_gpu, xavier_dla, hailo_hef]
+
+router:
+  enabled: true
+  strategy: calibrated_risk
+  window_frames: 16
+  risk_target: 0.05
+
+quantization:
+  precision: int8_qat
+  calibration_conditions: [clean, night, rain, fog, snow]
+
+datasets:
+  - name: cityscapes
+    root: /path/on/server/to/datasets/cityscapes
+    split: train
+  - name: acdc
+    root: /path/on/server/to/datasets/acdc
+    split: train
+
+deployment_targets:
+  - device_id: E1
+    backend: hailo_hef
+  - device_id: E2
+    backend: xavier_dla
+  - device_id: E3
+    backend: tensorrt_gpu
+
+output_root: outputs
