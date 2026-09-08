@@ -220,7 +220,7 @@ October 2026; otherwise target the February deadline.
 | GPU training capacity | `SERVER-01..05` per `../../docs/SHARED_INFRASTRUCTURE.md` §2 | locked to existing shared infra; no dedicated allocation yet |
 | Exact Hailo variant | **Hailo-8, 26 TOPS** (not Hailo-8L) | **resolved 2026-09-08** via `hailortcli fw-control identify` on device `E1` — HailoRT 4.23.0, firmware 4.23.0, `hailo-all` 5.1.1 |
 | Power meter / camera domain | Unknown — no external power analyzer or camera domain confirmed in shared infra | **open** — must be confirmed before any energy/camera claim |
-| Device lineup (E2/E3/Nano vs new E4) | Original plan assumed Jetson Nano/NX/AGX + Pi5 (3 backend classes). A **new device E4 (Thundercomm RUBIK Pi 3, Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT)** was granted access 2026-09-08 and is not part of that plan; Jetson NX/AGX/Nano are still unconfirmed. | **open** — see `INFRA_OVERRIDE.md` "Open decision" section; blocks extending `config.py`'s `Backend` literal beyond its current TensorRT/DLA/Hailo/CPU set |
+| Device lineup (E2/Nano vs new E4) | E3 (AGX Xavier) confirmed reachable 2026-09-08 (bare L4T, ML stack not installed). A **new device E4 (Thundercomm RUBIK Pi 3, Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT)** was also granted access and is not part of the original 3-backend-class plan. | **E4: provisional call — kept secondary, not a required backend** (toolchain risk vs. deadline; see `INFRA_OVERRIDE.md`). E2 (Xavier NX) / Jetson Nano still unconfirmed. |
 
 The energy/camera and device-lineup rows block Phase 1-2 experiments (not the supernet
 code itself) and must be resolved before any Hailo/Qualcomm-specific number or a 4-vs-3
