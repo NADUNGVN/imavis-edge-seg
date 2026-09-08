@@ -35,8 +35,8 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | Phase | Description | Status |
 |------:|-------------|--------|
 | 0 | Repository bootstrap (this scaffold) | **complete** |
-| 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8) and E3 (AGX Xavier) have working ML toolchains** (HailoRT / CUDA+cuDNN+TensorRT, both verified 2026-09-08); E4 (RUBIK Pi 3) reachable, kept secondary; E2 (Xavier NX)/Jetson Nano still not provided; see `docs/INFRA_OVERRIDE.md` |
-| 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **TensorRT GPU + Xavier DLA: 12/12 PASS on E3** (2026-09-08, all 4 elasticity levels x FP16/INT8-uncalibrated/DLA-FP16, own architecture, random weights) — see `scripts/compiler_smoke_test.md` and `reports/edge/`. Hailo DFC (HEF) still untested — no Dataflow Compiler host set up. Xavier NX/Nano not yet tried. Calibrated INT8 not yet tried. |
+| 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8), E2 (Xavier NX), E3 (AGX Xavier) all have working ML toolchains** (HailoRT / CUDA+cuDNN+TensorRT, all verified 2026-09-08); E4 (RUBIK Pi 3) reachable, kept secondary; Jetson Nano still not provided; see `docs/INFRA_OVERRIDE.md` |
+| 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **TensorRT GPU: 8/8 PASS on both E2 and E3.** **Xavier DLA: builds on both, but encoder-only** — decoder falls back to GPU due to a confirmed hardware limit ("DLA supports only 16 subgraphs per DLA core"), not an unsupported op; see `scripts/compiler_smoke_test.md` and `reports/edge/` for the corrected finding (an earlier version of this status wrongly claimed 0 fallback). Hailo DFC (HEF) still untested — no Dataflow Compiler host set up. Jetson Nano not yet tried. Calibrated INT8 not yet tried. |
 | 3 | Benchmark harness + power measurement protocol | not started |
 | 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested; **not yet**: real training loop, dataset loading, sandwich-rule/distillation training, any real weights |
 | 5 | Hardware-in-the-loop Pareto search | not started |
@@ -47,7 +47,7 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 10 | Manuscript | not started |
 
 `SERVER-01..05` still have no direct SSH path (see `docs/COLLABORATION_PROTOCOL.md`).
-E2 (Xavier NX) and Jetson Nano have not been provided yet. See
+Jetson Nano has not been provided yet. See
 [`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md) for the full status.
 
 ## Quick start

@@ -17,11 +17,24 @@ single-subnet ablations.
 
 | Device | Shared-infra status | What PACE-Seg additionally needs before use |
 |---|---|---|
-| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. | No compiled model/HEF run yet — still need `scripts/compiler_smoke_test.md` before any Hailo latency/energy claim |
-| **E3 — AGX Xavier (reachable, ML stack installed 2026-09-08)** | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4. **CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 installed and verified** (`nvcc`, `trtexec` both run). RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). Disk: 9.4G free after install. | Ready for the compiler smoke test (`scripts/compiler_smoke_test.md`); DLA path not yet tested; power mode not yet queried |
-| **E4 — RUBIK Pi 3 (new, 2026-09-08)** | Reachable, SSH key access installed. Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT (formerly SNPE) — **not TensorRT/DLA/Hailo**. | **Provisional recommendation (2026-09-08, not yet confirmed by researcher): keep as opportunistic/secondary only** — not a required backend, not part of go/no-go criteria; revisit only after E1/E3 (and E2 if provided) have a working compiler smoke test. `qairt-tools` binary not found on default `$PATH` for the `ubuntu` user. |
-| E2 — Xavier NX | **Inventory pending** (JetPack 5.1.5 planned) | Full inventory per shared-infra §7 checklist; confirm DLA availability and JetPack/TensorRT versions before compiler-safe search space is finalized |
+| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. | No compiled model/HEF run yet — still need a working Hailo DFC host before any Hailo compile/latency/energy claim |
+| **E2 — Xavier NX (reachable, ML stack already installed, 2026-09-08)** | Reachable over direct LAN (`192.168.10.93`). SSH key access installed. L4T R35.4.1. CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 **already present** (not installed by this session). | Compiler smoke test run (see below) — TensorRT GPU clean, DLA has a confirmed hardware subgraph limit affecting the decoder |
+| **E3 — AGX Xavier (reachable, ML stack installed 2026-09-08)** | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4. **CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 installed and verified** (`nvcc`, `trtexec` both run). RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). Disk: 9.4G free after install. | Compiler smoke test run (see below) — same DLA finding as E2 |
+| **E4 — RUBIK Pi 3 (new, 2026-09-08)** | Reachable, SSH key access installed. Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT (formerly SNPE) — **not TensorRT/DLA/Hailo**. | **Provisional recommendation (2026-09-08, not yet confirmed by researcher): keep as opportunistic/secondary only** — not a required backend, not part of go/no-go criteria. `qairt-tools` binary not found on default `$PATH` for the `ubuntu` user. |
 | Jetson Nano | **Not yet in shared-infra inventory table at all** | Needs its own inventory row added to `SHARED_INFRASTRUCTURE.md` §3.1 before use; JetPack 4 is EOL (2024-11) — expect the most toolchain friction here |
+
+### Compiler smoke test result (E2 + E3, 2026-09-08)
+
+TensorRT GPU (FP16 and uncalibrated INT8): 8/8 PASS on both devices, all 4 elasticity
+levels, no unsupported ops. Xavier DLA: builds on both devices at every level, but the
+**decoder falls back to GPU wholesale** — confirmed root cause directly from TensorRT's
+log: *"DLA supports only 16 subgraphs per DLA core"*. The encoder fits the budget and
+runs on DLA; the decoder's resize→add→conv pattern creates too many extra subgraph
+partitions and exhausts it. Not an unsupported-operator problem — a subgraph-count
+budget problem, plausibly fixable by restructuring the decoder. Full detail, per-level
+throughput, and a note correcting an earlier wrong "0 fallback" claim are in
+`reports/edge/E3_compiler_smoke_test_20260908.md` and
+`reports/edge/E2_NX_compiler_smoke_test_20260908.md`.
 | External power meter | Not recorded anywhere in shared infra | Confirm availability before claiming any J/frame number; without it, energy numbers must be clearly labeled as telemetry-derived (`tegrastats`), not system-level |
 | Camera / video domain | Not recorded | Default to public datasets (Cityscapes/ACDC/Dark Zurich) unless a project-specific capture setup is confirmed |
 
@@ -40,17 +53,17 @@ de-risk the paper's "multi-accelerator" claim.
 
 ## Access status (2026-09-08)
 
-Resolved for E1, E3, E4: all three reachable, dedicated SSH key
-(`~/.ssh/id_ed25519_imavis_edge_seg`) installed, aliased as `pi5`, `agx` (E3), `rubik` in
-`~/.ssh/config` (E1/E4 over Tailscale; E3 over direct LAN, no Tailscale on that device).
-Still open: `SERVER-01..05` (no direct SSH — see `COLLABORATION_PROTOCOL.md`) and Jetson
-NX/Nano (not yet provided). E3's CUDA/cuDNN/TensorRT stack is installed and verified —
-it is now the first device ready for `scripts/compiler_smoke_test.md`.
+Resolved for E1, E2, E3, E4: all four reachable, dedicated SSH key
+(`~/.ssh/id_ed25519_imavis_edge_seg`) installed, aliased as `pi5`, `nx` (E2), `agx` (E3),
+`rubik` (E4) in `~/.ssh/config` (E1/E4 over Tailscale; E2/E3 over direct LAN, no
+Tailscale on those two devices). Still open: `SERVER-01..05` (no direct SSH — see
+`COLLABORATION_PROTOCOL.md`) and Jetson Nano (not yet provided). E2 and E3 both have
+working TensorRT toolchains and a completed compiler smoke test.
 
 ## Mapping row for `../../docs/SHARED_INFRASTRUCTURE.md` §4
 
 Added:
 
 ```text
-| `IMAVIS_EDGE_SEG/` | NADUNGVN/imavis-edge-seg | TBD under NFS | TBD under NFS | SERVER-01..05 | E1 (Hailo SW ready), E3 (AGX Xavier, reachable, ML stack not installed), E4 (RUBIK Pi 3, secondary only), E2 (inventory pending), Jetson Nano (not inventoried) | Vision segmentation track; independent of CARE-ASD audio pipeline |
+| `IMAVIS_EDGE_SEG/` | NADUNGVN/imavis-edge-seg | TBD under NFS | TBD under NFS | SERVER-01..05 | E1 (Hailo SW ready), E2 (Xavier NX, ML stack ready), E3 (AGX Xavier, ML stack ready), E4 (RUBIK Pi 3, secondary only), Jetson Nano (not inventoried) | Vision segmentation track; independent of CARE-ASD audio pipeline |
 ```

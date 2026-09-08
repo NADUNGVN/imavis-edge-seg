@@ -21,25 +21,35 @@ across backends without a result in the table below.
 
 ## Result table (fill in per run)
 
-2026-09-08 result on **E3 (AGX Xavier)**, `PaceSegSupernet` at **all four elasticity
-levels** (own architecture, not Fast-SCNN — see
-`../reports/edge/E3_compiler_smoke_test_20260908.md` for the full per-level latency
-table and caveats). Reproduce with `export_all_levels.py` + `run_smoke_matrix.sh`:
+2026-09-08 result on **E3 (AGX Xavier) and E2 (Xavier NX)**, `PaceSegSupernet` at **all
+four elasticity levels** (own architecture, not Fast-SCNN — see
+`../reports/edge/E3_compiler_smoke_test_20260908.md` and
+`../reports/edge/E2_NX_compiler_smoke_test_20260908.md` for full per-level latency and
+an important correction to an earlier wrong "0 fallback" claim). Reproduce with
+`export_all_levels.py` + `run_smoke_matrix.sh`:
 
-| Operator | TensorRT GPU (FP16 + INT8*) | Xavier DLA (FP16, 0 fallback) | Hailo HEF | Notes |
+| Operator | TensorRT GPU (FP16 + INT8*) | Xavier DLA (FP16) | Hailo HEF | Notes |
 |---|---|---|---|---|
-| Conv (depthwise) | **PASS**, all 4 levels | **PASS**, all 4 levels | not tested | Hailo DFC not installed anywhere yet |
-| Conv (pointwise) | **PASS** | **PASS** | not tested | |
-| BatchNorm (fused) | **PASS** | **PASS** | not tested | |
-| ReLU / ReLU6 | **PASS** (ReLU only, not ReLU6) | **PASS** | not tested | |
-| Static resize (bilinear) | **PASS** | **PASS** | not tested | |
-| Add / Concat | **PASS** (Add only, not Concat) | **PASS** | not tested | |
+| Conv (depthwise) | **PASS**, all 4 levels, E2+E3 | **encoder: DLA. decoder: GPU fallback** (both devices, all levels) — see root cause below | not tested | Hailo DFC not installed anywhere yet |
+| Conv (pointwise) | **PASS** | same split | not tested | |
+| BatchNorm (fused) | **PASS** | same split | not tested | |
+| ReLU / ReLU6 | **PASS** (ReLU only, not ReLU6) | same split | not tested | |
+| Static resize (bilinear) | **PASS** | in the fallback region (decoder) | not tested | |
+| Add / Concat | **PASS** (Add only, not Concat) | in the fallback region (decoder) | not tested | |
 | Softmax (final) | N/A — not used | N/A — not used | not tested | Classifier head outputs raw logits, no final softmax, by design; avoids the known DLA softmax restriction entirely |
 
 \* INT8 here had no calibration data — proves compilability only, not accuracy.
 
+**DLA root cause (confirmed from TensorRT's own log, both E2 and E3):** *"DLA supports
+only 16 subgraphs per DLA core"*. The encoder (stem + 3 stages) fits within that budget
+and runs on DLA; the decoder's resize→add→conv pattern creates enough extra subgraph
+partitions that it exhausts the budget and falls back to GPU wholesale. This is a
+subgraph-count limit, not an unsupported-operator problem — restructuring the decoder to
+reduce partition count is a plausible fix, not yet attempted.
+
 Still not tested anywhere: Hailo DFC (needs an x86 host with the Dataflow Compiler
-installed — not set up yet), Xavier NX, Jetson Nano, calibrated INT8.
+installed — not set up yet), Jetson Nano, calibrated INT8, a decoder redesign that fits
+the 16-subgraph DLA budget.
 
 ## Gate
 
