@@ -18,7 +18,7 @@ single-subnet ablations.
 | Device | Shared-infra status | What PACE-Seg additionally needs before use |
 |---|---|---|
 | E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. | No compiled model/HEF run yet — still need `scripts/compiler_smoke_test.md` before any Hailo latency/energy claim |
-| **E3 — AGX Xavier (reachable, 2026-09-08)** | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4 (~JetPack 5.1.4). **Bare flash — no CUDA/cuDNN/TensorRT/Docker installed.** RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). | Install the JetPack ML stack (CUDA/cuDNN/TensorRT) before any TensorRT/DLA compiler smoke test; confirm exact RAM/SKU and sudo access for `nvpmodel`/power-mode control |
+| **E3 — AGX Xavier (reachable, ML stack installed 2026-09-08)** | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4. **CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 installed and verified** (`nvcc`, `trtexec` both run). RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). Disk: 9.4G free after install. | Ready for the compiler smoke test (`scripts/compiler_smoke_test.md`); DLA path not yet tested; power mode not yet queried |
 | **E4 — RUBIK Pi 3 (new, 2026-09-08)** | Reachable, SSH key access installed. Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT (formerly SNPE) — **not TensorRT/DLA/Hailo**. | **Provisional recommendation (2026-09-08, not yet confirmed by researcher): keep as opportunistic/secondary only** — not a required backend, not part of go/no-go criteria; revisit only after E1/E3 (and E2 if provided) have a working compiler smoke test. `qairt-tools` binary not found on default `$PATH` for the `ubuntu` user. |
 | E2 — Xavier NX | **Inventory pending** (JetPack 5.1.5 planned) | Full inventory per shared-infra §7 checklist; confirm DLA availability and JetPack/TensorRT versions before compiler-safe search space is finalized |
 | Jetson Nano | **Not yet in shared-infra inventory table at all** | Needs its own inventory row added to `SHARED_INFRASTRUCTURE.md` §3.1 before use; JetPack 4 is EOL (2024-11) — expect the most toolchain friction here |
@@ -44,8 +44,8 @@ Resolved for E1, E3, E4: all three reachable, dedicated SSH key
 (`~/.ssh/id_ed25519_imavis_edge_seg`) installed, aliased as `pi5`, `agx` (E3), `rubik` in
 `~/.ssh/config` (E1/E4 over Tailscale; E3 over direct LAN, no Tailscale on that device).
 Still open: `SERVER-01..05` (no direct SSH — see `COLLABORATION_PROTOCOL.md`) and Jetson
-NX/Nano (not yet provided). E3 needs its CUDA/cuDNN/TensorRT stack installed before any
-compiler smoke test.
+NX/Nano (not yet provided). E3's CUDA/cuDNN/TensorRT stack is installed and verified —
+it is now the first device ready for `scripts/compiler_smoke_test.md`.
 
 ## Mapping row for `../../docs/SHARED_INFRASTRUCTURE.md` §4
 
