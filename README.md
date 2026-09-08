@@ -35,10 +35,10 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | Phase | Description | Status |
 |------:|-------------|--------|
 | 0 | Repository bootstrap (this scaffold) | **complete** |
-| 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **blocked — no network path to lab hardware from this session** |
+| 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **partial** — E1 (Pi5+Hailo-8) and E4 (RUBIK Pi 3, Qualcomm) reachable + identified 2026-09-08; Jetson NX/AGX/Nano still not provided; see `docs/INFRA_OVERRIDE.md` |
 | 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | not started |
 | 3 | Benchmark harness + power measurement protocol | not started |
-| 4 | Elastic supernet v1 | not started |
+| 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested; **not yet**: real training loop, dataset loading, sandwich-rule/distillation training, any real weights |
 | 5 | Hardware-in-the-loop Pareto search | not started |
 | 6 | QAT + distillation + compiler-safe refinement | not started |
 | 7 | Calibrated visual-risk router | not started |
@@ -46,9 +46,11 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 9 | Ablations + sustained thermal/power runs | not started |
 | 10 | Manuscript | not started |
 
-Phase 1 is blocked because this session has no SSH/Tailscale path to `SERVER-01..05` or
-device `E1` (Pi5+Hailo). See [`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md) for what
-is needed to unblock it.
+`SERVER-01..05` still have no direct SSH path (see `docs/COLLABORATION_PROTOCOL.md`).
+Jetson NX/AGX/Nano have not been provided yet. See
+[`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md) for the full status and an open
+decision on whether the newly-reachable E4 (Qualcomm RUBIK Pi 3) belongs in the device
+lineup.
 
 ## Quick start
 
@@ -60,8 +62,11 @@ is needed to unblock it.
 ### Install
 
 ```bash
-uv sync --extra dev --extra torch
+uv sync --extra dev --extra torch --extra deploy
 ```
+
+(`torch` is needed for the model code, `deploy` for the ONNX export test — both are
+skipped gracefully if omitted.)
 
 ### Verify environment
 
@@ -77,7 +82,7 @@ uv run mypy src
 ## Project layout
 
 ```text
-src/imavis_edge_seg/  # Library code (all logic lives here)
+src/imavis_edge_seg/  # Library code (all logic lives here); models/ = elastic supernet
 configs/               # YAML configs — supernet space, search, deployment, experiment
 scripts/                # Thin CLI wrappers for long/server-side jobs
 tests/                  # Unit / smoke tests

@@ -89,8 +89,9 @@ extend-exclude = ["*.md"]
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "N", "SIM", "RUF"]
 # E501: line length handled by formatter. B008: typer.Option(...) as a default is the
-# documented typer pattern, not a real mutable-default bug.
-ignore = ["E501", "B008"]
+# documented typer pattern, not a real mutable-default bug. N812: `torch.nn.functional
+# as F` is the universal PyTorch convention.
+ignore = ["E501", "B008", "N812"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["imavis_edge_seg"]
@@ -102,7 +103,9 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12 here matches the numpy/torch stubs actually installed (they use 3.12-only typing
+# syntax); requires-python above stays >=3.11 for runtime compatibility.
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
