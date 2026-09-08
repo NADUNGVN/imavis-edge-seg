@@ -21,15 +21,23 @@ across backends without a result in the table below.
 
 ## Result table (fill in per run)
 
+2026-09-08 result on **E3 (AGX Xavier)**, `PaceSegSupernet` `tiny` subnet (own
+architecture, not Fast-SCNN — see `../reports/edge/E3_compiler_smoke_test_20260908.md`
+for full detail and caveats):
+
 | Operator | TensorRT GPU | Xavier DLA | Hailo HEF | Notes |
 |---|---|---|---|---|
-| Conv (depthwise) | | | | |
-| Conv (pointwise) | | | | |
-| BatchNorm (fused) | | | | |
-| ReLU / ReLU6 | | | | |
-| Static resize (bilinear) | | | | |
-| Add / Concat | | | | |
-| Softmax (final) | | | | DLA does not support softmax — confirm plugin/host fallback |
+| Conv (depthwise) | **PASS** (FP16, 2026-09-08) | **PASS** (FP16, 0 fallback, 2026-09-08) | not tested | Hailo DFC not installed anywhere yet |
+| Conv (pointwise) | **PASS** | **PASS** | not tested | |
+| BatchNorm (fused) | **PASS** | **PASS** | not tested | |
+| ReLU / ReLU6 | **PASS** (ReLU only, not ReLU6) | **PASS** | not tested | |
+| Static resize (bilinear) | **PASS** | **PASS** | not tested | |
+| Add / Concat | **PASS** (Add only, not Concat) | **PASS** | not tested | |
+| Softmax (final) | N/A — not used | N/A — not used | not tested | Classifier head outputs raw logits, no final softmax, by design; avoids the known DLA softmax restriction entirely |
+
+Still not tested anywhere: `small`/`medium`/`large` elasticity levels, INT8, Hailo DFC
+(needs an x86 host with the Dataflow Compiler installed — not set up yet), Xavier NX,
+Jetson Nano.
 
 ## Gate
 

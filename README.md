@@ -36,7 +36,7 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 |------:|-------------|--------|
 | 0 | Repository bootstrap (this scaffold) | **complete** |
 | 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8) and E3 (AGX Xavier) have working ML toolchains** (HailoRT / CUDA+cuDNN+TensorRT, both verified 2026-09-08); E4 (RUBIK Pi 3) reachable, kept secondary; E2 (Xavier NX)/Jetson Nano still not provided; see `docs/INFRA_OVERRIDE.md` |
-| 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | not started — E3 is ready for the TensorRT half |
+| 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **TensorRT GPU + Xavier DLA: PASS on E3** (2026-09-08, `tiny` level, own architecture, random weights, single elasticity level only) — see `scripts/compiler_smoke_test.md` and `reports/edge/`. Hailo DFC (HEF) still untested — no Dataflow Compiler host set up. `small`/`medium`/`large` levels and INT8 not yet tried. |
 | 3 | Benchmark harness + power measurement protocol | not started |
 | 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested; **not yet**: real training loop, dataset loading, sandwich-rule/distillation training, any real weights |
 | 5 | Hardware-in-the-loop Pareto search | not started |
