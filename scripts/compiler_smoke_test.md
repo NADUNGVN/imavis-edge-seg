@@ -47,9 +47,15 @@ partitions that it exhausts the budget and falls back to GPU wholesale. This is 
 subgraph-count limit, not an unsupported-operator problem — restructuring the decoder to
 reduce partition count is a plausible fix, not yet attempted.
 
+**E5 (Jetson Orin Nano Super), 2026-09-09** — a newer Orin-generation device, not the
+legacy "Jetson Nano" the plan above assumed (see `docs/INFRA_OVERRIDE.md` "Open
+decisions"). TensorRT GPU FP16/INT8: **PASS, all 4 levels**, no unsupported ops. No DLA
+on this device at all (confirmed: `Cannot create DLA engine, 0 not available`). Full
+detail: `../reports/edge/E5_orin_nano_compiler_smoke_test_20260909.md`.
+
 Still not tested anywhere: Hailo DFC (needs an x86 host with the Dataflow Compiler
-installed — not set up yet), Jetson Nano, calibrated INT8, a decoder redesign that fits
-the 16-subgraph DLA budget.
+installed — not set up yet), calibrated INT8, a decoder redesign that fits the
+16-subgraph DLA budget, the legacy Jetson Nano (if still wanted separately from E5).
 
 ## Gate
 
