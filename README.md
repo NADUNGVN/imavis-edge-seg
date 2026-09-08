@@ -24,6 +24,11 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 > Shared server/hardware inventory follows
 > [`../docs/SHARED_INFRASTRUCTURE.md`](../docs/SHARED_INFRASTRUCTURE.md); this project's
 > deltas are in [`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md).
+>
+> Claude has no network path to `SERVER-01..05`; all server work goes through Git
+> (push → one pasted command → committed report) per
+> [`docs/COLLABORATION_PROTOCOL.md`](docs/COLLABORATION_PROTOCOL.md). Edge devices
+> (`E1`/`E2`/`E3`/Jetson Nano) are SSHed into directly once reachable.
 
 ## Status
 
@@ -80,6 +85,7 @@ docs/                   # Research plan, infra override, hardware profile, proto
 data/                   # Manifests only in git; raw datasets gitignored
 outputs/                # Generated (gitignored)
 experiments/            # Registry + freeze files
+reports/server/         # Small reviewable reports committed back from server tasks
 ```
 
 ## Research rules (summary)
