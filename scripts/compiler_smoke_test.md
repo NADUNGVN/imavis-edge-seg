@@ -21,13 +21,14 @@ across backends without a result in the table below.
 
 ## Result table (fill in per run)
 
-2026-09-08 result on **E3 (AGX Xavier)**, `PaceSegSupernet` `tiny` subnet (own
-architecture, not Fast-SCNN — see `../reports/edge/E3_compiler_smoke_test_20260908.md`
-for full detail and caveats):
+2026-09-08 result on **E3 (AGX Xavier)**, `PaceSegSupernet` at **all four elasticity
+levels** (own architecture, not Fast-SCNN — see
+`../reports/edge/E3_compiler_smoke_test_20260908.md` for the full per-level latency
+table and caveats). Reproduce with `export_all_levels.py` + `run_smoke_matrix.sh`:
 
-| Operator | TensorRT GPU | Xavier DLA | Hailo HEF | Notes |
+| Operator | TensorRT GPU (FP16 + INT8*) | Xavier DLA (FP16, 0 fallback) | Hailo HEF | Notes |
 |---|---|---|---|---|
-| Conv (depthwise) | **PASS** (FP16, 2026-09-08) | **PASS** (FP16, 0 fallback, 2026-09-08) | not tested | Hailo DFC not installed anywhere yet |
+| Conv (depthwise) | **PASS**, all 4 levels | **PASS**, all 4 levels | not tested | Hailo DFC not installed anywhere yet |
 | Conv (pointwise) | **PASS** | **PASS** | not tested | |
 | BatchNorm (fused) | **PASS** | **PASS** | not tested | |
 | ReLU / ReLU6 | **PASS** (ReLU only, not ReLU6) | **PASS** | not tested | |
@@ -35,9 +36,10 @@ for full detail and caveats):
 | Add / Concat | **PASS** (Add only, not Concat) | **PASS** | not tested | |
 | Softmax (final) | N/A — not used | N/A — not used | not tested | Classifier head outputs raw logits, no final softmax, by design; avoids the known DLA softmax restriction entirely |
 
-Still not tested anywhere: `small`/`medium`/`large` elasticity levels, INT8, Hailo DFC
-(needs an x86 host with the Dataflow Compiler installed — not set up yet), Xavier NX,
-Jetson Nano.
+\* INT8 here had no calibration data — proves compilability only, not accuracy.
+
+Still not tested anywhere: Hailo DFC (needs an x86 host with the Dataflow Compiler
+installed — not set up yet), Xavier NX, Jetson Nano, calibrated INT8.
 
 ## Gate
 
