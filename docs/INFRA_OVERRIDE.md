@@ -17,7 +17,7 @@ single-subnet ablations.
 
 | Device | Shared-infra status | What PACE-Seg additionally needs before use |
 |---|---|---|
-| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. | No compiled model/HEF run yet — still need a working Hailo DFC host before any Hailo compile/latency/energy claim |
+| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. **Currently unreachable (2026-09-09)** — dropped off the visible Tailscale peer list mid-session. | Compiled HEFs exist (see below) but have not been run on this device yet — need E1 back online to copy them over and test with `hailortcli run` |
 | E2 — Xavier NX | Reachable over direct LAN (`192.168.10.93`). SSH key access installed. L4T R35.4.1. CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 already present (not installed by this session). | Compiler smoke test complete — see below |
 | E3 — AGX Xavier | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4. CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 installed 2026-09-08 and verified. RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). | Compiler smoke test complete — see below |
 | E4 — RUBIK Pi 3 | Reachable, SSH key access installed. Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT (formerly SNPE) — not TensorRT/DLA/Hailo. | **Provisional call (not yet confirmed by researcher): kept as opportunistic/secondary only**, not a required backend — see "Open decisions" |
@@ -45,9 +45,27 @@ cross-compatible; each device needs its own compiled engine, which the project's
 static-engine-per-backend design already assumes. Full detail:
 `reports/edge/E5_orin_nano_compiler_smoke_test_20260909.md`.
 
-Not yet tested anywhere: Hailo DFC (ONNX -> HEF; needs an x86 host with the Dataflow
-Compiler installed, not set up), calibrated INT8, a decoder redesign that fits the
-16-subgraph DLA budget.
+**Hailo DFC, 2026-09-09:** compiled on a **compile host**, not a device or server — the
+researcher's own Windows machine's WSL2 (Ubuntu 24.04, x86_64), which already had Hailo
+Dataflow Compiler 3.34.0 set up from a prior unrelated project (`drone-rocket`), at
+`~/hailo-work/venvs/dfc-3.34`. No new install was needed. All four elasticity levels:
+ONNX -> HAR (parse) -> optimized HAR (`--use-random-calib-set`) -> HEF (compile), all
+PASS, no unsupported layers. Full detail:
+`reports/edge/E1_hailo_dfc_compile_20260909.md`. **Not yet done:** running the compiled
+HEF on real Hailo-8 hardware — E1 was unreachable at the time (see table above).
+
+Not yet tested anywhere: calibrated (real-data) INT8 optimization, a decoder redesign
+that fits the 16-subgraph DLA budget, running the compiled HEF on real Hailo-8 hardware.
+
+## Compile hosts (not devices, not train servers)
+
+Some toolchains (Hailo DFC in particular) are meant to run on an x86_64 development
+host, not on the target device or on the shared train servers. Record these separately
+so "where do I compile this" and "where does this run" are never conflated:
+
+| Host | What's installed | Notes |
+|---|---|---|
+| Researcher's Windows machine, WSL2 (Ubuntu 24.04) | Hailo Dataflow Compiler 3.34.0, Hailo Model Zoo 2.19.0, at `~/hailo-work/venvs/dfc-3.34` (compiler) and `~/hailo-work/venvs/export` (ultralytics/ONNX export) | Set up for a prior unrelated project, reused here as-is. GPU passthrough not available to DFC under WSL2 (optimization runs CPU-only, level 0) — fine for compiler smoke tests, **not** for final accuracy-representative INT8 optimization, which should eventually use real calibration data and, if possible, a host DFC can use with GPU acceleration |
 
 ## Open decisions
 
