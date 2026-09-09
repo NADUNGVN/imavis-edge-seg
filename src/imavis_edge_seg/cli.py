@@ -14,6 +14,8 @@ from imavis_edge_seg import __version__
 from imavis_edge_seg.config import ExperimentConfig, load_config
 
 app = typer.Typer(add_completion=False, help="PACE-Seg edge segmentation CLI.")
+data_app = typer.Typer(add_completion=False, help="Dataset manifest commands.")
+app.add_typer(data_app, name="data")
 console = Console()
 
 
@@ -60,6 +62,46 @@ def config_init(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(yaml.safe_dump(cfg.model_dump(mode="json"), sort_keys=False))
     console.print(f"Wrote {output}")
+
+
+@data_app.command("manifest")
+def data_manifest(
+    dataset: str = typer.Option(..., "--dataset", help="cityscapes or acdc"),
+    data_root: Path = typer.Option(..., "--data-root", help="Dataset root directory"),
+    split: str = typer.Option(..., "--split", help="train/val/test (cityscapes) or train/val (acdc)"),
+    output: Path = typer.Option(..., "-o", "--output", help="Manifest CSV output path"),
+    conditions: list[str] = typer.Option(
+        [], "--condition", help="ACDC only: repeat for fog/night/rain/snow (default: all)"
+    ),
+    no_checksums: bool = typer.Option(
+        False, "--no-checksums", help="Skip sha256 (faster, less provenance)"
+    ),
+) -> None:
+    """Scan a dataset root and write a manifest CSV -- see docs/DATASET.md. Never run
+    against a partial/still-downloading tree; the manifest is meant to freeze exactly
+    what every training job will read."""
+    from imavis_edge_seg.data.manifest import (
+        build_manifest,
+        discover_acdc_samples,
+        discover_cityscapes_samples,
+        write_manifest_csv,
+    )
+
+    if dataset == "cityscapes":
+        samples = discover_cityscapes_samples(data_root, split)  # type: ignore[arg-type]
+    elif dataset == "acdc":
+        cond_tuple = tuple(conditions) if conditions else ("fog", "night", "rain", "snow")
+        samples = discover_acdc_samples(data_root, split, cond_tuple)  # type: ignore[arg-type]
+    else:
+        raise typer.BadParameter("dataset must be 'cityscapes' or 'acdc'")
+
+    if not samples:
+        console.print(f"[red]No samples found under {data_root} for split={split!r}[/red]")
+        raise typer.Exit(code=1)
+
+    rows = build_manifest(data_root, samples, compute_checksums=not no_checksums)
+    write_manifest_csv(rows, output)
+    console.print(f"Wrote {len(rows)} rows to {output}")
 
 
 if __name__ == "__main__":

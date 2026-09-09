@@ -23,7 +23,8 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 >
 > Shared server/hardware inventory follows
 > [`../docs/SHARED_INFRASTRUCTURE.md`](../docs/SHARED_INFRASTRUCTURE.md); this project's
-> deltas are in [`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md).
+> deltas are in [`docs/INFRA_OVERRIDE.md`](docs/INFRA_OVERRIDE.md). Dataset access,
+> layout and manifest workflow are in [`docs/DATASET.md`](docs/DATASET.md).
 >
 > Claude has no network path to `SERVER-01..05`; all server work goes through Git
 > (push → one pasted command → committed report) per
@@ -38,7 +39,7 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8), E2 (Xavier NX), E3 (AGX Xavier), E5 (Orin Nano Super) all have working ML toolchains**, all verified 2026-09-08/09; E4 (RUBIK Pi 3) reachable, kept secondary. E5 is a newer Orin device, not the legacy EOL "Jetson Nano" the plan assumed — role vs. that board is an open decision. See `docs/INFRA_OVERRIDE.md` |
 | 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **Compile-level gate satisfied on all three backend families.** TensorRT GPU: 8/8 PASS on E2, E3 and E5. Xavier DLA (E2/E3): builds, but encoder-only — decoder falls back to GPU due to a confirmed hardware limit ("DLA supports only 16 subgraphs per DLA core"), not an unsupported op. E5 has no DLA at all (confirmed). **Hailo DFC: ONNX→HAR→HEF all 4 levels PASS** (compiled on the researcher's WSL2, 2026-09-09) — not yet run on real Hailo-8 hardware (E1 currently unreachable). See `scripts/compiler_smoke_test.md` and `reports/edge/` — includes a correction of an earlier wrong "0 fallback" claim. Calibrated INT8 not yet tried anywhere. |
 | 3 | Benchmark harness + power measurement protocol | not started |
-| 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested; **not yet**: real training loop, dataset loading, sandwich-rule/distillation training, any real weights |
+| 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested. **Dataset loading implemented** (`src/imavis_edge_seg/data/`) — Cityscapes + ACDC `Dataset` classes, manifest CLI, tested against synthetic fixtures; **no real data downloaded yet** (both require manual registration, see `docs/DATASET.md`). **Not yet**: real training loop, sandwich-rule/distillation training, any real weights |
 | 5 | Hardware-in-the-loop Pareto search | not started |
 | 6 | QAT + distillation + compiler-safe refinement | not started |
 | 7 | Calibrated visual-risk router | not started |
@@ -78,10 +79,20 @@ uv run ruff check .
 uv run mypy src
 ```
 
+### Dataset manifests
+
+Once Cityscapes/ACDC are downloaded somewhere (registration required — see
+[`docs/DATASET.md`](docs/DATASET.md)):
+
+```bash
+uv run imavis-edge-seg data manifest --dataset cityscapes --data-root /path/to/cityscapes --split train -o data/manifests/cityscapes_train.csv
+uv run imavis-edge-seg data manifest --dataset acdc --data-root /path/to/acdc --split train -o data/manifests/acdc_train.csv
+```
+
 ## Project layout
 
 ```text
-src/imavis_edge_seg/  # Library code (all logic lives here); models/ = elastic supernet
+src/imavis_edge_seg/  # Library code (all logic lives here); models/ = supernet, data/ = datasets
 configs/               # YAML configs — supernet space, search, deployment, experiment
 scripts/                # Thin CLI wrappers for long/server-side jobs
 tests/                  # Unit / smoke tests
