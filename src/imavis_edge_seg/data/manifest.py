@@ -37,11 +37,13 @@ def discover_acdc_samples(
     root: Path, split: Literal["train", "val"], conditions: tuple[str, ...]
 ) -> list[tuple[Path, Path]]:
     """Pure filesystem discovery, no torch dependency -- shared by `ACDCDataset` and
-    the manifest-building CLI command."""
+    the manifest-building CLI command. Directory order is `{type}/{condition}/{split}`
+    (condition outside split) per ACDC's own README -- verified against a real
+    extracted download on 2026-09-09, not assumed."""
     samples: list[tuple[Path, Path]] = []
     for condition in conditions:
-        image_root = root / "rgb_anon" / split / condition
-        label_root = root / "gt" / split / condition
+        image_root = root / "rgb_anon" / condition / split
+        label_root = root / "gt" / condition / split
         if not image_root.is_dir():
             continue
         for image_path in sorted(image_root.glob("*/*_rgb_anon.png")):

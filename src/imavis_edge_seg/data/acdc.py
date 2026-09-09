@@ -1,9 +1,11 @@
 """ACDC (Adverse Conditions Dataset with Correspondences) loader.
 
-Expects the official on-disk layout:
+Expects the official on-disk layout (`{type}/{condition}/{split}/{scene}/...` per
+ACDC's own README -- condition outside split, verified against a real extracted
+download 2026-09-09, not assumed):
 
-    <root>/rgb_anon/<split>/<condition>/<scene>/<name>_rgb_anon.png
-    <root>/gt/<split>/<condition>/<scene>/<name>_gt_labelTrainIds.png
+    <root>/rgb_anon/<condition>/<split>/<scene>/<name>_rgb_anon.png
+    <root>/gt/<condition>/<split>/<scene>/<name>_gt_labelTrainIds.png
 
 Unlike Cityscapes, ACDC ships `labelTrainIds` masks directly, already in the same
 19-class scheme as `imavis_edge_seg.data.labels` -- no id-to-trainId conversion needed.

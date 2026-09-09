@@ -39,12 +39,17 @@ Cityscapes benchmark server) — do not expect a `gtFine/test/` label tree.
 ### ACDC
 
 ```text
-<root>/rgb_anon/<split>/<condition>/<scene>/<name>_rgb_anon.png
-<root>/gt/<split>/<condition>/<scene>/<name>_gt_labelTrainIds.png
+<root>/rgb_anon/<condition>/<split>/<scene>/<name>_rgb_anon.png
+<root>/gt/<condition>/<split>/<scene>/<name>_gt_labelTrainIds.png
 ```
 
-`<split>` is `train`/`val` (the public ones — `test` has no public labels).
-`<condition>` is one of `fog`/`night`/`rain`/`snow`. Unlike Cityscapes, ACDC ships
+**`<condition>` is outside `<split>`** — this is per ACDC's own README (the official
+layout is `{type}/{condition}/{split}/...`) and was verified against a real extracted
+download on 2026-09-09, not assumed from the paper. `<split>` is `train`/`val` (the
+public ones — `test` and the `*_ref` splits, i.e. the paired normal-condition images,
+are not used by this project). `<condition>` is one of `fog`/`night`/`rain`/`snow`.
+Expected counts: `train` = 400 images per condition (1,600 total); `val` = 100 per
+condition except `night` (106) = 406 total. Unlike Cityscapes, ACDC ships
 `labelTrainIds` masks directly, already in the same 19-class scheme — no conversion
 needed, and the label values from both datasets are directly comparable/mixable.
 

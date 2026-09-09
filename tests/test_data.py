@@ -48,8 +48,8 @@ def fake_acdc(tmp_path: Path) -> Path:
     root = tmp_path / "acdc"
     rgb = (np.random.rand(32, 64, 3) * 255).astype(np.uint8)
     train_ids = np.full((32, 64), 10, dtype=np.uint8)  # all "sky"
-    _write_png(root / "rgb_anon/train/fog/GOPR0001/GOPR0001_frame_000001_rgb_anon.png", rgb)
-    _write_png(root / "gt/train/fog/GOPR0001/GOPR0001_frame_000001_gt_labelTrainIds.png", train_ids)
+    _write_png(root / "rgb_anon/fog/train/GOPR0001/GOPR0001_frame_000001_rgb_anon.png", rgb)
+    _write_png(root / "gt/fog/train/GOPR0001/GOPR0001_frame_000001_gt_labelTrainIds.png", train_ids)
     return root
 
 
