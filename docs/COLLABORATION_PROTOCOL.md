@@ -31,6 +31,14 @@ repo name and hardware.
 - Never commit raw images/video, dataset archives, model checkpoints (`.pt`, `.onnx`,
   `.hef`, `.engine`), tokens, private paths, or evaluation labels. `data/raw/`,
   `outputs/`, logs and secrets stay on the server.
+- **Never chain a `git pull`/`git push` with other commands in the same one-liner
+  unless `credential.helper store` is already configured on that server.** A first-time
+  `git pull` over HTTPS on a private repo prompts interactively for username/password;
+  if that prompt is followed immediately by another pasted command block (as happened
+  2026-09-09 setting up the ACDC manifests), the paste gets fed into the credential
+  prompt and corrupts both commands. Have the researcher run
+  `git config --global credential.helper store` once, confirm a plain `git pull` works
+  cleanly, and only then resume chaining commands.
 
 ## Standard server lifecycle
 
