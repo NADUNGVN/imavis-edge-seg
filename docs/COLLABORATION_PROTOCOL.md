@@ -86,8 +86,15 @@ improvised on the server. Failing tasks still commit their short log for inspect
 For anything that must survive a closed SSH session, the repo provides a
 `scripts/server/start_<job>.sh` wrapper (owns `nohup`/`setsid`, run-ID/state-file
 creation) and a matching `scripts/server/status_<job>.sh` (reads `state.env`, no polling
-sleep). Neither exists yet — added when the first real training job is ready (Phase 4 in
-`../README.md`). Do not paste a full training loop directly into an interactive shell.
+sleep). `start_train_supernet.sh` / `status_train_supernet.sh` exist now (2026-09-09,
+Phase 4 training loop landed) — activate the right conda env first, then:
+
+```bash
+bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml
+bash scripts/server/status_train_supernet.sh
+```
+
+Do not paste a full training loop directly into an interactive shell.
 
 ## Completion rule
 

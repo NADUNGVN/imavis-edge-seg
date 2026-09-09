@@ -39,11 +39,11 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8), E2 (Xavier NX), E3 (AGX Xavier), E5 (Orin Nano Super) all have working ML toolchains**, all verified 2026-09-08/09; E4 (RUBIK Pi 3) reachable, kept secondary. E5 is a newer Orin device, not the legacy EOL "Jetson Nano" the plan assumed — role vs. that board is an open decision. See `docs/INFRA_OVERRIDE.md` |
 | 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **Compile-level gate satisfied on all three backend families.** TensorRT GPU: 8/8 PASS on E2, E3 and E5. Xavier DLA (E2/E3): builds, but encoder-only — decoder falls back to GPU due to a confirmed hardware limit ("DLA supports only 16 subgraphs per DLA core"), not an unsupported op. E5 has no DLA at all (confirmed). **Hailo DFC: ONNX→HAR→HEF all 4 levels PASS** (compiled on the researcher's WSL2, 2026-09-09) — not yet run on real Hailo-8 hardware (E1 currently unreachable). See `scripts/compiler_smoke_test.md` and `reports/edge/` — includes a correction of an earlier wrong "0 fallback" claim. Calibrated INT8 not yet tried anywhere. |
 | 3 | Benchmark harness + power measurement protocol | not started |
-| 4 | Elastic supernet v1 | **architecture implemented** (`src/imavis_edge_seg/models/`) — slimmable-width + elastic-depth encoder-decoder, static subnet extraction verified numerically equal to the supernet, ONNX export tested. **Real data downloaded and manifested on `SERVER-02`** (2026-09-09): Cityscapes (2975 train / 500 val) + ACDC (1600 train / 406 val) extracted to `~/Dung_TDTU/datasets/imavis-edge-seg/`, manifests committed to `data/manifests/`. Caught and fixed a real bug during this: ACDC's actual directory order is `{type}/{condition}/{split}/...`, not `{type}/{split}/{condition}/...` as first assumed — see `docs/DATASET.md`. **Not yet**: real training loop, sandwich-rule/distillation training, any real weights |
+| 4 | Elastic supernet v1 | **complete** — architecture (`src/imavis_edge_seg/models/`), data pipeline (`src/imavis_edge_seg/data/`, real Cityscapes 2975/500 + ACDC 1600/406 manifested on `SERVER-02`), and a working **sandwich-rule + in-place-distillation + boundary-aware training loop** (`src/imavis_edge_seg/training/`, `scripts/train_supernet.py`) — 32/32 tests pass including a synthetic end-to-end smoke run (loss decreases, checkpoint saves/loads, weights update). Detached server launch via `scripts/server/{start,status}_train_supernet.sh`. **Not yet**: a real training run on real data (only synthetic-data smoke-tested so far), any real/useful weights |
 | 5 | Hardware-in-the-loop Pareto search | not started |
-| 6 | QAT + distillation + compiler-safe refinement | not started |
+| 6 | QAT + distillation + compiler-safe refinement | in-place distillation implemented as part of Phase 4's sandwich-rule loop; QAT and compiler-safe refinement not started |
 | 7 | Calibrated visual-risk router | not started |
-| 8 | Full Cityscapes/ACDC experiments | not started |
+| 8 | Full Cityscapes/ACDC experiments | not started — data + training loop ready, no real run launched yet |
 | 9 | Ablations + sustained thermal/power runs | not started |
 | 10 | Manuscript | not started |
 
@@ -89,12 +89,26 @@ uv run imavis-edge-seg data manifest --dataset cityscapes --data-root /path/to/c
 uv run imavis-edge-seg data manifest --dataset acdc --data-root /path/to/acdc --split train -o data/manifests/acdc_train.csv
 ```
 
+### Training
+
+```bash
+uv run python scripts/train_supernet.py --config configs/experiment/default.yaml
+```
+
+On a server, prefer the detached wrapper so the job survives a closed SSH session (see
+`docs/COLLABORATION_PROTOCOL.md`):
+
+```bash
+bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml
+bash scripts/server/status_train_supernet.sh
+```
+
 ## Project layout
 
 ```text
-src/imavis_edge_seg/  # Library code (all logic lives here); models/ = supernet, data/ = datasets
+src/imavis_edge_seg/  # Library code (all logic lives here); models/ = supernet, data/ = datasets, training/ = sandwich-rule training loop
 configs/               # YAML configs — supernet space, search, deployment, experiment
-scripts/                # Thin CLI wrappers for long/server-side jobs
+scripts/                # Thin CLI wrappers for long/server-side jobs; scripts/server/ = detached job wrappers
 tests/                  # Unit / smoke tests
 docs/                   # Research plan, infra override, hardware profile, protocols
 data/                   # Manifests only in git; raw datasets gitignored

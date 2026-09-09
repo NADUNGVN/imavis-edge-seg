@@ -89,6 +89,25 @@ class QuantizationConfig(BaseModel):
     calibration_conditions: list[AdverseCondition] = Field(default_factory=_default_calibration_conditions)
 
 
+class TrainingConfig(BaseModel):
+    """Sandwich-rule supernet training (RESEARCH_PLAN.md §5.3 A). Distillation weight
+    reuses `SearchConfig.alpha_distill` rather than duplicating it here."""
+
+    batch_size: int = 8
+    num_workers: int = 4
+    max_steps: int = 100_000
+    lr: float = 3e-4
+    weight_decay: float = 1e-4
+    lr_schedule: Literal["constant", "cosine", "poly"] = "cosine"
+    warmup_steps: int = 500
+    sandwich_num_random_middle: int = 1  # besides the always-sampled smallest+largest
+    boundary_loss_weight: float = 1.0
+    distillation_temperature: float = 1.0
+    grad_clip_norm: float = 5.0
+    log_interval_steps: int = 50
+    checkpoint_interval_steps: int = 1000
+
+
 class DatasetConfig(BaseModel):
     name: Literal["cityscapes", "acdc", "dark_zurich", "bdd100k"]
     root: Path
@@ -105,6 +124,7 @@ class ExperimentConfig(BaseModel):
     experiment_id: str
     seed: int = 0
     supernet: SupernetConfig = Field(default_factory=SupernetConfig)
+    training: TrainingConfig = Field(default_factory=TrainingConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     router: RouterConfig = Field(default_factory=RouterConfig)
     quantization: QuantizationConfig = Field(default_factory=QuantizationConfig)
