@@ -59,11 +59,11 @@ committing the raw data itself
 
 ```bash
 uv run imavis-edge-seg data manifest \
-    --dataset cityscapes --data-root /home/ubuntu/datasets/cityscapes --split train \
+    --dataset cityscapes --data-root /home/ubuntu/Dung_TDTU/datasets/imavis-edge-seg/cityscapes --split train \
     -o data/manifests/cityscapes_train.csv
 
 uv run imavis-edge-seg data manifest \
-    --dataset acdc --data-root /home/ubuntu/datasets/acdc --split train \
+    --dataset acdc --data-root /home/ubuntu/Dung_TDTU/datasets/imavis-edge-seg/acdc --split train \
     -o data/manifests/acdc_train.csv
 ```
 

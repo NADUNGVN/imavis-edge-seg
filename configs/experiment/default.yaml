@@ -22,10 +22,10 @@ quantization:
 
 datasets:
   - name: cityscapes
-    root: /home/ubuntu/datasets/cityscapes
+    root: /home/ubuntu/Dung_TDTU/datasets/imavis-edge-seg/cityscapes
     split: train
   - name: acdc
-    root: /home/ubuntu/datasets/acdc
+    root: /home/ubuntu/Dung_TDTU/datasets/imavis-edge-seg/acdc
     split: train
 
 deployment_targets:
@@ -36,4 +36,4 @@ deployment_targets:
   - device_id: E3
     backend: tensorrt_gpu
 
-output_root: /home/ubuntu/experiments/imavis-edge-seg/outputs
+output_root: /home/ubuntu/Dung_TDTU/imavis-edge-seg/outputs
