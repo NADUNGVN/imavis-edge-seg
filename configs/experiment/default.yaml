@@ -7,7 +7,9 @@ supernet:
   compiler_safe_ops_only: true
 
 search:
-  objective: measured_latency_energy
+  # latency-only: no external power meter yet (deferred 2026-09-11, see
+  # RESEARCH_PLAN.md §14) -- switch to measured_latency_energy once one is acquired.
+  objective: measured_latency
   # xavier_dla intentionally not a default target: demoted to secondary/encoder-only
   # ablation per RESEARCH_PLAN.md §11's contingency -- see config.py's
   # _default_target_backends() for the full rationale.

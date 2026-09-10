@@ -69,7 +69,11 @@ class SupernetConfig(BaseModel):
 class SearchConfig(BaseModel):
     """Hardware-in-the-loop Pareto search objective weights (RQ1)."""
 
-    objective: Literal["flops", "measured_latency", "measured_latency_energy"] = "measured_latency_energy"
+    # "measured_latency", not "..._energy": no external calibrated power meter is
+    # available yet (deferred 2026-09-11, see RESEARCH_PLAN.md §14 "Power meter /
+    # camera domain") -- energy/J-frame must never be claimed from telemetry alone.
+    # §11's Go bar ("cuts p95 latency OR J/frame by >=20%") still holds latency-only.
+    objective: Literal["flops", "measured_latency", "measured_latency_energy"] = "measured_latency"
     lambda_latency: float = 1.0
     mu_energy: float = 1.0
     alpha_distill: float = 0.5

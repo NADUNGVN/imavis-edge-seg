@@ -6,7 +6,7 @@ from imavis_edge_seg.config import ExperimentConfig, load_config
 def test_default_config_round_trips() -> None:
     cfg = ExperimentConfig(experiment_id="unit-test")
     assert cfg.supernet.levels == ["tiny", "small", "medium", "large"]
-    assert cfg.search.objective == "measured_latency_energy"
+    assert cfg.search.objective == "measured_latency"  # no external power meter yet
     assert len(cfg.config_hash()) == 12
 
 
