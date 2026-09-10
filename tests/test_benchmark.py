@@ -133,3 +133,60 @@ def test_build_record_from_trtexec_dir_missing_runs_raises(tmp_path: Path) -> No
             precision="fp16",
             resolution=(384, 192),
         )
+
+
+def test_build_lookup_table_merges_multiple_records(tmp_path: Path) -> None:
+    from imavis_edge_seg.benchmark.lookup_table import build_lookup_table, write_lookup_table_csv
+
+    stats = compute_latency_stats([1.0, 1.1, 0.9, 1.05])
+    records_dir = tmp_path / "records"
+
+    BenchmarkRecord(
+        device_id="E3",
+        backend="tensorrt_gpu",
+        level="tiny",
+        precision="fp16",
+        resolution=(384, 192),
+        run_index=-1,
+        timestamp_utc="2026-09-10T00:00:00Z",
+        toolchain={"trt_version": "8502"},
+        end_to_end=stats,
+        kernel_only=stats,
+        throughput_fps=850.0,
+    ).write(records_dir / "e3_tensorrt_tiny_fp16.json")
+
+    BenchmarkRecord(
+        device_id="E1",
+        backend="hailo",
+        level="tiny",
+        precision="fp16",
+        resolution=(384, 192),
+        run_index=-1,
+        timestamp_utc="2026-09-10T00:00:00Z",
+        toolchain={"hailort": "4.17.0"},
+        end_to_end=stats,
+        throughput_fps=593.7,
+        power_mw={"min": 1800.0, "average": 1912.4, "max": 2050.0},
+        temp_c={"average": 52.3},
+    ).write(records_dir / "e1_hailo_tiny_fp16.json")
+
+    rows = build_lookup_table(records_dir)
+    assert len(rows) == 2
+    # sorted by (device_id, backend, level, precision, run_index) -- E1 before E3
+    assert rows[0]["device_id"] == "E1"
+    assert rows[0]["resolution"] == "384x192"
+    # energy/frame only computable when both power and end-to-end latency are present
+    assert rows[0]["energy_mj_per_frame"] == pytest.approx(1912.4 * stats.mean_ms / 1000.0)
+    assert "energy_mj_per_frame" not in rows[1]  # E3 record has no power_mw
+
+    csv_path = tmp_path / "lookup_table.csv"
+    write_lookup_table_csv(rows, csv_path)
+    lines = csv_path.read_text().splitlines()
+    assert len(lines) == 3  # header + 2 rows
+    assert "energy_mj_per_frame" in lines[0]
+
+
+def test_build_lookup_table_empty_dir_returns_empty_list(tmp_path: Path) -> None:
+    from imavis_edge_seg.benchmark.lookup_table import build_lookup_table
+
+    assert build_lookup_table(tmp_path) == []
