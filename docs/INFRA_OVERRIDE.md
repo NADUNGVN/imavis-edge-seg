@@ -13,6 +13,24 @@ models — prefer `SERVER-01`/`SERVER-02` (48 GB Quadro RTX 8000) for supernet t
 with multiple subnets in the sandwich rule; `SERVER-03`/`SERVER-04` (24 GB RTX 3090) for
 single-subnet ablations.
 
+**Torch/CUDA driver gotcha, hit on `SERVER-02` 2026-09-10:** that server's driver
+(535.230.02) only supports up to CUDA 12.2, but `pip install torch` from plain PyPI
+(what `pip install -e ".[dev,torch]"` does by default) resolves to a build requiring
+CUDA 12.4+ and silently falls back to CPU (`torch.cuda.is_available()` returns `False`,
+with a `CUDA initialization: The NVIDIA driver on your system is too old` warning easy
+to miss in a long log). Fix, per environment:
+
+```bash
+pip install --force-reinstall --index-url https://download.pytorch.org/whl/cu121 torch torchvision
+```
+
+Do **not** add `--no-deps` to that command -- the cu121 wheel needs its matching
+`nvidia-cublas-cu12`/`nvidia-cuda-runtime-cu12`/etc. companion packages, which
+`--no-deps` skips (hit this too: `libcublas.so.*[0-9] not found`). Verify with
+`python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"`
+before trusting any training run's device placement -- a silent CPU fallback doesn't
+crash, it just runs far slower than intended.
+
 ## Deploy — status vs what this project needs
 
 | Device | Shared-infra status | What PACE-Seg additionally needs before use |
