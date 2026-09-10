@@ -35,7 +35,7 @@ crash, it just runs far slower than intended.
 
 | Device | Shared-infra status | What PACE-Seg additionally needs before use |
 |---|---|---|
-| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY** (2026-09-08: `/dev/hailo0` present, `hailortcli` works, identify confirms **Hailo-8**, not 8L; HailoRT 4.23.0). SSH key access installed. **Currently unreachable (2026-09-09)** — dropped off the visible Tailscale peer list mid-session. | Compiled HEFs exist (see below) but have not been run on this device yet — need E1 back online to copy them over and test with `hailortcli run` |
+| E1 — Pi5 + Hailo-8 | **Reachable + Hailo software READY**, HailoRT 4.23.0, confirmed **Hailo-8** not 8L. Back online 2026-09-10 after a brief drop on 2026-09-09. **All 4 compiled `.hef` files (tiny/small/medium/large) ran successfully via `hailortcli run`** (593.7/334.0/148.4/55.25 FPS, smoke-test only, not a benchmark). | Compiler smoke test gate fully closed for this device — remaining work is calibrated INT8 and a protocol-following latency/energy measurement, not compiler compatibility |
 | E2 — Xavier NX | Reachable over direct LAN (`192.168.10.93`). SSH key access installed. L4T R35.4.1. CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 already present (not installed by this session). | Compiler smoke test complete — see below |
 | E3 — AGX Xavier | Reachable over direct LAN (`192.168.10.91`, no Tailscale on this device). SSH key access installed. L4T R35.6.4. CUDA 11.4.19 + cuDNN 8.6.0 + TensorRT 8.5.2.2 installed 2026-09-08 and verified. RAM ~14GiB (likely a 16GB SKU, not the 32GB dev kit assumed in the original plan). | Compiler smoke test complete — see below |
 | E4 — RUBIK Pi 3 | Reachable, SSH key access installed. Qualcomm QCM6490, Hexagon DSP/NPU via QAIRT (formerly SNPE) — not TensorRT/DLA/Hailo. | **Provisional call (not yet confirmed by researcher): kept as opportunistic/secondary only**, not a required backend — see "Open decisions" |
@@ -63,17 +63,19 @@ cross-compatible; each device needs its own compiled engine, which the project's
 static-engine-per-backend design already assumes. Full detail:
 `reports/edge/E5_orin_nano_compiler_smoke_test_20260909.md`.
 
-**Hailo DFC, 2026-09-09:** compiled on a **compile host**, not a device or server — the
-researcher's own Windows machine's WSL2 (Ubuntu 24.04, x86_64), which already had Hailo
-Dataflow Compiler 3.34.0 set up from a prior unrelated project (`drone-rocket`), at
-`~/hailo-work/venvs/dfc-3.34`. No new install was needed. All four elasticity levels:
-ONNX -> HAR (parse) -> optimized HAR (`--use-random-calib-set`) -> HEF (compile), all
-PASS, no unsupported layers. Full detail:
-`reports/edge/E1_hailo_dfc_compile_20260909.md`. **Not yet done:** running the compiled
-HEF on real Hailo-8 hardware — E1 was unreachable at the time (see table above).
+**Hailo DFC, 2026-09-09 compile + 2026-09-10 hardware run:** compiled on a **compile
+host**, not a device or server — the researcher's own Windows machine's WSL2 (Ubuntu
+24.04, x86_64), which already had Hailo Dataflow Compiler 3.34.0 set up from a prior
+unrelated project (`drone-rocket`), at `~/hailo-work/venvs/dfc-3.34`. No new install was
+needed. All four elasticity levels: ONNX -> HAR (parse) -> optimized HAR
+(`--use-random-calib-set`) -> HEF (compile), all PASS, no unsupported layers. **Once E1
+came back online, all four `.hef` files ran successfully via `hailortcli run`**
+(593.7/334.0/148.4/55.25 FPS for tiny/small/medium/large — smoke-test numbers, not a
+benchmark). Full detail: `reports/edge/E1_hailo_dfc_compile_20260909.md`.
 
 Not yet tested anywhere: calibrated (real-data) INT8 optimization, a decoder redesign
-that fits the 16-subgraph DLA budget, running the compiled HEF on real Hailo-8 hardware.
+that fits the 16-subgraph DLA budget, any protocol-following latency/energy measurement
+on any backend.
 
 ## Compile hosts (not devices, not train servers)
 

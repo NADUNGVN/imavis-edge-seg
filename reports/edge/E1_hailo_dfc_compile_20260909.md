@@ -42,16 +42,33 @@ a real, useful hint (not an error): the calibration data was not normalized, and
 recommends adding a normalization layer to the model so the neural core (not the host
 CPU) performs normalization -- worth doing when real training/calibration data exists.
 
+## Update 2026-09-10: ran on real Hailo-8 hardware (E1) — 4/4 PASS
+
+E1 came back online. Copied all four `.hef` files to `raspberrypi` (`/tmp/`) and ran each
+with `hailortcli run <file>.hef` (streaming inference, HailoRT's own benchmark mode, no
+custom harness):
+
+| Level | Frames | FPS | Notes |
+|---|---:|---:|---|
+| tiny | 2,972 | 593.70 | |
+| small | 1,672 | 334.01 | |
+| medium | 743 | 148.39 | |
+| large | 280 | 55.25 | |
+
+All four ran to completion with no errors. **This is not a representative benchmark
+number** — no measurement protocol (§9: warm-up count, run count, thermal steady state,
+external power meter) was followed, this is `hailortcli run`'s default streaming mode on
+an untrained random-weight model, single run. It does, however, confirm the full
+ONNX → HAR → optimized HAR → HEF → **real Hailo-8 execution** chain end to end, closing
+the last open item from this report.
+
 ## Not yet done
 
-- **Run the compiled HEF on real Hailo-8 hardware (E1).** E1 (`raspberrypi`,
-  `100.93.114.43`) dropped off the visible Tailscale peer list during this session and
-  could not be reached to copy the HEF over and test with `hailortcli run`. This is the
-  next step once E1 is reachable again -- compiling is necessary but not sufficient;
-  HailoRT actually loading and running the HEF is the real end-to-end confirmation.
 - Calibrated (real-data) INT8 optimization
-- `small`/`medium`/`large` were only parse+optimize+compile-tested, not yet run
-- Any latency/energy number following the measurement protocol (§9)
+- Any latency/energy number that actually follows the measurement protocol (§9) —
+  the FPS numbers above are a smoke-test confirmation only, not a benchmark result
+- Running this on `small`/`medium`/`large` was compile+run tested; still no accuracy
+  number for any level (needs a trained checkpoint, not random weights)
 
 ## Reading
 
@@ -59,5 +76,6 @@ Combined with `E2_NX_compiler_smoke_test_20260908.md`, `E3_compiler_smoke_test_2
 and `E5_orin_nano_compiler_smoke_test_20260909.md`, this closes out the Week 1-2 gate from
 `docs/SOURCE_RESEARCH_GAP_2026.md` §12 step 10 ("only start supernet training once at
 least one graph has compiled through both TensorRT and Hailo end to end") for the
-`PaceSegSupernet` architecture, at the compile level -- pending the E1 hardware run above
-to fully close it.
+`PaceSegSupernet` architecture — **now confirmed at both the compile level and the real
+hardware execution level**, on all three backend families (TensorRT GPU, Xavier DLA,
+Hailo).

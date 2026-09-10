@@ -53,24 +53,23 @@ decisions"). TensorRT GPU FP16/INT8: **PASS, all 4 levels**, no unsupported ops.
 on this device at all (confirmed: `Cannot create DLA engine, 0 not available`). Full
 detail: `../reports/edge/E5_orin_nano_compiler_smoke_test_20260909.md`.
 
-**Hailo DFC, 2026-09-09:** compiled on the researcher's own Windows machine's WSL2
-(Hailo Dataflow Compiler 3.34.0, already set up there from a prior unrelated project —
-no server needed). All four elasticity levels: ONNX -> HAR (parse) -> optimized HAR
-(random calibration) -> HEF (compile), all PASS, no unsupported layers. Full detail:
-`../reports/edge/E1_hailo_dfc_compile_20260909.md`. **Not yet done:** running the
-compiled HEF on real Hailo-8 hardware (E1) -- E1 dropped off the visible Tailscale
-network mid-session and could not be reached to complete this step.
+**Hailo DFC, 2026-09-09 (compile) + 2026-09-10 (real hardware run):** compiled on the
+researcher's own Windows machine's WSL2 (Hailo Dataflow Compiler 3.34.0, already set up
+there from a prior unrelated project — no server needed). All four elasticity levels:
+ONNX -> HAR (parse) -> optimized HAR (random calibration) -> HEF (compile), all PASS, no
+unsupported layers. **All four `.hef` files then ran successfully on real Hailo-8
+hardware (E1)** once it came back online: tiny 593.7 FPS, small 334.0 FPS, medium 148.4
+FPS, large 55.25 FPS (smoke-test numbers, not a benchmark — no measurement protocol
+followed). Full detail: `../reports/edge/E1_hailo_dfc_compile_20260909.md`.
 
 Still not tested anywhere: calibrated INT8, a decoder redesign that fits the 16-subgraph
-DLA budget, the legacy Jetson Nano (if still wanted separately from E5), running the
-compiled HEF on real Hailo-8 hardware.
+DLA budget, the legacy Jetson Nano (if still wanted separately from E5), any
+protocol-following latency/energy number on any backend.
 
 ## Gate
 
 Only start supernet training (Phase 4 in `README.md`) once at least one graph has
 compiled through **both** TensorRT and Hailo end to end (`RESEARCH_PLAN.md` source
-doc §12, step 10). **This gate is now satisfied at the compile level** (TensorRT GPU,
-Xavier DLA (partial), and Hailo DFC all PASS) — the remaining step (running the HEF on
-real Hailo-8 hardware) is a hardware-availability blocker, not a compiler-compatibility
-one, so it does not block starting real training/dataset work if the researcher wants to
-proceed now.
+doc §12, step 10). **This gate is fully satisfied** — TensorRT GPU, Xavier DLA
+(partial), and Hailo DFC all PASS at both the compile level and, for Hailo, confirmed
+real hardware execution too.
