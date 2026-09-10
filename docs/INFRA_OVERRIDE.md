@@ -51,10 +51,16 @@ on both devices at every level, but the **decoder falls back to GPU wholesale** 
 confirmed root cause directly from TensorRT's log: *"DLA supports only 16 subgraphs per
 DLA core"*. The encoder fits the budget and runs on DLA; the decoder's resize→add→conv
 pattern creates too many extra subgraph partitions and exhausts it. Not an
-unsupported-operator problem — a subgraph-count budget problem, plausibly fixable by
-restructuring the decoder. Full detail, per-level throughput, and a note correcting an
-earlier wrong "0 fallback" claim are in `reports/edge/E3_compiler_smoke_test_20260908.md`
-and `reports/edge/E2_NX_compiler_smoke_test_20260908.md`.
+unsupported-operator problem — a subgraph-count budget problem. Re-checked after the
+3x channel rescale (2026-09-10): the *encoder alone* already uses the full 16-subgraph
+budget, so a decoder-only restructure cannot recover DLA coverage — the whole graph's
+partition count would need reducing. **Decision executed 2026-09-10 (RESEARCH_PLAN.md
+§11 contingency): DLA demoted to a secondary, encoder-only ablation; TensorRT GPU +
+Hailo HEF are the two primary backends** (`configs/experiment/default.yaml`,
+`config.py::_default_target_backends`). Full detail, per-level throughput, and a note
+correcting an earlier wrong "0 fallback" claim are in
+`reports/edge/E3_compiler_smoke_test_20260908.md` and
+`reports/edge/E2_NX_compiler_smoke_test_20260908.md`.
 
 **E5 (Orin generation), 2026-09-09:** TensorRT GPU FP16/INT8: 8/8 PASS, all 4 levels, no
 unsupported ops, no DLA to test (device has none). CUDA/TensorRT are a full major version
@@ -73,9 +79,10 @@ came back online, all four `.hef` files ran successfully via `hailortcli run`**
 (593.7/334.0/148.4/55.25 FPS for tiny/small/medium/large — smoke-test numbers, not a
 benchmark). Full detail: `reports/edge/E1_hailo_dfc_compile_20260909.md`.
 
-Not yet tested anywhere: calibrated (real-data) INT8 optimization, a decoder redesign
-that fits the 16-subgraph DLA budget, any protocol-following latency/energy measurement
-on any backend.
+Not yet tested anywhere: calibrated (real-data) INT8 optimization. A full-graph redesign
+that fits the 16-subgraph DLA budget is possible future ablation work, not a near-term
+item (see "Xavier DLA coverage" in RESEARCH_PLAN.md §14 — resolved as a secondary
+ablation, not a blocker).
 
 ## Compile hosts (not devices, not train servers)
 
@@ -106,7 +113,9 @@ reproducibility on an EOL software stack (`docs/SOURCE_RESEARCH_GAP_2026.md` §3
 the opposite: a *newer*, actively-supported device (JetPack 6, CUDA 12.6, TensorRT 10.3)
 that happens to share the "Nano" name. Using E5 in place of the legacy Nano changes that
 part of the paper's narrative (no more EOL-stack reproducibility story on this device) —
-needs an explicit researcher decision, not an assumption.
+needs an explicit researcher decision, not an assumption. **2026-09-10: researcher intends
+to add a legacy Nano board later** -- not yet provided, so E5 remains the stand-in device
+for now; revisit this row once the legacy board is actually reachable.
 
 ## Access status (2026-09-09)
 

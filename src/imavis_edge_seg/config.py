@@ -41,7 +41,15 @@ def _default_input_resolutions() -> dict[ElasticityLevel, tuple[int, int]]:
 
 
 def _default_target_backends() -> list[Backend]:
-    return ["tensorrt_gpu", "xavier_dla", "hailo_hef"]
+    # xavier_dla deliberately excluded from the default Pareto-search/headline-claim
+    # backend set: confirmed live 2026-09-08/10 that Xavier's DLA has a hard 16-subgraph-
+    # per-core budget the encoder alone already exhausts, so the decoder never gets a
+    # DLA slot (see reports/edge/E3_compiler_smoke_test_20260908.md). This is
+    # RESEARCH_PLAN.md §11's own "excessive DLA fallback -> demote to secondary
+    # ablation, keep TensorRT GPU + Hailo as the two primary backends" contingency,
+    # executed 2026-09-10 -- DLA is still compiled/tested (encoder-only) as a secondary
+    # ablation, just not part of the default search/comparison target set.
+    return ["tensorrt_gpu", "hailo_hef"]
 
 
 class SupernetConfig(BaseModel):

@@ -8,7 +8,10 @@ supernet:
 
 search:
   objective: measured_latency_energy
-  target_backends: [tensorrt_gpu, xavier_dla, hailo_hef]
+  # xavier_dla intentionally not a default target: demoted to secondary/encoder-only
+  # ablation per RESEARCH_PLAN.md §11's contingency -- see config.py's
+  # _default_target_backends() for the full rationale.
+  target_backends: [tensorrt_gpu, hailo_hef]
 
 router:
   enabled: true
@@ -32,7 +35,7 @@ deployment_targets:
   - device_id: E1
     backend: hailo_hef
   - device_id: E2
-    backend: xavier_dla
+    backend: tensorrt_gpu
   - device_id: E3
     backend: tensorrt_gpu
 
