@@ -39,11 +39,11 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 1 | Hardware/toolchain inventory (Jetson Nano/NX/AGX, Hailo identify) | **E1 (Pi5+Hailo-8), E2 (Xavier NX), E3 (AGX Xavier), E5 (Orin Nano Super) all have working ML toolchains**, all verified 2026-09-08/09; E4 (RUBIK Pi 3) reachable, kept secondary. E5 is a newer Orin device, not the legacy EOL "Jetson Nano" the plan assumed — role vs. that board is an open decision. See `docs/INFRA_OVERRIDE.md` |
 | 2 | Compiler smoke test (Fast-SCNN/BiSeNetV2 → TensorRT/DLA/HEF) | **complete — compile AND real-hardware-execution gate satisfied on all three backend families.** TensorRT GPU: 8/8 PASS on E2, E3 and E5. Xavier DLA (E2/E3): builds, but encoder-only — decoder falls back to GPU due to a confirmed hardware limit ("DLA supports only 16 subgraphs per DLA core"), not an unsupported op. E5 has no DLA at all (confirmed). **Hailo: ONNX→HAR→HEF all 4 levels PASS, and all 4 HEFs ran successfully on real Hailo-8 hardware (E1)** 2026-09-10 (593.7/334.0/148.4/55.25 FPS, smoke-test numbers only, not a benchmark). See `scripts/compiler_smoke_test.md` and `reports/edge/` — includes a correction of an earlier wrong "0 fallback" claim. Calibrated INT8 not yet tried anywhere. |
 | 3 | Benchmark harness + power measurement protocol | not started |
-| 4 | Elastic supernet v1 | **complete** — architecture (`src/imavis_edge_seg/models/`), data pipeline (`src/imavis_edge_seg/data/`, real Cityscapes 2975/500 + ACDC 1600/406 manifested on `SERVER-02`), and a working **sandwich-rule + in-place-distillation + boundary-aware training loop** (`src/imavis_edge_seg/training/`, `scripts/train_supernet.py`) — 32/32 tests pass including a synthetic end-to-end smoke run (loss decreases, checkpoint saves/loads, weights update). Detached server launch via `scripts/server/{start,status}_train_supernet.sh`. **Not yet**: a real training run on real data (only synthetic-data smoke-tested so far), any real/useful weights |
+| 4 | Elastic supernet v1 | **complete** — architecture (`src/imavis_edge_seg/models/`), data pipeline (`src/imavis_edge_seg/data/`, real Cityscapes 2975/500 + ACDC 1600/406 on `SERVER-02`), sandwich-rule + in-place-distillation + boundary-aware **training loop** (`src/imavis_edge_seg/training/`), and an **mIoU evaluation loop** (`src/imavis_edge_seg/evaluation/`, `scripts/evaluate_supernet.py` — per-level, per-dataset, per-ACDC-condition breakdown). 38/38 tests pass. **First two real GPU training runs on `SERVER-02`** (2026-09-10, 2000 steps each): loss 19.5→7.5, converges cleanly, no crashes. **Not yet**: a long/serious training run (only short stability-check runs so far — current model capacity, ~126K params at "large", is undersized vs. baselines and not yet evaluated for real accuracy) |
 | 5 | Hardware-in-the-loop Pareto search | not started |
 | 6 | QAT + distillation + compiler-safe refinement | in-place distillation implemented as part of Phase 4's sandwich-rule loop; QAT and compiler-safe refinement not started |
 | 7 | Calibrated visual-risk router | not started |
-| 8 | Full Cityscapes/ACDC experiments | not started — data + training loop ready, no real run launched yet |
+| 8 | Full Cityscapes/ACDC experiments | not started — data, training and eval loops ready; no long/serious run launched yet |
 | 9 | Ablations + sustained thermal/power runs | not started |
 | 10 | Manuscript | not started |
 
@@ -103,10 +103,20 @@ bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml
 bash scripts/server/status_train_supernet.sh
 ```
 
+### Evaluation (mIoU)
+
+```bash
+uv run python scripts/evaluate_supernet.py --checkpoint outputs/<experiment_id>/checkpoints/step_XXXXXXXX.pt --config configs/experiment/default.yaml
+```
+
+Reports per-level mIoU on Cityscapes val and on ACDC val broken down by condition
+(fog/night/rain/snow). Restrict with `--level`/`--dataset` (repeatable) for a faster
+partial check.
+
 ## Project layout
 
 ```text
-src/imavis_edge_seg/  # Library code (all logic lives here); models/ = supernet, data/ = datasets, training/ = sandwich-rule training loop
+src/imavis_edge_seg/  # Library code (all logic lives here); models/ = supernet, data/ = datasets, training/ = sandwich-rule training loop, evaluation/ = mIoU
 configs/               # YAML configs — supernet space, search, deployment, experiment
 scripts/                # Thin CLI wrappers for long/server-side jobs; scripts/server/ = detached job wrappers
 tests/                  # Unit / smoke tests
