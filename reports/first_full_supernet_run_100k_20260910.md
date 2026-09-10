@@ -1,0 +1,58 @@
+# First full (100k-step) supernet training run — 2026-09-10/11
+
+First real training budget end to end: `experiment_id=pace_seg_v1`,
+`run_id=SERVER-02_train_20260910T093228Z`, 100,000 steps,
+`configs/experiment/default.yaml` as-is (rescaled ~1.02M-param architecture at
+"large", real Cityscapes 2975/500 + ACDC 1600/406). `task_status=0`; loss went
+7.5 (start) -> plateaued ~2.1-2.2 as LR cosine-decayed to 0 at step 100000. Evaluated
+with `scripts/evaluate_supernet.py` against `outputs/pace_seg_v1/checkpoints/step_00100000.pt`.
+
+## mIoU, all 4 levels x Cityscapes val + ACDC val (4 adverse conditions)
+
+| level | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow |
+|---|---:|---:|---:|---:|---:|
+| tiny | 0.2986 | 0.3154 | 0.1944 | 0.2901 | 0.2610 |
+| small | 0.3564 | 0.3658 | 0.2511 | 0.3680 | 0.3304 |
+| medium | 0.4120 | 0.4360 | 0.2898 | 0.4003 | 0.3981 |
+| large | 0.4712 | 0.4919 | 0.3312 | 0.4517 | 0.4492 |
+
+Full precision in `reports/eval_pace_seg_v1_step100000.json`.
+
+## Reading
+
+- **Monotonic in model size at every dataset/condition** (tiny < small < medium <
+  large), same as every prior shorter run — the sandwich-rule training keeps behaving
+  correctly at full training length, not just at toy step counts.
+- **Large improved 0.2105 -> 0.4712 on Cityscapes** (2.2x) going from the 2,000-step
+  stability check (`reports/first_end_to_end_miou_20260910.md`) to a real 100,000-step
+  budget — training continues to make real progress with more steps, no sign of
+  stalling or divergence at this budget.
+- **`acdc/night` is the hardest condition at every level** (0.19-0.33), as expected —
+  the least visual information available.
+- **Open question, needs verification before any paper claim**: `acdc/fog` mIoU is
+  *higher* than clean Cityscapes at every single level (e.g. large: 0.4919 vs 0.4712).
+  This is not necessarily wrong — ACDC's fog split may have visually simpler scenes
+  (more large uniform regions: sky, road, fog-obscured background) than Cityscapes'
+  dense urban scenes, which is a documented pattern in some adverse-segmentation work —
+  but it has not been verified here. Before this becomes a paper claim, check: (a) per-
+  class IoU breakdown for `acdc/fog` vs `cityscapes/val` (is a few large/easy classes
+  dominating the mean?), (b) that `IGNORE_INDEX` pixel fractions are comparable across
+  splits (a split with many more ignored pixels trivially inflates its mIoU over valid
+  classes).
+
+## Not yet established
+
+- **The go/no-go criterion this run was meant to inform** ("subnet gap ≤2 mIoU vs
+  independently-trained models at the same budget", RESEARCH_PLAN.md §11) **cannot be
+  checked yet** — 0/7 required baselines have been trained. These numbers show the
+  supernet trains and behaves correctly, not that it matches or beats independent
+  training.
+- **No data augmentation is applied anywhere in the training pipeline**
+  (`data/transforms.py`'s `SegmentationResizeToTensor` is resize + normalize only, and
+  `training/data.py` doesn't add any). 100,000 steps over a 4,575-image training set
+  with zero augmentation is a plausible source of headroom being left on the table
+  (likely the single highest-leverage next change) and possibly of overfitting bias in
+  the numbers above -- not yet measured either way (no separate train-loss-vs-val-mIoU
+  divergence check has been done).
+- Only 1 training seed so far; RESEARCH_PLAN.md §9 rule 8 requires 3 seeds for headline
+  numbers.
