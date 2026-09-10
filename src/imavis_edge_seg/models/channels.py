@@ -13,9 +13,14 @@ from dataclasses import dataclass, field
 from imavis_edge_seg.config import ElasticityLevel, SupernetConfig
 
 # Base ("large", multiplier 1.0) channel counts per stage. Chosen divisible by 8
-# for reasonable INT8/accelerator alignment; not tuned for accuracy yet.
-BASE_STEM_CHANNELS = 32
-BASE_STAGE_CHANNELS = (48, 64, 96)
+# for reasonable INT8/accelerator alignment. Scaled 3x from the original
+# compiler-smoke-test-only sizing (32/48/64/96, ~126K params at "large") to
+# ~1.02M params at "large" -- comparable to Fast-SCNN (~1.1M), the smallest
+# required baseline in docs/RESEARCH_PLAN.md §6.2. The original sizing was too
+# small to be a meaningful accuracy comparison point; see
+# reports/first_end_to_end_miou_20260910.md "Open decision".
+BASE_STEM_CHANNELS = 96
+BASE_STAGE_CHANNELS = (144, 192, 288)
 
 
 def round_channels(base: int, multiplier: float, divisor: int = 8) -> int:
