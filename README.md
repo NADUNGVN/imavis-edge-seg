@@ -43,7 +43,7 @@ Target venue: *Image and Vision Computing* (IMAVIS), Elsevier — special issue
 | 5 | Hardware-in-the-loop Pareto search | not started |
 | 6 | QAT + distillation + compiler-safe refinement | in-place distillation implemented as part of Phase 4's sandwich-rule loop; QAT and compiler-safe refinement not started |
 | 7 | Calibrated visual-risk router | not started |
-| 8 | Full Cityscapes/ACDC experiments | not started — data, training and eval loops ready; no long/serious run launched yet |
+| 8 | Full Cityscapes/ACDC experiments | 1x 100k-step supernet run in progress on SERVER-02 (`pace_seg_v1`, started 2026-09-10). **Scale-out infra ready**: a second supernet seed can be launched on an idle server via `scripts/server/start_train_supernet.sh <config> -- --override seed=1 experiment_id=pace_seg_v1_seed1` with zero new code. **Required-baseline training infra built** (`docs/RESEARCH_PLAN.md` §7): `scripts/train_baseline.py` / `scripts/server/{start,run,status}_train_baseline.sh` reuse the same data pipeline, loss and checkpoint format as the supernet trainer. Only 1/7 required baselines implemented so far (`mobilenetv3_deeplabv3`, via `torchvision.models.segmentation.deeplabv3_mobilenet_v3_large` — needs no custom architecture code); the other 6 (Fast-SCNN, BiSeNetV2, PIDNet-S/DDRNet-23-slim, SegFormer-B0, HARD, UCPNet) raise an explicit `NotImplementedError` from `models/baselines.py` and still need architecture code. 60/60 tests pass. Ready to launch on SERVER-01/03/04/05 once confirmed idle. |
 | 9 | Ablations + sustained thermal/power runs | not started |
 | 10 | Manuscript | not started |
 

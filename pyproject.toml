@@ -120,6 +120,12 @@ show_error_codes = true
 mypy_path = "src"
 packages = ["imavis_edge_seg"]
 
+[[tool.mypy.overrides]]
+# torchvision ships no py.typed marker for torchvision.models.segmentation (unlike
+# torch itself, which does) -- this is an upstream packaging gap, not our code.
+module = "torchvision.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
