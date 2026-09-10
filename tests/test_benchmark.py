@@ -157,7 +157,7 @@ def test_build_lookup_table_merges_multiple_records(tmp_path: Path) -> None:
 
     BenchmarkRecord(
         device_id="E1",
-        backend="hailo",
+        backend="hailo_hef",
         level="tiny",
         precision="fp16",
         resolution=(384, 192),
@@ -190,3 +190,60 @@ def test_build_lookup_table_empty_dir_returns_empty_list(tmp_path: Path) -> None
     from imavis_edge_seg.benchmark.lookup_table import build_lookup_table
 
     assert build_lookup_table(tmp_path) == []
+
+
+def test_build_record_from_hailo_dir_real_fixture(tmp_path: Path) -> None:
+    from imavis_edge_seg.benchmark.aggregate import build_record_from_hailo_dir
+
+    # Real hailortcli --csv rows, captured live on E1 2026-09-10 (power/current columns
+    # blank -- this Hailo-8 M.2 module has no on-board power/current sensor).
+    header = (
+        "net_name,status,status_description,fps,num_of_frames,send_rate,recv_rate,"
+        "hw_latency,overall_latency,min_power,average_power,max_power,min_current,"
+        "average_current,max_current,min_temp,average_temp,max_temp\n"
+    )
+    rows = [
+        "pace_seg_tiny,0,HAILO_SUCCESS,,5000,,,1.94634,3.7149,,,,,,,44.4994,45.3249,45.8652\n",
+        "pace_seg_tiny,0,HAILO_SUCCESS,,5000,,,1.95012,3.7402,,,,,,,44.6,45.4,45.9\n",
+        "pace_seg_tiny,0,HAILO_SUCCESS,,5000,,,1.93889,3.6987,,,,,,,44.3,45.2,45.7\n",
+    ]
+    for i, row in enumerate(rows, start=1):
+        (tmp_path / f"run{i}.csv").write_text(header + row)
+    (tmp_path / "environment.txt").write_text(
+        "device_id=E1\ntimestamp_utc=2026-09-10T15:28:05Z\n"
+        "HailoRT-CLI version 4.23.0\n"
+        "Board Name: Hailo-8\n"
+        "Firmware Version: 4.23.0 (release,app,extended context switch buffer)\n"
+    )
+
+    record = build_record_from_hailo_dir(
+        tmp_path,
+        device_id="E1",
+        backend="hailo_hef",
+        level="tiny",
+        precision="fp16",
+        resolution=(384, 192),
+    )
+    assert record.toolchain["hailort_version"] == "4.23.0"
+    assert record.toolchain["board_name"] == "Hailo-8"
+    assert record.end_to_end is not None
+    assert record.end_to_end.n == 3  # 3 run-level samples, not per-frame
+    assert record.kernel_only is not None
+    assert record.throughput_fps is not None and record.throughput_fps > 0
+    assert record.power_mw is None  # no sensor on this module -- must stay unset
+    assert record.temp_c is not None
+    assert record.temp_c["average"] == pytest.approx((45.3249 + 45.4 + 45.2) / 3)
+
+
+def test_build_record_from_hailo_dir_missing_runs_raises(tmp_path: Path) -> None:
+    from imavis_edge_seg.benchmark.aggregate import build_record_from_hailo_dir
+
+    with pytest.raises(FileNotFoundError):
+        build_record_from_hailo_dir(
+            tmp_path,
+            device_id="E1",
+            backend="hailo_hef",
+            level="tiny",
+            precision="fp16",
+            resolution=(384, 192),
+        )

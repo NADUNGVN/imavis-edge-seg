@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Protocol-compliant latency/power/temp capture for one HEF on E1 (docs/RESEARCH_PLAN.md
-# §9): 3 independent runs, >=5000 frames each, environment manifest. HailoRT's
-# --measure-power/--measure-temp are on-chip telemetry, not an external calibrated
-# meter (§9 rule 6) -- label results accordingly, never as a system-level number.
+# Protocol-compliant latency/temp capture for one HEF on E1 (docs/RESEARCH_PLAN.md §9):
+# 3 independent runs, >=5000 frames each, environment manifest. HailoRT's
+# --measure-temp is on-chip telemetry, not an external calibrated meter (§9 rule 6) --
+# label results accordingly, never as a system-level number.
 #
-# NOTE: written 2026-09-10 but not yet run live -- E1's Hailo chip was busy with another
-# researcher's job at the time (see docs/INFRA_OVERRIDE.md). Verify the flags still
-# match `hailortcli run --help` before first use.
+# NOTE: --measure-power/--measure-current are deliberately NOT used. Confirmed live on
+# E1 2026-09-10: this Hailo-8 M.2 module has no on-board power/current sensor --
+# `hailortcli run --measure-power` fails with "Power measurement not supported" (and
+# --measure-current likewise), unlike the PCIe eval boards HailoRT assumes. Energy/frame
+# for E1 is unavailable from telemetry and needs an external meter -- do not report
+# power_mw for this device without one.
 #
 # Usage: run_hailo_protocol.sh <hef_path> <device_id> <output_dir>
 set -euo pipefail
@@ -26,7 +29,7 @@ mkdir -p "$OUTDIR"
 for run in 1 2 3; do
   echo "=== run $run/3 ($DEVICE_ID) ==="
   hailortcli run "$HEF" --measure-latency --measure-overall-latency \
-    --measure-power --measure-temp \
+    --measure-temp --dont-show-progress \
     -c 5000 --csv "$OUTDIR/run${run}.csv" \
     > "$OUTDIR/run${run}_log.txt" 2>&1
   echo "run $run exit=$?"
