@@ -95,7 +95,10 @@ def test_manifest_without_checksums(fake_cityscapes: Path) -> None:
 torch = pytest.importorskip("torch")
 
 from imavis_edge_seg.data.cityscapes import CityscapesDataset  # noqa: E402
-from imavis_edge_seg.data.transforms import SegmentationResizeToTensor  # noqa: E402
+from imavis_edge_seg.data.transforms import (  # noqa: E402
+    SegmentationResizeToTensor,
+    SegmentationTrainAugment,
+)
 
 
 def test_cityscapes_dataset_loads_and_resizes(fake_cityscapes: Path) -> None:
@@ -113,3 +116,44 @@ def test_cityscapes_dataset_raises_on_empty_split(fake_cityscapes: Path) -> None
     transform = SegmentationResizeToTensor(height=16, width=32)
     with pytest.raises(FileNotFoundError):
         CityscapesDataset(fake_cityscapes, split="val", transform=transform)
+
+
+def _random_image_and_mask(height: int, width: int) -> tuple["Image.Image", "Image.Image"]:
+    rng = np.random.default_rng(0)
+    image = Image.fromarray(rng.integers(0, 256, (height, width, 3), dtype=np.uint8), mode="RGB")
+    mask = Image.fromarray(rng.integers(0, NUM_CLASSES, (height, width), dtype=np.uint8), mode="L")
+    return image, mask
+
+
+def test_segmentation_train_augment_output_shape_always_matches_target() -> None:
+    transform = SegmentationTrainAugment(height=32, width=64)
+    image, mask = _random_image_and_mask(48, 96)
+    for _ in range(10):  # random scale each call -- shape must stay fixed regardless
+        image_tensor, mask_tensor = transform(image, mask)
+        assert image_tensor.shape == (3, 32, 64)
+        assert mask_tensor.shape == (32, 64)
+
+
+def test_segmentation_train_augment_mask_values_stay_in_valid_range() -> None:
+    transform = SegmentationTrainAugment(height=32, width=64)
+    image, mask = _random_image_and_mask(48, 96)
+    for _ in range(10):
+        _, mask_tensor = transform(image, mask)
+        valid = (mask_tensor >= 0) & (mask_tensor < NUM_CLASSES)
+        assert bool(((mask_tensor == IGNORE_INDEX) | valid).all())
+
+
+def test_segmentation_train_augment_downscale_pads_with_ignore_index() -> None:
+    # scale_range fixed < 1 guarantees the scaled image is smaller than the target,
+    # so padding (and therefore IGNORE_INDEX pixels) must appear in the output.
+    transform = SegmentationTrainAugment(height=32, width=64, scale_range=(0.5, 0.5))
+    image, mask = _random_image_and_mask(32, 64)
+    _, mask_tensor = transform(image, mask)
+    assert bool((mask_tensor == IGNORE_INDEX).any())
+
+
+def test_segmentation_train_augment_is_actually_random() -> None:
+    transform = SegmentationTrainAugment(height=32, width=64)
+    image, mask = _random_image_and_mask(48, 96)
+    outputs = [transform(image, mask)[0] for _ in range(8)]
+    assert not all(torch.equal(outputs[0], out) for out in outputs[1:])

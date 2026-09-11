@@ -13,7 +13,7 @@ from torch.utils.data import ConcatDataset, DataLoader, Dataset
 from imavis_edge_seg.config import ExperimentConfig
 from imavis_edge_seg.data.acdc import ACDCDataset
 from imavis_edge_seg.data.cityscapes import CityscapesDataset
-from imavis_edge_seg.data.transforms import SegmentationResizeToTensor
+from imavis_edge_seg.data.transforms import SegmentationResizeToTensor, SegmentationTrainAugment
 
 _Sample = tuple[Tensor, Tensor]
 
@@ -21,7 +21,11 @@ _Sample = tuple[Tensor, Tensor]
 def build_train_dataset(config: ExperimentConfig) -> Dataset[_Sample]:
     largest_level = config.supernet.levels[-1]
     height, width = config.supernet.input_resolutions[largest_level]
-    transform = SegmentationResizeToTensor(height=height, width=width)
+    transform: SegmentationResizeToTensor | SegmentationTrainAugment
+    if config.training.augment:
+        transform = SegmentationTrainAugment(height=height, width=width)
+    else:
+        transform = SegmentationResizeToTensor(height=height, width=width)
 
     datasets: list[Dataset[_Sample]] = []
     for dataset_config in config.datasets:

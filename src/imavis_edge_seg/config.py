@@ -118,6 +118,7 @@ class TrainingConfig(BaseModel):
     grad_clip_norm: float = 5.0
     log_interval_steps: int = 50
     checkpoint_interval_steps: int = 1000
+    augment: bool = True  # data.transforms.SegmentationTrainAugment vs. plain resize
 
 
 class DatasetConfig(BaseModel):
