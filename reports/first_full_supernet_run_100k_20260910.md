@@ -29,16 +29,25 @@ Full precision in `reports/eval_pace_seg_v1_step100000.json`.
   stalling or divergence at this budget.
 - **`acdc/night` is the hardest condition at every level** (0.19-0.33), as expected —
   the least visual information available.
-- **Open question, needs verification before any paper claim**: `acdc/fog` mIoU is
-  *higher* than clean Cityscapes at every single level (e.g. large: 0.4919 vs 0.4712).
-  This is not necessarily wrong — ACDC's fog split may have visually simpler scenes
-  (more large uniform regions: sky, road, fog-obscured background) than Cityscapes'
-  dense urban scenes, which is a documented pattern in some adverse-segmentation work —
-  but it has not been verified here. Before this becomes a paper claim, check: (a) per-
-  class IoU breakdown for `acdc/fog` vs `cityscapes/val` (is a few large/easy classes
-  dominating the mean?), (b) that `IGNORE_INDEX` pixel fractions are comparable across
-  splits (a split with many more ignored pixels trivially inflates its mIoU over valid
-  classes).
+- **RESOLVED 2026-09-11 — `acdc/fog` > clean Cityscapes explained, not a bug.**
+  Per-class breakdown (`--per-class`, `reports/eval_pace_seg_v1_step100000_percls.json`,
+  `large` level) rules out the ignore-pixel hypothesis outright: `acdc/fog` actually has
+  *fewer* ignored pixels proportionally than Cityscapes (93.7% valid vs 87.5% valid), so
+  it isn't inflating its own mIoU that way. The real mechanism: several **large,
+  structural classes score noticeably *higher* in fog** -- `wall` 0.256→0.469, `pole`
+  0.294→0.451, `traffic light` 0.233→0.383, `sky` 0.900→0.976 -- plausibly because
+  ACDC's fog scenes are visually simpler/more homogeneous. Averaged unweighted with 15
+  other classes, these gains outweigh a **real, expected, and safety-relevant
+  degradation on dynamic road-user classes**: `person` 0.471→0.280, `bicycle`
+  0.472→0.204, `motorcycle` 0.139→0.016, `car` 0.828→0.709. Macro mIoU alone hides this
+  — it says fog is "easier" while the classes that matter most for adverse-condition
+  safety are clearly worse. **Action: always report the per-class breakdown for
+  person/rider/pole/traffic-sign/traffic-light alongside aggregate mIoU** (already
+  required by `RESEARCH_PLAN.md` §8 — this is a concrete demonstration of why that
+  metric is in the plan, not just a nice-to-have). Note also several rare classes
+  (`train`, `rider`, `motorcycle`, `bus`) swing 10-40 points between splits from small
+  sample size alone — treat single-split rare-class numbers as noisy, not a robust
+  claim, until per-class pixel/instance counts are checked too.
 
 ## Not yet established
 
