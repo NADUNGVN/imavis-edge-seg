@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Start a detached required-baseline training run (RESEARCH_PLAN.md §7). Activate the
 # right conda env first, then:
-#   bash scripts/server/start_train_baseline.sh <model> [config.yaml] [-- extra train_baseline.py args]
+#   bash scripts/server/start_train_baseline.sh <model> [config.yaml] [extra train_baseline.py args]
 # e.g. bash scripts/server/start_train_baseline.sh mobilenetv3_deeplabv3
+# Multiple --override values must each repeat the flag (argparse action="append"):
+#   bash scripts/server/start_train_baseline.sh mobilenetv3_deeplabv3 configs/experiment/default.yaml --override seed=1 --override experiment_id=baseline_seed1
+# A leading "--" is optional and stripped if present.
 # Check progress with status_train_baseline.sh <model>. Job dir is keyed by model name
 # so several baselines can run concurrently on the same or different servers without
 # colliding -- never paste a full training loop directly into an interactive shell,
@@ -26,6 +29,11 @@ fi
 
 CONFIG="${1:-configs/experiment/default.yaml}"
 shift || true
+# Strip a literal "--" separator if present -- see start_train_supernet.sh, which hit
+# this same bug live (task_status=2, "unrecognized arguments: --").
+if [ "${1:-}" = "--" ]; then
+  shift
+fi
 RUN_ID="$(hostname)_${MODEL}_$(date -u +%Y%m%dT%H%M%SZ)"
 JOB_DIR="outputs/train_baseline/$MODEL/$RUN_ID"
 mkdir -p "$JOB_DIR"

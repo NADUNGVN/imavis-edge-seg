@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Start a detached supernet training run. Activate the right conda env first, then:
-#   bash scripts/server/start_train_supernet.sh [config.yaml] [-- extra train_supernet.py args]
+#   bash scripts/server/start_train_supernet.sh [config.yaml] [extra train_supernet.py args]
+# e.g. multiple --override values must each repeat the flag (argparse action="append"):
+#   bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml --override seed=1 --override experiment_id=pace_seg_v1_seed1
+# A leading "--" is optional and stripped if present, but --override itself always needs
+# to be repeated per key=value pair -- "--override a=1 b=2" passes "b=2" as an
+# unrecognized positional, not a second override.
 # Check progress with status_train_supernet.sh. Never paste a full training loop
 # directly into an interactive shell -- this owns nohup/setsid so the SSH session can
 # close without killing the job.
@@ -20,6 +25,13 @@ fi
 
 CONFIG="${1:-configs/experiment/default.yaml}"
 shift || true
+# Strip a literal "--" separator if present -- it's a hint for the human caller (see
+# the usage comment above), not something train_supernet.py's argparse understands;
+# forwarding it caused a real "unrecognized arguments: --" failure in practice
+# (task_status=2, SERVER-01_train_20260911T001714Z).
+if [ "${1:-}" = "--" ]; then
+  shift
+fi
 RUN_ID="$(hostname)_train_$(date -u +%Y%m%dT%H%M%SZ)"
 JOB_DIR="outputs/train_supernet/$RUN_ID"
 mkdir -p "$JOB_DIR"
