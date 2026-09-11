@@ -270,3 +270,175 @@ class BiSeNetV2(nn.Module):
         fused = self.aggregation(detail_feat, semantic_feat)
         logits = self.head(fused)
         return F.interpolate(logits, size=input_size, mode="bilinear", align_corners=False)
+
+
+class _BasicBlock(nn.Module):
+    """Standard ResNet BasicBlock (2x conv3x3 + residual) -- DDRNet's trunk/branch
+    building block."""
+
+    def __init__(self, in_channels: int, out_channels: int, stride: int = 1) -> None:
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, stride, 1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, 1, 1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.act = nn.ReLU(inplace=True)
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut: nn.Module = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 1, stride, bias=False), nn.BatchNorm2d(out_channels)
+            )
+        else:
+            self.shortcut = nn.Identity()
+
+    def forward(self, x: Tensor) -> Tensor:
+        out = self.act(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        return self.act(out + self.shortcut(x))  # type: ignore[no-any-return]
+
+
+class _Bottleneck(nn.Module):
+    """ResNet Bottleneck (1x1 reduce -> 3x3 -> 1x1 expand x2), used for DDRNet's final
+    stage on both branches."""
+
+    def __init__(self, in_channels: int, mid_channels: int, stride: int = 1) -> None:
+        super().__init__()
+        out_channels = mid_channels * 2
+        self.conv1 = nn.Conv2d(in_channels, mid_channels, 1, bias=False)
+        self.bn1 = nn.BatchNorm2d(mid_channels)
+        self.conv2 = nn.Conv2d(mid_channels, mid_channels, 3, stride, 1, bias=False)
+        self.bn2 = nn.BatchNorm2d(mid_channels)
+        self.conv3 = nn.Conv2d(mid_channels, out_channels, 1, bias=False)
+        self.bn3 = nn.BatchNorm2d(out_channels)
+        self.act = nn.ReLU(inplace=True)
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut: nn.Module = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 1, stride, bias=False), nn.BatchNorm2d(out_channels)
+            )
+        else:
+            self.shortcut = nn.Identity()
+
+    def forward(self, x: Tensor) -> Tensor:
+        out = self.act(self.bn1(self.conv1(x)))
+        out = self.act(self.bn2(self.conv2(out)))
+        out = self.bn3(self.conv3(out))
+        return self.act(out + self.shortcut(x))  # type: ignore[no-any-return]
+
+
+class _DAPPM(nn.Module):
+    """Deep Aggregation Pyramid Pooling Module: like a PSPNet-style pyramid pooling
+    module, but each pooled scale is fused (added, after upsampling) into the *next*
+    finer scale before its own 3x3 conv, cascading global context down to the finest
+    branch instead of pooling every branch independently in parallel."""
+
+    def __init__(self, in_channels: int, branch_channels: int, out_channels: int) -> None:
+        super().__init__()
+        self.scale0 = nn.Sequential(nn.Conv2d(in_channels, branch_channels, 1, bias=False), nn.BatchNorm2d(branch_channels))
+        pool_specs = [(5, 2, 2), (9, 4, 4), (17, 8, 8)]  # (kernel, stride, padding)
+        self.pools = nn.ModuleList(
+            [nn.AvgPool2d(k, s, p) for k, s, p in pool_specs] + [nn.AdaptiveAvgPool2d(1)]
+        )
+        self.pool_projects = nn.ModuleList(
+            [
+                nn.Sequential(nn.Conv2d(in_channels, branch_channels, 1, bias=False), nn.BatchNorm2d(branch_channels))
+                for _ in range(4)
+            ]
+        )
+        self.process = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.ReLU(inplace=True),
+                    nn.Conv2d(branch_channels, branch_channels, 3, padding=1, bias=False),
+                    nn.BatchNorm2d(branch_channels),
+                )
+                for _ in range(4)
+            ]
+        )
+        self.compression = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Conv2d(branch_channels * 5, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+        )
+        self.shortcut = nn.Sequential(nn.Conv2d(in_channels, out_channels, 1, bias=False), nn.BatchNorm2d(out_channels))
+
+    def forward(self, x: Tensor) -> Tensor:
+        size = x.shape[-2:]
+        branches = [self.scale0(x)]
+        prev = branches[0]
+        for pool, project, process in zip(self.pools, self.pool_projects, self.process, strict=True):
+            pooled = F.interpolate(project(pool(x)), size=size, mode="bilinear", align_corners=False)
+            prev = process(pooled + prev)
+            branches.append(prev)
+        out: Tensor = self.compression(torch.cat(branches, dim=1))
+        return out + self.shortcut(x)  # type: ignore[no-any-return]
+
+
+class DDRNetSlim(nn.Module):
+    """DDRNet-23-slim (Hong et al. 2021, "Deep Dual-Resolution Networks for Real-time
+    and Accurate Semantic Segmentation of Road Scenes"): a shared ResNet-style stem/
+    trunk splits into a low-resolution branch (keeps downsampling for global context)
+    and a high-resolution branch (stays at 1/8 input resolution throughout), with two
+    bilateral fusion points between them, a DAPPM head on the low-res branch's output,
+    and a final add + segmentation head. "-slim" channel widths (32 base / 64 high-res
+    branch), matching the paper's lightweight variant."""
+
+    def __init__(self, num_classes: int = 19) -> None:
+        super().__init__()
+        self.stem = nn.Sequential(
+            _conv_bn_act(3, 32, 3, 2), _conv_bn_act(32, 32, 3, 2)
+        )
+        self.layer1 = nn.Sequential(_BasicBlock(32, 32), _BasicBlock(32, 32))
+        self.layer2 = nn.Sequential(_BasicBlock(32, 64, stride=2), _BasicBlock(64, 64))
+
+        self.layer3_low = nn.Sequential(_BasicBlock(64, 128, stride=2), _BasicBlock(128, 128))
+        self.layer4_low = nn.Sequential(_BasicBlock(128, 256, stride=2), _BasicBlock(256, 256))
+        self.layer5_low = _Bottleneck(256, 256, stride=2)  # -> 512 channels
+
+        self.layer3_high = nn.Sequential(_BasicBlock(64, 64), _BasicBlock(64, 64))
+        self.layer4_high = nn.Sequential(_BasicBlock(64, 64), _BasicBlock(64, 64))
+        self.layer5_high = _Bottleneck(64, 64, stride=1)  # -> 128 channels
+
+        # Bilateral fusion 1 (after layer3_*): low(128,1/16) <-> high(64,1/8)
+        self.compress1 = nn.Sequential(nn.Conv2d(128, 64, 1, bias=False), nn.BatchNorm2d(64))
+        self.down1 = nn.Sequential(nn.Conv2d(64, 128, 3, 2, 1, bias=False), nn.BatchNorm2d(128))
+        # Bilateral fusion 2 (after layer4_*): low(256,1/32) <-> high(64,1/8) -- high is
+        # 4x coarser-resolution than low here (1/8 vs 1/32), so down2 needs two stride-2
+        # steps, not one (unlike down1, where high/low were only 2x apart).
+        self.compress2 = nn.Sequential(nn.Conv2d(256, 64, 1, bias=False), nn.BatchNorm2d(64))
+        self.down2 = nn.Sequential(
+            nn.Conv2d(64, 64, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 256, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(256),
+        )
+
+        self.dappm = _DAPPM(512, 96, 128)
+        self.act = nn.ReLU(inplace=True)
+        self.head = nn.Sequential(_conv_bn_act(128, 128, 3, 1), nn.Conv2d(128, num_classes, 1))
+
+    def forward(self, image: Tensor) -> Tensor:
+        input_size = image.shape[-2:]
+        trunk = self.layer2(self.layer1(self.stem(image)))  # 1/8, 64ch
+
+        low = self.layer3_low(trunk)  # 1/16, 128ch
+        high = self.layer3_high(trunk)  # 1/8, 64ch
+        low, high = (
+            self.act(low + self.down1(high)),
+            self.act(high + F.interpolate(self.compress1(low), size=high.shape[-2:], mode="bilinear", align_corners=False)),
+        )
+
+        low = self.layer4_low(low)  # 1/32, 256ch
+        high = self.layer4_high(high)  # 1/8, 64ch
+        low, high = (
+            self.act(low + self.down2(high)),
+            self.act(high + F.interpolate(self.compress2(low), size=high.shape[-2:], mode="bilinear", align_corners=False)),
+        )
+
+        low = self.layer5_low(low)  # 1/64, 512ch
+        high = self.layer5_high(high)  # 1/8, 128ch
+
+        low_context = self.dappm(low)
+        low_context_up = F.interpolate(low_context, size=high.shape[-2:], mode="bilinear", align_corners=False)
+        fused = high + low_context_up
+        logits = self.head(fused)
+        return F.interpolate(logits, size=input_size, mode="bilinear", align_corners=False)
