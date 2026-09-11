@@ -8,17 +8,17 @@ sandwich rule, no distillation).
 
 `mobilenetv3_deeplabv3` needs no custom architecture code (torchvision ships it, with
 an ImageNet-pretrained backbone -- see its wrapper's docstring for why that asymmetry
-is deliberate and disclosed). `fast_scnn`, `bisenetv2` and `ddrnet23_slim` are
-from-scratch implementations in `baseline_architectures.py` (random-init, matching the
-supernet's own from-scratch training condition). RESEARCH_PLAN.md §7 asks for "PIDNet-S
-**or** DDRNet-23-slim" -- `ddrnet23_slim` satisfies that; `pidnet_s` stays unimplemented
-(kept as a name in case the researcher wants that specific one instead later, not
-because both are required). `hard` and `ucpnet` are explicitly conditional in the plan
-("if code/checkpoint reproducible" / "if released in time") -- a web check on
-2026-09-11 found no public code/checkpoint release for either, so they stay
-`NotImplementedError` rather than a guessed reconstruction of an unpublished
-architecture (which would risk misrepresenting someone else's paper). `segformer_b0`
-has no implementation yet. Every unimplemented name raises `NotImplementedError`
+is deliberate and disclosed). `fast_scnn`, `bisenetv2`, `ddrnet23_slim` and
+`segformer_b0` are from-scratch implementations in `baseline_architectures.py`
+(random-init, matching the supernet's own from-scratch training condition).
+RESEARCH_PLAN.md §7 asks for "PIDNet-S **or** DDRNet-23-slim" -- `ddrnet23_slim`
+satisfies that; `pidnet_s` stays unimplemented (kept as a name in case the researcher
+wants that specific one instead later, not because both are required). `hard` and
+`ucpnet` are explicitly conditional in the plan ("if code/checkpoint reproducible" /
+"if released in time") -- a web check on 2026-09-11 found no public code/checkpoint
+release for either, so they stay `NotImplementedError` rather than a guessed
+reconstruction of an unpublished architecture (which would risk misrepresenting
+someone else's paper). Every unimplemented name raises `NotImplementedError`
 explicitly rather than being silently missing from `BASELINE_NAMES`, so a caller
 iterating that list finds out immediately which ones still need work (or, for
 hard/ucpnet, why they're intentionally skipped).
@@ -29,7 +29,12 @@ from __future__ import annotations
 from torch import Tensor, nn
 from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large
 
-from imavis_edge_seg.models.baseline_architectures import BiSeNetV2, DDRNetSlim, FastSCNN
+from imavis_edge_seg.models.baseline_architectures import (
+    BiSeNetV2,
+    DDRNetSlim,
+    FastSCNN,
+    SegformerB0,
+)
 
 BASELINE_NAMES = (
     "mobilenetv3_deeplabv3",
@@ -78,6 +83,8 @@ def build_baseline_model(name: str, num_classes: int = 19) -> nn.Module:
         return BiSeNetV2(num_classes)
     if name == "ddrnet23_slim":
         return DDRNetSlim(num_classes)
+    if name == "segformer_b0":
+        return SegformerB0(num_classes)
     if name in BASELINE_NAMES:
         raise NotImplementedError(
             f"baseline {name!r} is a required baseline (RESEARCH_PLAN.md §7) but has no "

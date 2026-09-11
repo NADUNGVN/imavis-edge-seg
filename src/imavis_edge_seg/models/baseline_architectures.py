@@ -442,3 +442,171 @@ class DDRNetSlim(nn.Module):
         fused = high + low_context_up
         logits = self.head(fused)
         return F.interpolate(logits, size=input_size, mode="bilinear", align_corners=False)
+
+
+class _OverlapPatchEmbed(nn.Module):
+    """SegFormer's patch embedding: an overlapping-stride conv (not a non-overlapping
+    ViT-style patch split) so adjacent patches share context, then flatten to a token
+    sequence + LayerNorm."""
+
+    def __init__(self, in_channels: int, embed_dim: int, patch_size: int, stride: int) -> None:
+        super().__init__()
+        self.proj = nn.Conv2d(in_channels, embed_dim, patch_size, stride, patch_size // 2)
+        self.norm = nn.LayerNorm(embed_dim)
+
+    def forward(self, x: Tensor) -> tuple[Tensor, int, int]:
+        x = self.proj(x)
+        height, width = x.shape[-2:]
+        tokens = x.flatten(2).transpose(1, 2)  # (B, N, C)
+        return self.norm(tokens), height, width
+
+
+class _EfficientSelfAttention(nn.Module):
+    """Multi-head self-attention with a spatial-reduction ratio `sr_ratio` applied to
+    the key/value sequence (a strided conv that shrinks K/V length before attention) --
+    SegFormer's way of keeping attention tractable over high-resolution feature maps."""
+
+    def __init__(self, dim: int, num_heads: int, sr_ratio: int) -> None:
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+        self.scale = self.head_dim**-0.5
+        self.q = nn.Linear(dim, dim)
+        self.kv = nn.Linear(dim, dim * 2)
+        self.proj = nn.Linear(dim, dim)
+        self.sr_ratio = sr_ratio
+        if sr_ratio > 1:
+            self.sr = nn.Conv2d(dim, dim, sr_ratio, sr_ratio)
+            self.sr_norm = nn.LayerNorm(dim)
+
+    def forward(self, x: Tensor, height: int, width: int) -> Tensor:
+        batch, n_tokens, dim = x.shape
+        q = self.q(x).reshape(batch, n_tokens, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+
+        if self.sr_ratio > 1:
+            x_kv = x.transpose(1, 2).reshape(batch, dim, height, width)
+            x_kv = self.sr(x_kv).reshape(batch, dim, -1).transpose(1, 2)
+            x_kv = self.sr_norm(x_kv)
+        else:
+            x_kv = x
+        kv = self.kv(x_kv).reshape(batch, -1, 2, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+        k, v = kv[0], kv[1]
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        out = (attn @ v).transpose(1, 2).reshape(batch, n_tokens, dim)
+        return self.proj(out)  # type: ignore[no-any-return]
+
+
+class _MixFFN(nn.Module):
+    """SegFormer's FFN: Linear -> depthwise 3x3 conv (replaces positional encoding by
+    leaking local position info through zero-padding) -> GELU -> Linear."""
+
+    def __init__(self, dim: int, hidden_dim: int) -> None:
+        super().__init__()
+        self.fc1 = nn.Linear(dim, hidden_dim)
+        self.dwconv = nn.Conv2d(hidden_dim, hidden_dim, 3, 1, 1, groups=hidden_dim)
+        self.act = nn.GELU()
+        self.fc2 = nn.Linear(hidden_dim, dim)
+
+    def forward(self, x: Tensor, height: int, width: int) -> Tensor:
+        batch = x.shape[0]
+        x = self.fc1(x)
+        hidden_dim = x.shape[-1]
+        x = x.transpose(1, 2).reshape(batch, hidden_dim, height, width)
+        x = self.dwconv(x)
+        x = x.flatten(2).transpose(1, 2)
+        x = self.act(x)
+        return self.fc2(x)  # type: ignore[no-any-return]
+
+
+class _MiTBlock(nn.Module):
+    """One Mix Transformer block: pre-norm attention + pre-norm Mix-FFN, both
+    residual."""
+
+    def __init__(self, dim: int, num_heads: int, sr_ratio: int, mlp_ratio: int = 4) -> None:
+        super().__init__()
+        self.norm1 = nn.LayerNorm(dim)
+        self.attn = _EfficientSelfAttention(dim, num_heads, sr_ratio)
+        self.norm2 = nn.LayerNorm(dim)
+        self.mlp = _MixFFN(dim, dim * mlp_ratio)
+
+    def forward(self, x: Tensor, height: int, width: int) -> Tensor:
+        x = x + self.attn(self.norm1(x), height, width)
+        x = x + self.mlp(self.norm2(x), height, width)
+        return x
+
+
+class _MiTStage(nn.Module):
+    def __init__(
+        self, in_channels: int, embed_dim: int, patch_size: int, stride: int, depth: int, num_heads: int, sr_ratio: int
+    ) -> None:
+        super().__init__()
+        self.patch_embed = _OverlapPatchEmbed(in_channels, embed_dim, patch_size, stride)
+        self.blocks = nn.ModuleList([_MiTBlock(embed_dim, num_heads, sr_ratio) for _ in range(depth)])
+        self.norm = nn.LayerNorm(embed_dim)
+
+    def forward(self, x: Tensor) -> Tensor:
+        tokens, height, width = self.patch_embed(x)
+        for block in self.blocks:
+            tokens = block(tokens, height, width)
+        tokens = self.norm(tokens)
+        return tokens.transpose(1, 2).reshape(tokens.shape[0], -1, height, width)  # type: ignore[no-any-return]
+
+
+class SegformerB0(nn.Module):
+    """SegFormer-B0 (Xie et al. 2021, "SegFormer: Simple and Efficient Design for
+    Semantic Segmentation with Transformers"): a 4-stage Mix Vision Transformer (MiT)
+    encoder -- overlap patch embedding + efficient self-attention with spatial
+    reduction + Mix-FFN, no positional encoding -- feeding a lightweight all-MLP
+    decoder (project each stage to a common width, upsample, concat, fuse, classify).
+    Channel/head/depth config matches the paper's B0 (the smallest variant)."""
+
+    _STAGES = (
+        # (embed_dim, patch_size, stride, depth, num_heads, sr_ratio)
+        (32, 7, 4, 2, 1, 8),
+        (64, 3, 2, 2, 2, 4),
+        (160, 3, 2, 2, 5, 2),
+        (256, 3, 2, 2, 8, 1),
+    )
+    _DECODER_DIM = 256
+
+    def __init__(self, num_classes: int = 19) -> None:
+        super().__init__()
+        in_channels = 3
+        stages = []
+        for embed_dim, patch_size, stride, depth, num_heads, sr_ratio in self._STAGES:
+            stages.append(_MiTStage(in_channels, embed_dim, patch_size, stride, depth, num_heads, sr_ratio))
+            in_channels = embed_dim
+        self.stages = nn.ModuleList(stages)
+
+        self.linear_projects = nn.ModuleList(
+            [nn.Linear(embed_dim, self._DECODER_DIM) for embed_dim, *_ in self._STAGES]
+        )
+        self.fuse = nn.Sequential(
+            nn.Conv2d(self._DECODER_DIM * len(self._STAGES), self._DECODER_DIM, 1, bias=False),
+            nn.BatchNorm2d(self._DECODER_DIM),
+            nn.ReLU(inplace=True),
+        )
+        self.classifier = nn.Conv2d(self._DECODER_DIM, num_classes, 1)
+
+    def forward(self, image: Tensor) -> Tensor:
+        input_size = image.shape[-2:]
+        features = []
+        x = image
+        for stage in self.stages:
+            x = stage(x)
+            features.append(x)
+
+        target_size = features[0].shape[-2:]
+        projected = []
+        for feat, project in zip(features, self.linear_projects, strict=True):
+            batch, _channels, height, width = feat.shape
+            tokens = feat.flatten(2).transpose(1, 2)
+            tokens = project(tokens)
+            feat_proj = tokens.transpose(1, 2).reshape(batch, self._DECODER_DIM, height, width)
+            projected.append(F.interpolate(feat_proj, size=target_size, mode="bilinear", align_corners=False))
+
+        fused = self.fuse(torch.cat(projected, dim=1))
+        logits = self.classifier(fused)
+        return F.interpolate(logits, size=input_size, mode="bilinear", align_corners=False)
