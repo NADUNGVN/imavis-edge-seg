@@ -1,5 +1,24 @@
 # First full (100k-step) supernet training run — 2026-09-10/11
 
+## Seed 1 (`pace_seg_v1_seed1`) — added 2026-09-11
+
+Same config/architecture/step budget, `seed=1` (`RESEARCH_PLAN.md` §9 rule 8: 3 seeds
+required for headline numbers -- 2/3 now done). All 20 cells within **~0.01-0.03 mIoU**
+of seed 0 (largest single delta: `large/acdc/fog` -0.013), no crossovers in the
+monotonic tiny<small<medium<large ordering, and **`acdc/fog` > clean Cityscapes holds
+at every level in seed 1 too** -- the same pattern, not a seed-0-specific fluke,
+reinforcing the per-class explanation below rather than calling it into question.
+Good early sign of training stability/reproducibility. Full precision in
+`reports/eval_pace_seg_v1_seed1_step100000.json`.
+
+| level | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow |
+|---|---:|---:|---:|---:|---:|
+| tiny | 0.3046 | 0.3173 | 0.1966 | 0.3131 | 0.2697 |
+| small | 0.3603 | 0.3790 | 0.2523 | 0.3607 | 0.3325 |
+| medium | 0.4165 | 0.4298 | 0.2848 | 0.4035 | 0.4038 |
+| large | 0.4700 | 0.4789 | 0.3268 | 0.4553 | 0.4568 |
+
+
 First real training budget end to end: `experiment_id=pace_seg_v1`,
 `run_id=SERVER-02_train_20260910T093228Z`, 100,000 steps,
 `configs/experiment/default.yaml` as-is (rescaled ~1.02M-param architecture at
@@ -63,5 +82,5 @@ Full precision in `reports/eval_pace_seg_v1_step100000.json`.
   (likely the single highest-leverage next change) and possibly of overfitting bias in
   the numbers above -- not yet measured either way (no separate train-loss-vs-val-mIoU
   divergence check has been done).
-- Only 1 training seed so far; RESEARCH_PLAN.md §9 rule 8 requires 3 seeds for headline
-  numbers.
+- 2/3 training seeds done (RESEARCH_PLAN.md §9 rule 8 requires 3 for headline numbers);
+  seed 1 landed within ~0.01-0.03 mIoU of seed 0 everywhere -- see above.
