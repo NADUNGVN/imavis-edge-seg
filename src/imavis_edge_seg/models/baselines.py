@@ -35,7 +35,18 @@ class _DeepLabV3MobileNetV3(nn.Module):
     """Thin wrapper: torchvision's `DeepLabV3` returns a dict (`{"out": ..., "aux":
     ...}`, aux only when `aux_loss=True`) already upsampled to the input's (H, W) --
     unwrap to a plain logits tensor so this matches every other model in this
-    project's forward signature."""
+    project's forward signature.
+
+    Deliberate asymmetry, decided 2026-09-11: `weights=None` (segmentation head is
+    random-init) but `weights_backbone` is left at torchvision's own default
+    (ImageNet-pretrained MobileNetV3-Large) -- PACE-Seg's own supernet has no
+    equivalent public pretrained checkpoint (bespoke architecture) and trains fully
+    from scratch, so this baseline gets a real initialization advantage the proposed
+    method does not. This is standard practice for how such baselines are normally
+    deployed/reported, not an oversight -- but it must be disclosed as a methods-
+    section caveat, and it makes the RESEARCH_PLAN.md §11 "subnet gap <=2 mIoU" go/no-go
+    bar *harder* to clear (a pretrained baseline is a stronger opponent), not easier.
+    """
 
     def __init__(self, num_classes: int) -> None:
         super().__init__()
