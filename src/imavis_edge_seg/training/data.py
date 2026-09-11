@@ -46,6 +46,13 @@ def build_train_dataset(config: ExperimentConfig) -> Dataset[_Sample]:
 
 def build_train_dataloader(config: ExperimentConfig) -> DataLoader[_Sample]:
     dataset = build_train_dataset(config)
+    # `training.trainer`/`training.baseline_trainer` both loop training "forever" by
+    # re-iterating this same DataLoader (`for _ in itertools.count(): yield from
+    # loader`) rather than re-creating it -- without persistent_workers, every epoch
+    # boundary (here, every ~len(dataset)/batch_size steps -- a few hundred, given a
+    # ~4.5k-image dataset) tears down and respawns all worker processes, starving the
+    # GPU for a moment each time. Observed live as uneven MBW/GPU-util in nvitop during
+    # a baseline run. persistent_workers requires num_workers > 0.
     return DataLoader(
         dataset,
         batch_size=config.training.batch_size,
@@ -53,4 +60,5 @@ def build_train_dataloader(config: ExperimentConfig) -> DataLoader[_Sample]:
         num_workers=config.training.num_workers,
         drop_last=True,
         pin_memory=torch.cuda.is_available(),
+        persistent_workers=config.training.num_workers > 0,
     )
