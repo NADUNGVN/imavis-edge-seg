@@ -19,7 +19,25 @@ def test_build_baseline_model_mobilenetv3_deeplabv3_output_shape() -> None:
     assert logits.shape == (2, 19, *_TEST_HW)
 
 
-@pytest.mark.parametrize("name", [n for n in BASELINE_NAMES if n != "mobilenetv3_deeplabv3"])
+@pytest.mark.parametrize("name", ["fast_scnn", "bisenetv2"])
+def test_build_baseline_model_from_scratch_archs_output_shape_and_gradient_flow(name: str) -> None:
+    model = build_baseline_model(name, num_classes=19)
+    image = torch.randn(2, 3, *_TEST_HW, requires_grad=True)
+    logits = model(image)
+    assert logits.shape == (2, 19, *_TEST_HW)
+    logits.sum().backward()
+    assert image.grad is not None and torch.isfinite(image.grad).all()
+    assert all(
+        param.grad is not None and torch.isfinite(param.grad).all()
+        for param in model.parameters()
+        if param.requires_grad
+    ), "every parameter should receive a finite gradient -- no dead/detached path"
+
+
+_IMPLEMENTED = {"mobilenetv3_deeplabv3", "fast_scnn", "bisenetv2"}
+
+
+@pytest.mark.parametrize("name", [n for n in BASELINE_NAMES if n not in _IMPLEMENTED])
 def test_build_baseline_model_unimplemented_raises_not_config_error(name: str) -> None:
     # These are required baselines (RESEARCH_PLAN.md §7) not yet implemented -- the
     # factory must say so explicitly, not raise a generic/misleading error or silently
