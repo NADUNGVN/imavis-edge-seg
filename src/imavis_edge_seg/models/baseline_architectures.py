@@ -1,14 +1,15 @@
 """From-scratch implementations of required baselines (`docs/RESEARCH_PLAN.md` §7) that
-have no off-the-shelf checkpoint in this project's dependencies. Plain `nn.Conv2d`/
-`nn.BatchNorm2d` throughout -- no elasticity, no slimmable machinery (that's specific to
-`models/blocks.py`'s supernet); each of these is one fixed static architecture, trained
-and evaluated exactly like the supernet's "large" level but never resized at inference.
+have no off-the-shelf checkpoint in this project's dependencies: `FastSCNN`,
+`BiSeNetV2`, `DDRNetSlim`, `SegformerB0`. No elasticity, no slimmable machinery (that's
+specific to `models/blocks.py`'s supernet); each of these is one fixed static
+architecture, trained and evaluated exactly like the supernet's "large" level but never
+resized at inference.
 
-Random-init (no pretrained backbone) for both -- the point of comparison against
+Random-init (no pretrained backbone) for all four -- the point of comparison against
 `mobilenetv3_deeplabv3` (which does use an ImageNet-pretrained backbone, see
-`baselines.py`'s docstring) is to also have at least one required baseline trained under
-the exact same from-scratch condition as the supernet, so the "gap <=2 mIoU"
-(RESEARCH_PLAN.md §11) comparison isn't confounded by initialization for every baseline.
+`baselines.py`'s docstring) is to also have required baselines trained under the exact
+same from-scratch condition as the supernet, so the "gap <=2 mIoU" (RESEARCH_PLAN.md
+§11) comparison isn't confounded by initialization for every baseline.
 """
 
 from __future__ import annotations
