@@ -1,7 +1,9 @@
+import io
 import random
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 
 torch = pytest.importorskip("torch")
 
@@ -191,3 +193,76 @@ def test_run_training_end_to_end_updates_weights_and_checkpoints(tmp_path: Path)
 
     checkpoints = list((tmp_path / "checkpoints").glob("*.pt"))
     assert len(checkpoints) >= 1
+
+
+# ---- resume from checkpoint ---------------------------------------------------------
+
+
+def test_run_training_resumes_from_existing_checkpoint(tmp_path: Path) -> None:
+    from torch.optim import AdamW
+
+    config = _tiny_config(max_steps=4, checkpoint_interval_steps=2)
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    # Simulate a run that already reached step 2 (e.g. before an accidental kill):
+    # a real step_00000002.pt checkpoint, same config, pre-existing in output_dir.
+    supernet = PaceSegSupernet(config.supernet)
+    optimizer = AdamW(supernet.parameters(), lr=config.training.lr)
+    save_checkpoint(tmp_path / "checkpoints" / "step_00000002.pt", supernet, optimizer, step=2, config=config)
+
+    buffer = io.StringIO()
+    console = Console(file=buffer, width=200)
+    run_training(config, dataloader, output_dir=tmp_path, console=console, device="cpu")
+
+    log = buffer.getvalue()
+    assert "resumed from" in log and "step 2" in log
+
+    checkpoints = sorted((tmp_path / "checkpoints").glob("*.pt"))
+    assert [c.name for c in checkpoints] == ["step_00000002.pt", "step_00000004.pt"]
+    assert load_checkpoint(checkpoints[-1])["step"] == 4
+
+
+def test_run_training_resume_already_at_max_steps_does_nothing(tmp_path: Path) -> None:
+    from torch.optim import AdamW
+
+    config = _tiny_config(max_steps=2, checkpoint_interval_steps=2)
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    supernet = PaceSegSupernet(config.supernet)
+    optimizer = AdamW(supernet.parameters(), lr=config.training.lr)
+    save_checkpoint(tmp_path / "checkpoints" / "step_00000002.pt", supernet, optimizer, step=2, config=config)
+    saved_state = {k: v.clone() for k, v in supernet.state_dict().items()}
+
+    buffer = io.StringIO()
+    console = Console(file=buffer, width=200)
+    returned = run_training(config, dataloader, output_dir=tmp_path, console=console, device="cpu")
+
+    assert "nothing to do" in buffer.getvalue()
+    assert all(torch.equal(saved_state[k], v) for k, v in returned.state_dict().items())
+    # No new checkpoint written -- still exactly the one that was already there.
+    checkpoints = list((tmp_path / "checkpoints").glob("*.pt"))
+    assert len(checkpoints) == 1
+
+
+def test_run_training_ignores_checkpoint_with_mismatched_config_hash(tmp_path: Path) -> None:
+    from torch.optim import AdamW
+
+    config_a = _tiny_config(max_steps=2, checkpoint_interval_steps=2)
+    config_b = _tiny_config(max_steps=2, checkpoint_interval_steps=2)
+    config_b.seed = 1  # top-level field -- different config_hash than config_a
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    supernet = PaceSegSupernet(config_a.supernet)
+    optimizer = AdamW(supernet.parameters(), lr=config_a.training.lr)
+    save_checkpoint(tmp_path / "checkpoints" / "step_00000002.pt", supernet, optimizer, step=2, config=config_a)
+
+    buffer = io.StringIO()
+    console = Console(file=buffer, width=200)
+    run_training(config_b, dataloader, output_dir=tmp_path, console=console, device="cpu")
+
+    assert "ignoring it" in buffer.getvalue()
+    # Started from scratch and ran the full budget again -- a second, later checkpoint
+    # is written on top of the mismatched one, not silently skipped.
+    checkpoints = sorted((tmp_path / "checkpoints").glob("*.pt"))
+    assert len(checkpoints) >= 1
+    assert load_checkpoint(checkpoints[-1])["config_hash"] == config_b.config_hash()

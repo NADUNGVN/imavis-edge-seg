@@ -51,3 +51,15 @@ def save_checkpoint(
 def load_checkpoint(path: Path, map_location: str = "cpu") -> dict[str, Any]:
     checkpoint: dict[str, Any] = torch.load(path, map_location=map_location, weights_only=False)
     return checkpoint
+
+
+def find_latest_checkpoint(checkpoint_dir: Path) -> Path | None:
+    """Highest-step `step_*.pt` under `checkpoint_dir`, or `None` if the directory
+    doesn't exist or has none. Used to resume an interrupted run -- an accidental
+    `kill` or a shared-server contention crash otherwise loses all progress since the
+    *previous* run's completion, not just since the last checkpoint write
+    (`training.trainer`/`training.baseline_trainer` always started from scratch)."""
+    if not checkpoint_dir.is_dir():
+        return None
+    checkpoints = sorted(checkpoint_dir.glob("step_*.pt"))
+    return checkpoints[-1] if checkpoints else None

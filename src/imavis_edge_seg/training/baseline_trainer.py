@@ -21,7 +21,11 @@ from torch.utils.data import DataLoader
 
 from imavis_edge_seg.config import ExperimentConfig
 from imavis_edge_seg.models.baselines import build_baseline_model
-from imavis_edge_seg.training.checkpoint import save_checkpoint
+from imavis_edge_seg.training.checkpoint import (
+    find_latest_checkpoint,
+    load_checkpoint,
+    save_checkpoint,
+)
 from imavis_edge_seg.training.losses import boundary_aware_segmentation_loss
 from imavis_edge_seg.training.schedule import lr_lambda
 
@@ -48,10 +52,37 @@ def run_baseline_training(
     optimizer = AdamW(model.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: lr_lambda(step, config))
 
+    # Resume if a checkpoint already exists for this experiment_id -- see
+    # training.trainer.run_training's identical block for why.
+    start_step = 0
+    latest = find_latest_checkpoint(output_dir / "checkpoints")
+    if latest is not None:
+        checkpoint = load_checkpoint(latest, map_location=device)
+        if checkpoint["config_hash"] != config.config_hash():
+            console.print(
+                f"[yellow]found {latest} but its config_hash {checkpoint['config_hash']!r} != "
+                f"current config's {config.config_hash()!r} -- ignoring it and starting from "
+                "scratch (architecture/hyperparameters changed since that checkpoint)[/yellow]"
+            )
+        else:
+            model.load_state_dict(checkpoint["model_state_dict"])
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            start_step = checkpoint["step"]
+            for _ in range(start_step):
+                scheduler.step()
+            console.print(f"resumed from {latest} at step {start_step}")
+
+    if start_step >= config.training.max_steps:
+        console.print(
+            f"checkpoint already at step {start_step} >= max_steps "
+            f"{config.training.max_steps} -- nothing to do"
+        )
+        return model
+
     batches = _infinite_batches(dataloader)
     running_loss = 0.0
 
-    for step in range(1, config.training.max_steps + 1):
+    for step in range(start_step + 1, config.training.max_steps + 1):
         image, mask = next(batches)
         image = image.to(device)
         mask = mask.to(device)

@@ -1,13 +1,15 @@
+import io
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 
 torch = pytest.importorskip("torch")
 
 from imavis_edge_seg.config import ExperimentConfig  # noqa: E402
 from imavis_edge_seg.models.baselines import BASELINE_NAMES, build_baseline_model  # noqa: E402
 from imavis_edge_seg.training.baseline_trainer import run_baseline_training  # noqa: E402
-from imavis_edge_seg.training.checkpoint import load_checkpoint  # noqa: E402
+from imavis_edge_seg.training.checkpoint import load_checkpoint, save_checkpoint  # noqa: E402
 
 _TEST_HW = (64, 64)
 
@@ -98,3 +100,26 @@ def test_run_baseline_training_end_to_end_updates_weights_and_checkpoints(tmp_pa
 
     checkpoint = load_checkpoint(checkpoints[0])
     assert set(checkpoint["model_state_dict"].keys()) == set(trained.state_dict().keys())
+
+
+def test_run_baseline_training_resumes_from_existing_checkpoint(tmp_path: Path) -> None:
+    from torch.optim import AdamW
+
+    config = _tiny_config(max_steps=4, checkpoint_interval_steps=2)
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    model = build_baseline_model("mobilenetv3_deeplabv3", num_classes=config.supernet.num_classes)
+    optimizer = AdamW(model.parameters(), lr=config.training.lr)
+    save_checkpoint(tmp_path / "checkpoints" / "step_00000002.pt", model, optimizer, step=2, config=config)
+
+    buffer = io.StringIO()
+    console = Console(file=buffer, width=200)
+    run_baseline_training(
+        "mobilenetv3_deeplabv3", config, dataloader, output_dir=tmp_path, console=console, device="cpu"
+    )
+
+    log = buffer.getvalue()
+    assert "resumed from" in log and "step 2" in log
+    checkpoints = sorted((tmp_path / "checkpoints").glob("*.pt"))
+    assert [c.name for c in checkpoints] == ["step_00000002.pt", "step_00000004.pt"]
+    assert load_checkpoint(checkpoints[-1])["step"] == 4
