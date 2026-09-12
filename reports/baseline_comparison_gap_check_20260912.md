@@ -75,6 +75,35 @@ vs. `fast_scnn_seed0_aug` is the first apples-to-apples (both augmented) test of
 go/no-go criterion. Until then, **no augmented same-budget comparison exists yet** --
 treat the go/no-go question as open again, not resolved either way.
 
+## RESOLVED (first data point) 2026-09-12 -- the real, augmented apples-to-apples test
+
+`pace_seg_v1_seed2` (supernet, `seed=2`, trained *with* augmentation from the start)
+finished and was evaluated against `fast_scnn_seed0_aug` -- both sides now augmented,
+same 100k-step budget, same data:
+
+| dataset | fast_scnn (aug) | supernet-large seed2 (aug) | gap (supernet − fast_scnn) |
+|---|---:|---:|---:|
+| cityscapes | 0.5227 | 0.5354 | +0.0127 |
+| acdc/fog | 0.5730 | 0.5761 | +0.0031 |
+| acdc/night | 0.3813 | 0.3870 | +0.0057 |
+| acdc/rain | 0.5004 | 0.4883 | **−0.0121** |
+| acdc/snow | 0.5055 | 0.5163 | +0.0108 |
+
+Supernet wins 4/5 splits by small margins (0.3-1.3 mIoU points) and loses 1/5 (rain,
+by 1.2 points). This is a **much more modest, and much more plausible, result than the
+superseded no-augmentation comparison** -- close to parity, comfortably inside
+RQ2's hypothesized "within 1.0-1.5 mIoU" band either direction, and nowhere near the
+§11 no-go trigger (>2 mIoU loss). **Go/no-go: passes**, on this first augmented data
+point.
+
+This is one seed per side, not the 3 `RESEARCH_PLAN.md` §9 rule 8 wants for a
+headline claim -- `pace_seg_v1_aug_seed0` and `fast_scnn_seed1_aug` are in progress
+(SERVER-01/03) to start building that. With margins this small (~0.3-1.3 points,
+smaller than the ~1-3 point seed-to-seed noise seen on the no-augmentation runs),
+more seeds are needed before claiming a winner on any individual split with
+confidence -- the *overall* "clears go/no-go" conclusion is robust already, but
+"wins 4/5" specifically should not be over-read from a single seed pair.
+
 ## Caveat before this becomes a manuscript claim
 
 - Only 2/3 supernet seeds and 1/1 fast_scnn seed so far -- `RESEARCH_PLAN.md` §9 rule 8
