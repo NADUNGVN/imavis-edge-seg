@@ -45,6 +45,36 @@ capacity (and mobilenetv3 additionally has pretrained-backbone advantage). These
 useful as *upper-bound reference points* for what more capacity buys, not as go/no-go
 evidence. Only `fast_scnn` is close enough in budget to be the valid test.
 
+## SUPERSEDED 2026-09-12 (later same day) -- augmentation changes the picture
+
+`fast_scnn` was re-trained with the newly-added `SegmentationTrainAugment` (random
+scale+crop, flip, color jitter; `experiment_id=baseline_fast_scnn_seed0_aug`), same
+100k steps, same everything else:
+
+| dataset | fast_scnn (no aug) | fast_scnn (aug) | delta |
+|---|---:|---:|---:|
+| cityscapes | 0.4080 | **0.5227** | **+0.1147** |
+| acdc/fog | 0.4593 | 0.5730 | +0.1137 |
+| acdc/night | 0.2917 | 0.3813 | +0.0896 |
+| acdc/rain | 0.3891 | 0.5004 | +0.1113 |
+| acdc/snow | 0.3915 | 0.5055 | +0.1140 |
+
+Augmentation is worth **~9-11.5 mIoU points** on this model/dataset size -- confirming
+it as the highest-leverage change flagged in
+`reports/first_full_supernet_run_100k_20260910.md`, and considerably larger than the
+supernet's entire margin over fast_scnn above (2.6-6.4 points). **`fast_scnn` with
+augmentation (0.5227 cityscapes) now beats the supernet without augmentation (0.4706)**
+-- the "supernet wins 5/5" result above no longer holds as a fair comparison, since
+only one side has augmentation now. It was correct and fairly measured *at the time*
+(both sides lacked augmentation identically), but is superseded, not wrong.
+
+**The real comparison now depends on `pace_seg_v1_seed2`** (SERVER-02, `seed=2`),
+launched *after* `TrainingConfig.augment` defaulted to `True` -- it picked up
+augmentation automatically, with no explicit override needed. Once it finishes, seed 2
+vs. `fast_scnn_seed0_aug` is the first apples-to-apples (both augmented) test of the
+go/no-go criterion. Until then, **no augmented same-budget comparison exists yet** --
+treat the go/no-go question as open again, not resolved either way.
+
 ## Caveat before this becomes a manuscript claim
 
 - Only 2/3 supernet seeds and 1/1 fast_scnn seed so far -- `RESEARCH_PLAN.md` §9 rule 8
