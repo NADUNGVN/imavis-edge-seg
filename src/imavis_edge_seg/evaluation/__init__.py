@@ -1,3 +1,4 @@
+from imavis_edge_seg.evaluation.calibration import CalibrationAccumulator, CalibrationResult
 from imavis_edge_seg.evaluation.data import build_acdc_eval_loader, build_cityscapes_eval_loader
 from imavis_edge_seg.evaluation.evaluator import evaluate_level
 from imavis_edge_seg.evaluation.metrics import (
@@ -8,6 +9,8 @@ from imavis_edge_seg.evaluation.metrics import (
 )
 
 __all__ = [
+    "CalibrationAccumulator",
+    "CalibrationResult",
     "ConfusionMatrixAccumulator",
     "EvalResult",
     "build_acdc_eval_loader",
