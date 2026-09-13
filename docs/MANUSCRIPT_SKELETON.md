@@ -139,30 +139,32 @@ not as an optional extra.
 
 **Go/no-go: supernet vs. same-budget independent baseline**
 (`reports/baseline_comparison_gap_check_20260912.md`). The honest result required
-two passes. An initial no-augmentation comparison showed the supernet's `large`
-level beating `fast_scnn` (the one comparable-budget baseline, 1.136M vs. ~1.047M
-params) by 2.6-6.4 mIoU on all 5 splits. That comparison was superseded once
-`fast_scnn` was re-trained with the newly added augmentation and gained 9.0-11.5
-mIoU points — more than the supernet's entire original margin, meaning augmented
-`fast_scnn` alone would beat the unaugmented supernet. The corrected, apples-to-
-apples comparison (both sides augmented, one seed each) is:
+three passes, each correcting the last. An initial no-augmentation comparison showed
+the supernet's `large` level beating `fast_scnn` (the one comparable-budget baseline,
+1.136M vs. ~1.047M params) by 2.6-6.4 mIoU on all 5 splits. That was superseded once
+`fast_scnn` was re-trained with the newly added augmentation and gained 9.0-11.5 mIoU
+points on its own — more than the supernet's entire original margin. A first
+augmented-vs-augmented comparison (one seed each) then showed the supernet winning
+4/5 splits by 0.3-1.3 points; adding a second seed on each side changed that to
+**winning 2/5 and losing 3/5**, with every margin still tiny (0.04-1.2 points) and
+comparable in size to each side's own seed-to-seed spread. Averaged over 2 seeds per
+side:
 
-| dataset | fast_scnn (aug) | supernet-large seed2 (aug) | gap |
+| dataset | fast_scnn-aug (2-seed avg) | supernet-large-aug (2-seed avg) | gap |
 |---|---:|---:|---:|
-| Cityscapes | 0.5227 | 0.5354 | +0.0127 |
-| ACDC/fog | 0.5730 | 0.5761 | +0.0031 |
-| ACDC/night | 0.3813 | 0.3870 | +0.0057 |
-| ACDC/rain | 0.5004 | 0.4883 | −0.0121 |
-| ACDC/snow | 0.5055 | 0.5163 | +0.0108 |
+| Cityscapes | 0.5208 | 0.5311 | +0.0103 |
+| ACDC/fog | 0.5629 | 0.5633 | +0.0004 |
+| ACDC/night | 0.3823 | 0.3799 | −0.0024 |
+| ACDC/rain | 0.5053 | 0.4933 | −0.0120 |
+| ACDC/snow | 0.5073 | 0.5008 | −0.0065 |
 
-The supernet wins 4/5 splits by 0.3-1.3 mIoU points and loses 1/5 (rain) by 1.2
-points — a much smaller, more modest margin than the superseded comparison, sitting
-inside RQ2's hypothesized ±1.0-1.5 mIoU parity band and comfortably clear of the §11
-no-go trigger (>2 mIoU loss). **Go/no-go: passes**, on this first augmented data
-point. This is one seed per side; margins this small are smaller than seed-to-seed
-noise already observed on the unaugmented runs, so "wins 4/5" should not yet be
-over-read from a single seed pair, even though the overall pass/fail conclusion is
-robust.
+This is **near-parity within noise**, comfortably inside RQ2's hypothesized ±1.0-1.5
+mIoU band and clear of the §11 no-go trigger (>2 mIoU loss) either direction — **the
+honest headline claim is that the shared supernet matches independent per-budget
+training at comparable cost, not that it outperforms it.** The single-seed "wins 4/5"
+framing did not replicate and should not be cited; the corrected 2-seed comparison
+above is the current best estimate, refined further once the 3rd seed
+(`RESEARCH_PLAN.md` §9 rule 8) lands.
 
 **Latency (measured, not FLOPs)** — the complete cross-backend table
 (`reports/edge/E1_hailo_benchmark_protocol_20260910.md`,
@@ -189,10 +191,10 @@ exists to test RQ1's "≥15-20% cost reduction vs. FLOPs-aware search" hypothesi
 the Pareto result shows device-dependence, not a quantified win margin
 (`reports/pareto_search_v1_20260912.md`).
 
-**[TODO: pending 3-seed headline numbers, RESEARCH_PLAN.md §9 rule 8]** Only 2/3
-supernet seeds and 1/1 fast_scnn seed exist; a third seed on both sides is in
-progress (`pace_seg_v1_aug_seed0`, `fast_scnn_seed1_aug`) before any number above is
-a citable headline claim.
+**[TODO: pending 3rd seed for headline numbers, RESEARCH_PLAN.md §9 rule 8]** 2/3
+supernet seeds and 2/2 fast_scnn seeds are now augmented; a 3rd seed on both sides
+would tighten the near-parity estimate above, not change its direction, before it is
+a fully citable headline claim.
 
 **[TODO: pending remaining baselines]** `segformer_b0` is trained/evaluated
 (README.md Phase 8) but not yet in this comparison table; `pidnet_s` is skipped
@@ -245,8 +247,8 @@ unresolved and must be settled before the device lineup is described definitivel
 ## Conclusion
 
 **[TODO: pending nearly everything above]** A conclusion cannot honestly be written
-yet: it needs go/no-go outcomes across all four RQs, and today only RQ2 has a first
-(single-seed, one-baseline) positive signal, RQ1 only a qualitative illustration,
-and RQ3/RQ4 have no router or systematic compiler-space comparison respectively.
-Draft this section last, after Phases 6, 7 and 9 (QAT, router, ablations) land and
-3-seed headline numbers are in.
+yet: it needs go/no-go outcomes across all four RQs, and today only RQ2 has a
+2-seed, one-baseline signal (near-parity with independent training, not a win —
+see Experiments), RQ1 only a qualitative illustration, and RQ3/RQ4 have no router or
+systematic compiler-space comparison respectively. Draft this section last, after
+Phases 6, 7 and 9 (QAT, router, ablations) land and 3-seed headline numbers are in.

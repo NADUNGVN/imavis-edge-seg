@@ -104,17 +104,40 @@ more seeds are needed before claiming a winner on any individual split with
 confidence -- the *overall* "clears go/no-go" conclusion is robust already, but
 "wins 4/5" specifically should not be over-read from a single seed pair.
 
+## UPDATED 2026-09-13 -- 2 seeds per side: near-parity, not a supernet win
+
+`pace_seg_v1_aug_seed0` finished, giving 2 augmented supernet seeds (seed0, seed2);
+`fast_scnn_seed1_aug` also finished, giving 2 augmented fast_scnn seeds (seed0,
+seed1). Averaging each side over its 2 seeds:
+
+| dataset | fast_scnn-aug (2-seed avg) | supernet-large-aug (2-seed avg) | gap |
+|---|---:|---:|---:|
+| cityscapes | 0.5208 | 0.5311 | +0.0103 |
+| acdc/fog | 0.5629 | 0.5633 | +0.0004 |
+| acdc/night | 0.3823 | 0.3799 | **−0.0024** |
+| acdc/rain | 0.5053 | 0.4933 | **−0.0120** |
+| acdc/snow | 0.5073 | 0.5008 | **−0.0065** |
+
+With a second seed on each side, the picture changes from "supernet wins 4/5" to
+**supernet wins 2/5, loses 3/5** -- exactly the over-reading risk flagged above, now
+confirmed. Every margin is still tiny (0.04-1.2 mIoU points, both directions) and
+both sides' own seed-to-seed spread is comparable in size (supernet seed0 vs. seed2:
+0.9-3.1 points; fast_scnn seed0 vs. seed1: 0.4-2.0 points) -- this is **near-parity
+within noise**, not a clean win for either side. This is arguably the more scientifically
+expected and more defensible result for RQ2's actual hypothesis ("subnets land within
+1.0-1.5 mIoU of independent training", not "beat it") than the earlier single-seed
+"wins 4/5" framing was. **Go/no-go: still passes** -- nowhere close to the >2 mIoU
+no-go trigger in either direction -- but the honest headline claim is "matches
+independent per-budget training at comparable cost", not "outperforms it".
+
 ## Caveat before this becomes a manuscript claim
 
-- Only 2/3 supernet seeds and 1/1 fast_scnn seed so far -- `RESEARCH_PLAN.md` §9 rule 8
-  wants 3 seeds for headline numbers. The margin here (2.6-6.4 points) is comfortably
-  larger than the seed-to-seed noise already observed (~0.01-0.03 points), so this
-  result is very unlikely to flip, but the third seed (both supernet and fast_scnn)
-  should still be run before this goes in the paper.
-- fast_scnn here has no augmentation either, so the comparison is fair as run --  but
-  neither number reflects what either model could reach *with* augmentation (now
-  available, `data.transforms.SegmentationTrainAugment`). Future re-runs of both should
-  use it, and this comparison should be redone once they do.
-- Per-class breakdown not yet pulled for fast_scnn's supernet-large counterpart in the
-  same table -- worth checking whether the win is broad-based or concentrated in a few
-  classes, same diligence as the acdc/fog investigation.
+- 2/3 supernet seeds and 2/2 fast_scnn seeds now augmented -- the 3rd seed on both
+  sides (`RESEARCH_PLAN.md` §9 rule 8) should still land before this is a headline
+  number, though 2 seeds already show the "wins 4/5" framing was seed-pair-specific,
+  not real, so a 3rd seed is about tightening the parity estimate, not about
+  re-litigating direction.
+- Per-class breakdown not yet pulled for fast_scnn vs. supernet-large in the same
+  table -- worth checking whether the near-parity aggregate hides a person/rider/
+  vulnerable-road-user-class split the way the acdc/fog investigation found, before
+  calling the two methods equivalent in every respect that matters.
