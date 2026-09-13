@@ -1,0 +1,24 @@
+\section{Deployment Protocol}
+\label{sec:deployment}
+
+Each static level is exported and compiled independently for TensorRT GPU, a Xavier DLA-targeted path, and a Hailo HEF. The DLA path is scoped as a secondary encoder-only ablation: the confirmed limit of 16 subgraphs per DLA core is already exhausted by the encoder, so the full decoder falls back to GPU. TensorRT GPU and Hailo HEF are therefore the primary backends for headline hardware claims.
+
+The benchmark protocol uses batch size one, at least 200 warm-up inferences, at least 5,000 timed frames, three independent runs, and complete toolchain disclosure. Kernel-only and host-plus-DMA latency are reported separately. The benchmark harness records p95 latency and bootstrap confidence intervals where the backend exposes sufficient per-inference data. No energy-per-frame number is claimed until an external calibrated power meter is available; the current Hailo-8 M.2 module has no usable on-board power/current sensor.
+
+\begin{table}[t]
+\caption{Current measured end-to-end mean latency (ms), three runs per level.}
+\label{tab:latency}
+\centering
+\begin{tabular}{lrr}
+\toprule
+Level & Hailo-8 & TensorRT GPU FP16 \\
+\midrule
+\texttt{tiny} & 3.714 & 0.912 \\
+\texttt{small} & 6.597 & 1.781 \\
+\texttt{medium} & 20.290 & 4.546 \\
+\texttt{large} & 41.140 & 9.389 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TODO{Add E2/E5 benchmark records, exact board power modes, clocks, temperatures, and external power-meter results.}

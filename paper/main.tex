@@ -1,0 +1,49 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\method}{PACE-Seg}
+
+\title{PACE-Seg: Compiler-Portable Elastic Semantic Segmentation with Hardware-Measured Selection under Adverse Conditions}
+
+\author{First Author, Second Author, and Third Author% 
+\thanks{Author names, affiliations, funding, and correspondence details are placeholders. This living manuscript is associated with the repository commit used for each reported result.}%
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Edge semantic segmentation under adverse visual conditions must account for more than clean-image accuracy. It must also respect the latency, compiler, memory, and energy behavior of the target accelerator. We present \method, a compiler-portable elastic segmentation framework that trains one restricted-operator supernet and extracts static subnets for heterogeneous edge backends. The current evidence covers Cityscapes and ACDC evaluation, four elasticity levels, TensorRT GPU execution, and Hailo-8 execution. At 100k training steps, mIoU increases monotonically with model size across clean and adverse conditions; the large level reaches 0.4712 on Cityscapes and 0.4919, 0.3312, 0.4517, and 0.4492 on ACDC fog, night, rain, and snow, respectively. A first apples-to-apples augmented comparison against Fast-SCNN passes the predefined parity gate, with the supernet winning four of five splits by 0.3--1.3 mIoU points and losing ACDC/rain by 1.2 points. Measured end-to-end latency ranges from 3.714 to 41.14 ms on Hailo-8 and from 0.912 to 9.389 ms on an AGX Xavier TensorRT GPU. Under an identical 10 ms budget, the best level is device-dependent: small on Hailo-8 and large on the TensorRT GPU. Quantization-aware training, energy measurement, calibrated risk routing, and the remaining ablations are not yet complete and are intentionally not claimed here.
+\end{abstract}
+
+\begin{IEEEkeywords}
+semantic segmentation, edge AI, hardware-aware neural architecture search, elastic supernet, compiler portability, adverse conditions, TensorRT, Hailo
+\end{IEEEkeywords}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_method}
+\input{sections/04_deployment}
+\input{sections/05_experiments}
+\input{sections/06_ablations}
+\input{sections/07_limitations}
+\input{sections/08_conclusion}
+
+\section*{Acknowledgment}
+\TODO{State funding, institutional support, and non-author contributions.}
+
+\section*{Data Availability}
+Cityscapes and ACDC are public research datasets accessed under their respective terms. The source code, experiment configurations, benchmark records, checkpoint hashes, and generated tables should be archived at publication.
+
+\TODO{Insert archival repository DOI, exact release tag, and data-access statements.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

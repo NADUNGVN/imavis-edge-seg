@@ -1,0 +1,18 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Semantic segmentation on heterogeneous edge accelerators is usually evaluated through a proxy such as FLOPs or parameter count, even though those proxies need not predict measured latency or energy on different accelerator architectures. A graph compiled for one backend is also not guaranteed to compile, unmodified, for another backend. Finally, clean-image mIoU does not describe reliability under night, rain, fog, or snow. Training one independently optimized model per device can further increase training and maintenance cost.
+
+We study the underexplored intersection of compiler-portable elastic segmentation, hardware-measured resource optimization, and calibrated risk-aware inference under adverse visual conditions. The working hypothesis is that a shared, compiler-safe supernet can provide several static deployable choices while preserving accuracy close to an independently trained model of comparable capacity.
+
+The intended contributions are:
+\begin{enumerate}
+  \item a restricted-operator elastic segmentation supernet with static subnets for heterogeneous compilers;
+  \item a hardware-in-the-loop Pareto search that joins measured backend latency with segmentation quality;
+  \item a calibrated visual-risk router that can select among precompiled engines; and
+  \item a cross-platform reliability and measurement protocol spanning clean and adverse conditions.
+\end{enumerate}
+
+The first two contributions have partial evidence in the current repository. The compiler-safe supernet, training loop, evaluation loop, benchmark harness, and first Pareto lookup-table search are implemented. The risk router, quantization-aware training, energy axis, systematic literature review, and the full ablation matrix remain open.
+
+\TODO{Replace this paragraph with a final novelty statement only after the systematic literature review is complete.}

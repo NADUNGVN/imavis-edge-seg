@@ -1,0 +1,8 @@
+\section{Ablations and Failure Analysis}
+\label{sec:ablations}
+
+The planned ablation matrix includes shared supernet versus independent training; FLOPs versus measured latency; latency-only versus latency-plus-energy; unconstrained versus compiler-safe operators; PTQ versus QAT; with and without distillation; static levels versus a router; entropy versus calibrated routing; per-frame versus windowed routing; and behavior across 5, 10, 15, and 30 W power modes.
+
+None of these ten ablations is complete. The DLA demotion is a deployment-compatibility finding, not a substitute for the planned accuracy/cost ablation. The original larger margin over Fast-SCNN was superseded after augmentation was applied to the baseline, illustrating why all comparisons must share preprocessing, seed accounting, and training budget.
+
+\TODO{Populate this section only from archived ablation records.}

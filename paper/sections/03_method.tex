@@ -1,0 +1,17 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Compiler-safe elastic supernet}
+The supernet uses a restricted operator set consisting of convolution--batch-normalization--activation blocks, depthwise and pointwise convolution, pooling, addition, concatenation, and static resize. The set was chosen to lie in the practical intersection of the TensorRT GPU, Xavier DLA, and Hailo Dataflow Compiler execution models. Four static elasticity levels---\texttt{tiny}, \texttt{small}, \texttt{medium}, and \texttt{large}---vary channel multiplier, block count, and input resolution. Each extracted subnet contains no dynamic control flow.
+
+\subsection{Training objective}
+The training loop uses a sandwich rule with in-place distillation and a boundary-aware auxiliary loss intended to protect small classes at low capacity. Let $\mathcal{L}_{\mathrm{seg}}$ denote the segmentation loss, $\mathcal{L}_{\mathrm{dist}}$ the teacher--student distillation loss, $\mathcal{L}_{\mathrm{bnd}}$ the boundary term, and $\mathcal{L}_{\mathrm{cal}}$ a calibration term. The current implementation optimizes
+\begin{equation}
+  \mathcal{L}=\lambda_{\mathrm{seg}}\mathcal{L}_{\mathrm{seg}}+\lambda_{\mathrm{dist}}\mathcal{L}_{\mathrm{dist}}+\lambda_{\mathrm{bnd}}\mathcal{L}_{\mathrm{bnd}}+\lambda_{\mathrm{cal}}\mathcal{L}_{\mathrm{cal}}.
+\end{equation}
+The measured-cost objective is currently a lookup-table Pareto search over trained levels. A continuous latency--energy surrogate and feedback into architecture search are future work.
+
+\subsection{Data and evaluation boundary}
+The minimum evaluation scope is Cityscapes plus ACDC. ACDC is evaluated by fog, night, rain, and snow condition. Metrics include mIoU and class-level breakdowns; calibration prerequisites include expected calibration error (ECE), negative log-likelihood (NLL), Brier score, and area under the risk--coverage curve (AURC).
+
+\TODO{Document exact preprocessing, augmentation, seed policy, checkpoint hashes, and final train/validation split in the camera-ready version.}

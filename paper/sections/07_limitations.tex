@@ -1,0 +1,8 @@
+\section{Limitations}
+\label{sec:limitations}
+
+The primary hardware evidence currently covers Hailo-8 and TensorRT GPU only. Xavier DLA is limited to an encoder-only secondary ablation, and E5 (Orin Nano Super) is a newer device rather than the legacy Jetson Nano originally considered. The device-lineup decision remains open.
+
+Quantization-aware training and calibrated routing are not implemented. ECE, NLL, Brier, and AURC are available as evaluation prerequisites, but no router or clinical/safety claim follows from those metrics alone. Energy per frame is unclaimed because no external calibrated power-meter measurement is available. Latency is locked to the disclosed backend and compiler versions and should not be generalized to other toolchain releases.
+
+\TODO{Resolve the device lineup, QAT, router, power measurement, and three-seed protocol before submission.}

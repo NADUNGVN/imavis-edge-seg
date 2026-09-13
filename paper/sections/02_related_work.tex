@@ -1,0 +1,22 @@
+\section{Related Work}
+\label{sec:related}
+
+This section is intentionally a structured placeholder until the planned systematic literature review is complete. The review will cover four gaps: (i) lightweight and real-time segmentation, including the disconnect between FLOPs and measured latency; (ii) compiler portability across TensorRT, Xavier DLA, and Hailo-style dataflow NPUs; (iii) adverse-condition segmentation and uncertainty-aware evaluation, including ACDC; and (iv) dynamic, once-for-all, and elastic supernets that avoid independently training every deployment budget.
+
+Adjacent systems such as YOLIC, Light-SEF, UCPNet, and HARD should be positioned against the specific combination targeted here rather than against any single axis. The final version must report a method-versus-gap table and cite primary sources for each comparison.
+
+\begin{table}[t]
+\caption{Planned related-work comparison.}
+\label{tab:related-work-placeholder}
+\centering
+\begin{tabular}{p{0.23\linewidth}p{0.18\linewidth}p{0.18\linewidth}p{0.27\linewidth}}
+\toprule
+Work family & Elastic/shared training & Multi-backend compilation & Adverse-condition or calibrated risk \ 
+\midrule
+Lightweight segmentation & \TODO{review} & \TODO{review} & \TODO{review} \\
+Hardware-aware segmentation & \TODO{review} & \TODO{review} & \TODO{review} \\
+Dynamic/once-for-all networks & \TODO{review} & \TODO{review} & \TODO{review} \\
+\method & Yes & TensorRT, DLA, Hailo scope & Planned; not yet implemented \\
+\bottomrule
+\end{tabular}
+\end{table}
