@@ -27,6 +27,7 @@ from imavis_edge_seg.training.checkpoint import (
     save_checkpoint,
 )
 from imavis_edge_seg.training.losses import boundary_aware_segmentation_loss
+from imavis_edge_seg.training.quantization import apply_qat
 from imavis_edge_seg.training.schedule import lr_lambda
 
 _Sample = tuple[torch.Tensor, torch.Tensor]
@@ -44,11 +45,30 @@ def run_baseline_training(
     output_dir: Path,
     console: Console | None = None,
     device: str = "cpu",
+    qat: bool = False,
+    init_checkpoint: Path | None = None,
 ) -> nn.Module:
     console = console or Console()
     torch.manual_seed(config.seed)
 
-    model = build_baseline_model(baseline_name, num_classes=config.supernet.num_classes).to(device)
+    model = build_baseline_model(baseline_name, num_classes=config.supernet.num_classes)
+
+    # RESEARCH_PLAN.md §5.2's "FP32 teacher -> shared supernet -> QAT INT8" workflow:
+    # start QAT from an already-trained FP32 checkpoint's weights, not from scratch.
+    # Order matters -- load the FP32 weights into the *plain* model first, then
+    # apply_qat takes over those same (now FP32-initialized) weight/bias Parameter
+    # objects, rather than the freshly-initialized random ones; `.to(device)` last so
+    # every parameter (including apply_qat's newly-constructed QATConv2d instances)
+    # ends up on the right device, not just the ones that existed before conversion.
+    if init_checkpoint is not None:
+        init_state = load_checkpoint(init_checkpoint, map_location="cpu")
+        model.load_state_dict(init_state["model_state_dict"])
+        console.print(f"initialized from {init_checkpoint} (step={init_state['step']})")
+    if qat:
+        model = apply_qat(model)
+        console.print(f"[{baseline_name}] QAT enabled: all nn.Conv2d layers fake-quantized (INT8)")
+    model = model.to(device)
+
     optimizer = AdamW(model.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: lr_lambda(step, config))
 

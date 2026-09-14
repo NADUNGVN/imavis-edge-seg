@@ -10,6 +10,7 @@ from imavis_edge_seg.config import ExperimentConfig  # noqa: E402
 from imavis_edge_seg.models.baselines import BASELINE_NAMES, build_baseline_model  # noqa: E402
 from imavis_edge_seg.training.baseline_trainer import run_baseline_training  # noqa: E402
 from imavis_edge_seg.training.checkpoint import load_checkpoint, save_checkpoint  # noqa: E402
+from imavis_edge_seg.training.quantization import QATConv2d  # noqa: E402
 
 _TEST_HW = (64, 64)
 
@@ -123,3 +124,48 @@ def test_run_baseline_training_resumes_from_existing_checkpoint(tmp_path: Path) 
     checkpoints = sorted((tmp_path / "checkpoints").glob("*.pt"))
     assert [c.name for c in checkpoints] == ["step_00000002.pt", "step_00000004.pt"]
     assert load_checkpoint(checkpoints[-1])["step"] == 4
+
+
+def test_run_baseline_training_qat_converts_conv_layers_and_trains(tmp_path: Path) -> None:
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    trained = run_baseline_training(
+        "fast_scnn", config, dataloader, output_dir=tmp_path, device="cpu", qat=True
+    )
+
+    assert any(isinstance(m, QATConv2d) for m in trained.modules())
+    assert all(
+        p.grad is not None and torch.isfinite(p.grad).all() for p in trained.parameters()
+    ), "QAT training should still produce finite gradients on every parameter"
+
+
+def test_run_baseline_training_init_checkpoint_starts_from_fp32_weights(tmp_path: Path) -> None:
+    from torch.optim import AdamW
+
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    fp32_model = build_baseline_model("fast_scnn", num_classes=config.supernet.num_classes)
+    fp32_optimizer = AdamW(fp32_model.parameters(), lr=config.training.lr)
+    fp32_ckpt = tmp_path / "fp32_step_00000010.pt"
+    save_checkpoint(fp32_ckpt, fp32_model, fp32_optimizer, step=10, config=config)
+    fp32_weight = fp32_model.downsample[0][0].weight.clone()
+
+    qat_output_dir = tmp_path / "qat_run"
+    trained = run_baseline_training(
+        "fast_scnn",
+        config,
+        dataloader,
+        output_dir=qat_output_dir,
+        device="cpu",
+        qat=True,
+        init_checkpoint=fp32_ckpt,
+    )
+
+    # A QAT run initialized from the FP32 checkpoint starts from those weights (then
+    # trains further, so it won't be bit-identical, but should be close after just a
+    # couple of steps) rather than a fresh random init.
+    trained_weight = trained.downsample[0][0].weight
+    assert torch.allclose(trained_weight, fp32_weight, atol=0.1)
+    assert isinstance(trained.downsample[0][0], QATConv2d)
