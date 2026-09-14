@@ -130,14 +130,51 @@ expected and more defensible result for RQ2's actual hypothesis ("subnets land w
 no-go trigger in either direction -- but the honest headline claim is "matches
 independent per-budget training at comparable cost", not "outperforms it".
 
+## FINAL (3 seeds per side) 2026-09-14 -- confirmed near-parity, headline-ready
+
+`pace_seg_v1_aug_seed3` and `fast_scnn_seed2_aug` finished, giving the full 3
+augmented seeds per side `RESEARCH_PLAN.md` §9 rule 8 wants for a headline number.
+3-seed averages:
+
+| dataset | fast_scnn-aug (3-seed avg) | supernet-large-aug (3-seed avg) | gap |
+|---|---:|---:|---:|
+| cityscapes | 0.5228 | 0.5338 | +0.0110 |
+| acdc/fog | 0.5629 | 0.5650 | +0.0021 |
+| acdc/night | 0.3822 | 0.3757 | −0.0065 |
+| acdc/rain | 0.5050 | 0.5027 | −0.0023 |
+| acdc/snow | 0.5048 | 0.5055 | +0.0007 |
+
+Supernet wins 3/5 splits, loses 2/5 -- every margin is now **≤1.1 mIoU points**,
+including a near-exact tie on `acdc/snow` (+0.0007). This is the most stable estimate
+so far and confirms the 2-seed reading: **true near-parity**, not a win for either
+side. **Go/no-go: passes**, headline-ready with 3 seeds per side. The honest claim
+for the paper is that the shared supernet matches independently-trained, same-budget
+training within ~1 mIoU point across clean and all four adverse conditions, at a
+fraction of the training/maintenance cost of training 4 separate models per device --
+RQ2's actual hypothesis, confirmed, not exceeded.
+
+## Side finding: augmentation does not help every architecture equally
+
+`segformer_b0` was also re-trained with augmentation (`baseline_segformer_b0_seed0_aug`)
+and, unlike `fast_scnn` (+9 to +11.5 points from augmentation), scored **lower** with
+augmentation than without: Cityscapes 0.5665 (no aug) -> 0.5513 (aug), a **-0.0152**
+change, with similar small drops on every ACDC condition. Not yet understood -- possible
+causes (untested): SegFormer's transformer encoder may already have enough implicit
+regularization (attention structure, overlap patch embedding smooths some scale
+variance) that added scale/crop/color augmentation is net noise rather than signal at
+this step budget; or the same random-scale-and-crop recipe simply needs different
+hyperparameters (crop range, color-jitter strength) per architecture family rather
+than one fixed recipe for all. `bisenetv2`, `ddrnet23_slim` and `mobilenetv3_deeplabv3`
+have not been re-trained with augmentation yet, so it is unknown whether this is a
+CNN-vs-transformer split or specific to SegFormer -- **do not generalize
+"augmentation helps" as a blanket claim** without checking each architecture.
+
 ## Caveat before this becomes a manuscript claim
 
-- 2/3 supernet seeds and 2/2 fast_scnn seeds now augmented -- the 3rd seed on both
-  sides (`RESEARCH_PLAN.md` §9 rule 8) should still land before this is a headline
-  number, though 2 seeds already show the "wins 4/5" framing was seed-pair-specific,
-  not real, so a 3rd seed is about tightening the parity estimate, not about
-  re-litigating direction.
 - Per-class breakdown not yet pulled for fast_scnn vs. supernet-large in the same
   table -- worth checking whether the near-parity aggregate hides a person/rider/
   vulnerable-road-user-class split the way the acdc/fog investigation found, before
   calling the two methods equivalent in every respect that matters.
+- The segformer_b0 augmentation regression (above) is unexplained and should be
+  investigated (e.g. per-class breakdown, or an ablation over augmentation strength)
+  before writing any general "augmentation improves robustness" claim in the paper.

@@ -72,10 +72,16 @@ four already-trained levels (`src/imavis_edge_seg/search/pareto.py`, Phase 5) �
 yet a continuous surrogate feeding back into architecture search, and latency-only
 (no energy term).
 
-**[TODO: pending QAT, Phase 6 — "not started" per README.md]** Quantization so far
-is PTQ-only and uncalibrated (compiler smoke tests used `--int8` with no calibration
-data, or Hailo's `--use-random-calib-set`); real INT8 accuracy and the §11 bar of
-≤~1.0-1.5 mIoU loss vs. FP32 cannot be written up until QAT lands.
+**[TODO: pending a real QAT training run + FP32-vs-INT8 mIoU comparison, Phase 6]**
+QAT v1 (`src/imavis_edge_seg/training/quantization.py`) exists as a mechanism only:
+dynamic per-tensor INT8 fake-quantization convertible in place on a model while
+preserving `state_dict` key names (enabling the §5.2 FP32→QAT workflow), verified
+against the real `fast_scnn` architecture. Not yet done: calibrated (not dynamic)
+quantization ranges; support for the supernet's `SlimmableConv2d`; and any actual
+training run, so the §11 bar of ≤~1.0-1.5 mIoU loss vs. FP32 cannot be written up
+yet. Compiler-side quantization so far is PTQ-only and uncalibrated (smoke tests used
+`--int8` with no calibration data, or Hailo's `--use-random-calib-set`), a separate
+and even less rigorous placeholder than QAT v1.
 
 **[TODO: pending calibrated risk router, Phase 7]** The router (Contribution 3) is
 unimplemented; only its calibration-metric prerequisite
@@ -137,34 +143,46 @@ classes degrade as expected (person 0.471→0.280, bicycle 0.472→0.204, car
 breakdowns for person/rider/pole/sign/light are reported alongside the aggregate,
 not as an optional extra.
 
-**Go/no-go: supernet vs. same-budget independent baseline**
+**Go/no-go: supernet vs. same-budget independent baseline, FINAL (3 seeds/side)**
 (`reports/baseline_comparison_gap_check_20260912.md`). The honest result required
-three passes, each correcting the last. An initial no-augmentation comparison showed
-the supernet's `large` level beating `fast_scnn` (the one comparable-budget baseline,
-1.136M vs. ~1.047M params) by 2.6-6.4 mIoU on all 5 splits. That was superseded once
-`fast_scnn` was re-trained with the newly added augmentation and gained 9.0-11.5 mIoU
-points on its own — more than the supernet's entire original margin. A first
-augmented-vs-augmented comparison (one seed each) then showed the supernet winning
-4/5 splits by 0.3-1.3 points; adding a second seed on each side changed that to
-**winning 2/5 and losing 3/5**, with every margin still tiny (0.04-1.2 points) and
-comparable in size to each side's own seed-to-seed spread. Averaged over 2 seeds per
-side:
+several corrections. An initial no-augmentation comparison showed the supernet's
+`large` level beating `fast_scnn` (the one comparable-budget baseline, 1.136M vs.
+~1.047M params) by 2.6-6.4 mIoU on all 5 splits; that was superseded once `fast_scnn`
+gained 9.0-11.5 mIoU points from augmentation alone — more than the supernet's entire
+original margin. Augmented-vs-augmented comparisons with 1 and then 2 seeds each
+narrowed the margin further and flipped which side "won" more splits, confirming a
+single-seed-pair result should not be trusted. With the full 3 seeds per side
+`RESEARCH_PLAN.md` §9 rule 8 requires:
 
-| dataset | fast_scnn-aug (2-seed avg) | supernet-large-aug (2-seed avg) | gap |
+| dataset | fast_scnn-aug (3-seed avg) | supernet-large-aug (3-seed avg) | gap |
 |---|---:|---:|---:|
-| Cityscapes | 0.5208 | 0.5311 | +0.0103 |
-| ACDC/fog | 0.5629 | 0.5633 | +0.0004 |
-| ACDC/night | 0.3823 | 0.3799 | −0.0024 |
-| ACDC/rain | 0.5053 | 0.4933 | −0.0120 |
-| ACDC/snow | 0.5073 | 0.5008 | −0.0065 |
+| Cityscapes | 0.5228 | 0.5338 | +0.0110 |
+| ACDC/fog | 0.5629 | 0.5650 | +0.0021 |
+| ACDC/night | 0.3822 | 0.3757 | −0.0065 |
+| ACDC/rain | 0.5050 | 0.5027 | −0.0023 |
+| ACDC/snow | 0.5048 | 0.5055 | +0.0007 |
 
-This is **near-parity within noise**, comfortably inside RQ2's hypothesized ±1.0-1.5
-mIoU band and clear of the §11 no-go trigger (>2 mIoU loss) either direction — **the
-honest headline claim is that the shared supernet matches independent per-budget
-training at comparable cost, not that it outperforms it.** The single-seed "wins 4/5"
-framing did not replicate and should not be cited; the corrected 2-seed comparison
-above is the current best estimate, refined further once the 3rd seed
-(`RESEARCH_PLAN.md` §9 rule 8) lands.
+Supernet wins 3/5 splits, loses 2/5, every margin **≤1.1 mIoU points** (a near-exact
+tie on ACDC/snow). This is the stable, headline-ready result: **true near-parity**,
+comfortably inside RQ2's hypothesized ±1.0-1.5 mIoU band and clear of the §11 no-go
+trigger (>2 mIoU loss) either direction. **The claim for the paper is that the shared
+supernet matches independent same-budget training within ~1 mIoU point across clean
+and all four adverse conditions, at a fraction of the training/maintenance cost of
+training one model per device/budget — RQ2's actual hypothesis, confirmed, not
+exceeded.** Earlier "wins 4/5" (1 seed) and "wins 2/5" (2 seeds) framings should not
+be cited; only the 3-seed table above is the citable number.
+
+**Side finding, not yet understood**: augmentation does not help every architecture.
+`segformer_b0` scored *lower* with augmentation than without (Cityscapes 0.5665 ->
+0.5513, -0.0152), the opposite of `fast_scnn`'s large gain.
+`bisenetv2`/`ddrnet23_slim`/`mobilenetv3_deeplabv3` have not been re-trained with
+augmentation, so whether this is a transformer-vs-CNN effect or specific to
+SegFormer's architecture/hyperparameters is unknown.
+
+**[TODO: pending augmentation-regression investigation]** Before writing any general
+"augmentation improves robustness" claim, the `segformer_b0` regression needs a
+per-class breakdown or an augmentation-strength ablation, per
+`reports/baseline_comparison_gap_check_20260912.md`'s side-finding section.
 
 **Latency (measured, not FLOPs)** — the complete cross-backend table
 (`reports/edge/E1_hailo_benchmark_protocol_20260910.md`,
@@ -191,10 +209,9 @@ exists to test RQ1's "≥15-20% cost reduction vs. FLOPs-aware search" hypothesi
 the Pareto result shows device-dependence, not a quantified win margin
 (`reports/pareto_search_v1_20260912.md`).
 
-**[TODO: pending 3rd seed for headline numbers, RESEARCH_PLAN.md §9 rule 8]** 2/3
-supernet seeds and 2/2 fast_scnn seeds are now augmented; a 3rd seed on both sides
-would tighten the near-parity estimate above, not change its direction, before it is
-a fully citable headline claim.
+3/3 seeds per side are now augmented (`RESEARCH_PLAN.md` §9 rule 8 satisfied) — the
+go/no-go table above is headline-ready; no further seeds needed for this specific
+comparison.
 
 **[TODO: pending remaining baselines]** `segformer_b0` is trained/evaluated
 (README.md Phase 8) but not yet in this comparison table; `pidnet_s` is skipped
@@ -248,7 +265,9 @@ unresolved and must be settled before the device lineup is described definitivel
 
 **[TODO: pending nearly everything above]** A conclusion cannot honestly be written
 yet: it needs go/no-go outcomes across all four RQs, and today only RQ2 has a
-2-seed, one-baseline signal (near-parity with independent training, not a win —
-see Experiments), RQ1 only a qualitative illustration, and RQ3/RQ4 have no router or
+headline-ready (3-seed), one-baseline signal (near-parity with independent training,
+not a win — see Experiments; still only 1 of the 7 baseline slots is a valid
+same-budget test), RQ1 only a qualitative illustration, and RQ3/RQ4 have no router or
 systematic compiler-space comparison respectively. Draft this section last, after
-Phases 6, 7 and 9 (QAT, router, ablations) land and 3-seed headline numbers are in.
+Phases 6 (QAT training run + real INT8-vs-FP32 numbers), 7 (router) and 9 (ablations)
+land.
