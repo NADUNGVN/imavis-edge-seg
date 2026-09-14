@@ -27,6 +27,7 @@ from imavis_edge_seg.evaluation.data import build_acdc_eval_loader, build_citysc
 from imavis_edge_seg.evaluation.metrics import ConfusionMatrixAccumulator, EvalResult
 from imavis_edge_seg.models.baselines import BASELINE_NAMES, build_baseline_model
 from imavis_edge_seg.training.checkpoint import load_checkpoint
+from imavis_edge_seg.training.quantization import apply_qat
 
 
 def _dataset_root(config: ExperimentConfig, name: str) -> Path | None:
@@ -62,15 +63,27 @@ def main() -> None:
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--output-json", type=Path, default=None)
     parser.add_argument("--per-class", action="store_true", help="see evaluate_supernet.py --per-class")
+    parser.add_argument(
+        "--qat",
+        action="store_true",
+        help="apply_qat before loading the checkpoint -- required to correctly "
+        "evaluate a checkpoint that was *trained* with --qat (train_baseline.py). "
+        "Loading such a checkpoint into a plain, non-QAT model would evaluate its "
+        "QAT-trained weights at full FP32 precision, not the INT8 fake-quantized "
+        "inference the checkpoint was actually trained/is meant to be deployed under.",
+    )
     args = parser.parse_args()
 
     console = Console()
     config = load_config(args.config)
-    model = build_baseline_model(args.model, num_classes=config.supernet.num_classes).to(args.device)
+    model = build_baseline_model(args.model, num_classes=config.supernet.num_classes)
+    if args.qat:
+        model = apply_qat(model)
+    model = model.to(args.device)
     checkpoint = load_checkpoint(args.checkpoint, map_location=args.device)
     model.load_state_dict(checkpoint["model_state_dict"])
     console.print(
-        f"model={args.model} loaded checkpoint step={checkpoint['step']} "
+        f"model={args.model} qat={args.qat} loaded checkpoint step={checkpoint['step']} "
         f"config_hash={checkpoint['config_hash']} git_commit={checkpoint['git_commit']}"
     )
 
