@@ -98,7 +98,8 @@ def _evaluate_split(
     probe_level: ElasticityLevel,
     candidates: list[ParetoPoint],
     latency_by_level: dict[ElasticityLevel, float],
-    risk_target: float | None,
+    error_risk_target_override: float | None,
+    raw_risk_target_override: float | None,
     device: str,
     cityscapes_root: Path | None,
     acdc_root: Path | None,
@@ -141,13 +142,12 @@ def _evaluate_split(
     calibrator = fit_risk_calibrator(fit_scores, fit_errors)
     # entropy's raw_risk (nats, unbounded, typically ~0.3-3) and calibrated_risk's
     # calibrated_risk (an error probability, 0-1) live on different scales -- each
-    # needs its *own* risk_target on its *own* scale, or a shared error-scale target
-    # (the natural default) makes entropy's raw nats look enormous by comparison and
-    # forces it to over-escalate to the most expensive level almost every time. Only
-    # calibrated_risk's target defaults from the observed error distribution;
-    # entropy's defaults from the raw score distribution it actually operates on.
-    error_risk_target = risk_target if risk_target is not None else mean(fit_errors)
-    raw_risk_target = risk_target if risk_target is not None else mean(fit_scores)
+    # needs its *own* risk_target on its *own* scale (independently overridable), or
+    # a shared target makes one strategy's threshold meaningless on the other's
+    # scale. Defaults: calibrated_risk from the fit-half's mean observed error,
+    # entropy from the fit-half's mean raw score.
+    error_risk_target = error_risk_target_override if error_risk_target_override is not None else mean(fit_errors)
+    raw_risk_target = raw_risk_target_override if raw_risk_target_override is not None else mean(fit_scores)
 
     strategies = list(STRATEGIES)
     if oracle_level is not None:
@@ -180,9 +180,11 @@ def _evaluate_split(
 
     console.print(
         f"[{split_name}] fit n={len(fit_scores)} (mean error={mean(fit_errors):.4f}, "
-        f"median={median(fit_errors):.4f}) error_risk_target={error_risk_target:.4f} "
+        f"median={median(fit_errors):.4f}) "
+        f"error_risk_target={error_risk_target:.4f} "
+        f"({'explicit' if error_risk_target_override is not None else 'auto'}) "
         f"raw_risk_target={raw_risk_target:.4f} "
-        f"({'explicit' if risk_target is not None else 'auto = fit-half mean of the matching scale'})"
+        f"({'explicit' if raw_risk_target_override is not None else 'auto'})"
     )
     return {
         "num_fit": len(fit_scores),
@@ -205,13 +207,21 @@ def main() -> None:
     parser.add_argument("--latency-field", default="end_to_end_p95_ms")
     parser.add_argument("--probe-level", default=None, help="default: the cheapest configured level")
     parser.add_argument(
-        "--risk-target",
+        "--error-risk-target",
         type=float,
         default=None,
-        help="override BOTH calibrated_risk's (error-probability scale) and "
-        "entropy's (raw nats scale) auto-picked targets with this same value -- "
-        "only pass this if you specifically want them equal; default: each "
-        "strategy gets its own scale's fit-half mean (see module docstring)",
+        help="override calibrated_risk's risk_target (error-probability scale, "
+        "0-1) -- default: fit-half's mean observed error. A stricter (smaller) "
+        "value forces more escalation to medium/large.",
+    )
+    parser.add_argument(
+        "--raw-risk-target",
+        type=float,
+        default=None,
+        help="override entropy's risk_target (raw softmax-entropy scale, nats, "
+        "typically ~0.3-3) -- default: fit-half's mean raw score. Do NOT pass an "
+        "error-probability-scale value here, or entropy over-escalates almost "
+        "every image (see module docstring's 2026-09-15 scale-mismatch bug).",
     )
     parser.add_argument("--dataset", action="append", default=[], choices=["cityscapes", "acdc"])
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -295,7 +305,8 @@ def main() -> None:
             probe_level,
             candidates,
             latency_by_level,
-            args.risk_target,
+            args.error_risk_target,
+            args.raw_risk_target,
             args.device,
             cityscapes_root,
             acdc_root,
