@@ -72,21 +72,37 @@ four already-trained levels (`src/imavis_edge_seg/search/pareto.py`, Phase 5) �
 yet a continuous surrogate feeding back into architecture search, and latency-only
 (no energy term).
 
-**[TODO: pending a real QAT training run + FP32-vs-INT8 mIoU comparison, Phase 6]**
-QAT v1 (`src/imavis_edge_seg/training/quantization.py`) exists as a mechanism only:
-dynamic per-tensor INT8 fake-quantization convertible in place on a model while
-preserving `state_dict` key names (enabling the §5.2 FP32→QAT workflow), verified
-against the real `fast_scnn` architecture. Not yet done: calibrated (not dynamic)
-quantization ranges; support for the supernet's `SlimmableConv2d`; and any actual
-training run, so the §11 bar of ≤~1.0-1.5 mIoU loss vs. FP32 cannot be written up
-yet. Compiler-side quantization so far is PTQ-only and uncalibrated (smoke tests used
-`--int8` with no calibration data, or Hailo's `--use-random-calib-set`), a separate
-and even less rigorous placeholder than QAT v1.
+QAT v1 (`src/imavis_edge_seg/training/quantization.py`) is dynamic per-tensor INT8
+fake-quantization, convertible in place on a model while preserving `state_dict`
+key names (enabling the §5.2 FP32→QAT workflow). **Real FP32-vs-INT8 result
+2026-09-14/15** (`reports/qat_v1_20260913.md`): fine-tuning 10k steps with
+`--qat` from an FP32 checkpoint loses 0.11-1.25 mIoU points vs. FP32, confirmed
+across 2 architectures (`fast_scnn`, `ddrnet23_slim`) x 2 seeds each (n=3
+runs) — **the §11 go bar (≤~1.0-1.5 mIoU loss) passes, headline-ready**. Not yet
+done: calibrated (not dynamic) quantization ranges; support for the supernet's
+`SlimmableConv2d`; `bisenetv2`/`segformer_b0`/`mobilenetv3_deeplabv3` not
+QAT-tested. Compiler-side quantization is still PTQ-only and uncalibrated
+separately (smoke tests used `--int8` with no calibration data, or Hailo's
+`--use-random-calib-set`), a separate and less rigorous placeholder than QAT v1.
 
-**[TODO: pending calibrated risk router, Phase 7]** The router (Contribution 3) is
-unimplemented; only its calibration-metric prerequisite
-(`src/imavis_edge_seg/evaluation/calibration.py`: ECE, NLL, Brier, AURC) exists. No
-routing policy can be described yet.
+The router (Contribution 3, `src/imavis_edge_seg/router/` +
+`scripts/evaluate_router.py`) fits a real `RiskCalibrator` on half of each
+validation split and routes the held-out half per-image, running every candidate
+level to measure real achieved mIoU and real latency. **Real result
+2026-09-15** (`reports/router_v1_20260914.md`): `calibrated_risk` achieves higher
+achieved mIoU than raw-`entropy` routing in 7/7 tested splits (Cityscapes at 2
+risk_target settings, E1/Hailo + E3/TensorRT, all 4 ACDC conditions), margins
++0.0013 to +0.0183 mIoU — a real, direction-consistent result for RQ3, though
+`calibrated_risk` also spends a bit more latency each time (mIoU-per-ms
+efficiency is a mixed 2/7 vs. 5/7, not a decisive efficiency win yet). A
+structural finding: the current escalation policy uses only each candidate's
+latency *rank*, not magnitude, so a fitted calibrator's decisions transfer
+unchanged across deployment targets (E1 and E3 gave numerically identical
+achieved mIoU on the same split) — convenient, but means the policy is not yet
+latency-*value*-aware. Not yet done: wiring into a streaming multi-engine loop
+(§5.3's 8-32 frame window, not the per-image routing tested so far); a dedicated
+router-overhead measurement against the §11 "<~5% of end-to-end cost" bar; UIoU
+(needs ACDC's uncertain-region annotations).
 
 ## Deployment protocol
 
@@ -172,17 +188,21 @@ training one model per device/budget — RQ2's actual hypothesis, confirmed, not
 exceeded.** Earlier "wins 4/5" (1 seed) and "wins 2/5" (2 seeds) framings should not
 be cited; only the 3-seed table above is the citable number.
 
-**Side finding, not yet understood**: augmentation does not help every architecture.
-`segformer_b0` scored *lower* with augmentation than without (Cityscapes 0.5665 ->
-0.5513, -0.0152), the opposite of `fast_scnn`'s large gain.
-`bisenetv2`/`ddrnet23_slim`/`mobilenetv3_deeplabv3` have not been re-trained with
-augmentation, so whether this is a transformer-vs-CNN effect or specific to
-SegFormer's architecture/hyperparameters is unknown.
-
-**[TODO: pending augmentation-regression investigation]** Before writing any general
-"augmentation improves robustness" claim, the `segformer_b0` regression needs a
-per-class breakdown or an augmentation-strength ablation, per
-`reports/baseline_comparison_gap_check_20260912.md`'s side-finding section.
+**Side finding, investigated and explained 2026-09-15**
+(`reports/segformer_augmentation_investigation_20260915.md`): `segformer_b0`
+scored *lower* with augmentation than without on Cityscapes (0.5665 -> 0.5513,
+-0.0152), the opposite of `fast_scnn`'s large gain — but this is not a blanket
+"augmentation doesn't help" effect. Per-class analysis shows the drop is
+concentrated almost entirely in 2 rare classes (train -0.109, truck -0.084; every
+common class within ±0.002), while augmentation *improves* `segformer_b0` on
+every ACDC adverse condition (net +0.0155 average). Reading: `fast_scnn` (1.1M
+params) was badly underfit on rare classes without augmentation and augmentation
+fixes that; `segformer_b0` (3.7M params) already fit those classes reasonably, so
+at a fixed training-step budget, augmentation instead trades a little
+clean-domain rare-class accuracy for adverse-domain generalization — a
+capacity/budget-dependent trade-off, not a bug. `bisenetv2`/`ddrnet23_slim`/
+`mobilenetv3_deeplabv3` still have not been re-trained with augmentation, so
+whether this pattern holds at other capacities is untested.
 
 **Latency (measured, not FLOPs)** — the complete cross-backend table
 (`reports/edge/E1_hailo_benchmark_protocol_20260910.md`,
