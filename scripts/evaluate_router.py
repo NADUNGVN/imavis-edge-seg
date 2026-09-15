@@ -19,6 +19,17 @@ choices can be measured, not just each choice in isolation.
 Add --eval-json (an `evaluate_supernet.py --output-json` file) to also include the
 `oracle` strategy (a constant pick of whichever level has the best known aggregate
 mIoU, RESEARCH_PLAN.md's documented upper-bound comparison, not a per-image decision).
+
+`entropy`'s raw risk (softmax entropy in nats, typically ~0.3-3) and
+`calibrated_risk`'s calibrated risk (an error probability, 0-1) are on different
+scales -- each strategy's default `risk_target` is auto-picked from the fit-half's
+mean *on that strategy's own scale* (not a single shared default), otherwise
+`entropy`'s nats-scale score looks enormous next to an error-scale target and the
+policy over-escalates to the most expensive level almost every time regardless of
+the actual per-image signal -- caught on a real run (2026-09-15, E3/cityscapes)
+where `entropy` was spending 96% of `static_large`'s latency for only a modest mIoU
+gain over `calibrated_risk`, which used 7x less latency for the same effect size
+per ms spent (see `reports/router_v1_20260914.md`).
 """
 
 from __future__ import annotations
@@ -128,7 +139,15 @@ def _evaluate_split(
         raise ValueError(f"{split_name}: need at least 2 val images (got {num_images}) to split fit/test")
 
     calibrator = fit_risk_calibrator(fit_scores, fit_errors)
-    effective_risk_target = risk_target if risk_target is not None else mean(fit_errors)
+    # entropy's raw_risk (nats, unbounded, typically ~0.3-3) and calibrated_risk's
+    # calibrated_risk (an error probability, 0-1) live on different scales -- each
+    # needs its *own* risk_target on its *own* scale, or a shared error-scale target
+    # (the natural default) makes entropy's raw nats look enormous by comparison and
+    # forces it to over-escalate to the most expensive level almost every time. Only
+    # calibrated_risk's target defaults from the observed error distribution;
+    # entropy's defaults from the raw score distribution it actually operates on.
+    error_risk_target = risk_target if risk_target is not None else mean(fit_errors)
+    raw_risk_target = risk_target if risk_target is not None else mean(fit_scores)
 
     strategies = list(STRATEGIES)
     if oracle_level is not None:
@@ -141,11 +160,15 @@ def _evaluate_split(
         for raw_risk, per_level in zip(test_probe_risk, test_per_level, strict=True):
             if strategy == "oracle":
                 chosen = oracle_level
+            elif strategy == "entropy":
+                router_config = RouterConfig(strategy=strategy, risk_target=raw_risk_target)  # type: ignore[arg-type]
+                chosen = select_level(candidates, router_config, raw_risk=raw_risk)
+            elif strategy == "calibrated_risk":
+                router_config = RouterConfig(strategy=strategy, risk_target=error_risk_target)  # type: ignore[arg-type]
+                chosen = select_level(candidates, router_config, calibrated_risk=calibrator.predict(raw_risk))
             else:
-                calibrated = calibrator.predict(raw_risk) if strategy == "calibrated_risk" else None
-                raw = raw_risk if strategy == "entropy" else None
-                router_config = RouterConfig(strategy=strategy, risk_target=effective_risk_target)  # type: ignore[arg-type]
-                chosen = select_level(candidates, router_config, calibrated_risk=calibrated, raw_risk=raw)
+                router_config = RouterConfig(strategy=strategy, risk_target=error_risk_target)  # type: ignore[arg-type]
+                chosen = select_level(candidates, router_config)
             pred, mask = per_level[chosen]  # type: ignore[index]
             accumulator.update(pred, mask)
             chosen_latencies.append(latency_by_level[chosen])  # type: ignore[index]
@@ -157,13 +180,15 @@ def _evaluate_split(
 
     console.print(
         f"[{split_name}] fit n={len(fit_scores)} (mean error={mean(fit_errors):.4f}, "
-        f"median={median(fit_errors):.4f}) risk_target={effective_risk_target:.4f} "
-        f"({'explicit' if risk_target is not None else 'auto = fit-half mean error'})"
+        f"median={median(fit_errors):.4f}) error_risk_target={error_risk_target:.4f} "
+        f"raw_risk_target={raw_risk_target:.4f} "
+        f"({'explicit' if risk_target is not None else 'auto = fit-half mean of the matching scale'})"
     )
     return {
         "num_fit": len(fit_scores),
         "num_test": len(test_probe_risk),
-        "risk_target": effective_risk_target,
+        "error_risk_target": error_risk_target,
+        "raw_risk_target": raw_risk_target,
         "calibrator": calibrator.to_dict(),
         "strategies": strategy_results,
     }
@@ -179,7 +204,15 @@ def main() -> None:
     parser.add_argument("--backend", required=True, help='deployment target backend, e.g. "hailo_hef" or "tensorrt_gpu"')
     parser.add_argument("--latency-field", default="end_to_end_p95_ms")
     parser.add_argument("--probe-level", default=None, help="default: the cheapest configured level")
-    parser.add_argument("--risk-target", type=float, default=None, help="default: fit-half's mean observed error")
+    parser.add_argument(
+        "--risk-target",
+        type=float,
+        default=None,
+        help="override BOTH calibrated_risk's (error-probability scale) and "
+        "entropy's (raw nats scale) auto-picked targets with this same value -- "
+        "only pass this if you specifically want them equal; default: each "
+        "strategy gets its own scale's fit-half mean (see module docstring)",
+    )
     parser.add_argument("--dataset", action="append", default=[], choices=["cityscapes", "acdc"])
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save-calibrator", type=Path, default=None, help="save one split's fitted calibrator (last one evaluated) as JSON")
