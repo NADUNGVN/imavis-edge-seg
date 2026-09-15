@@ -15,7 +15,10 @@ score, not a better calibrator.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -30,6 +33,28 @@ class RiskCalibrator:
             np.clip(np.searchsorted(self.bin_edges, raw_score, side="right") - 1, 0, len(self.bin_expected_error) - 1)
         )
         return float(self.bin_expected_error[bin_index])
+
+    def to_dict(self) -> dict[str, Any]:
+        """`+-inf` edges round-trip through JSON via Python's `float("inf")` support
+        in `json.dumps`/`json.loads` (not strict JSON, but stdlib handles it)."""
+        return {
+            "bin_edges": self.bin_edges.tolist(),
+            "bin_expected_error": self.bin_expected_error.tolist(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> RiskCalibrator:
+        return cls(
+            bin_edges=np.asarray(data["bin_edges"], dtype=np.float64),
+            bin_expected_error=np.asarray(data["bin_expected_error"], dtype=np.float64),
+        )
+
+    def save(self, path: str | Path) -> None:
+        Path(path).write_text(json.dumps(self.to_dict(), indent=2))
+
+    @classmethod
+    def load(cls, path: str | Path) -> RiskCalibrator:
+        return cls.from_dict(json.loads(Path(path).read_text()))
 
 
 def fit_risk_calibrator(

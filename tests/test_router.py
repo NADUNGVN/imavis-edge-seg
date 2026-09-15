@@ -5,7 +5,8 @@ torch = pytest.importorskip("torch")
 
 from imavis_edge_seg.config import RouterConfig  # noqa: E402
 from imavis_edge_seg.data.labels import IGNORE_INDEX  # noqa: E402
-from imavis_edge_seg.router.calibrator import fit_risk_calibrator  # noqa: E402
+from imavis_edge_seg.router.calibrator import RiskCalibrator, fit_risk_calibrator  # noqa: E402
+from imavis_edge_seg.router.observed_error import compute_per_image_error  # noqa: E402
 from imavis_edge_seg.router.policy import select_level  # noqa: E402
 from imavis_edge_seg.router.risk_probe import compute_risk_score  # noqa: E402
 from imavis_edge_seg.search.pareto import ParetoPoint  # noqa: E402
@@ -160,3 +161,66 @@ def test_select_level_unknown_strategy_raises() -> None:
     config = RouterConfig.model_construct(strategy="not_a_real_strategy", risk_target=0.05, enabled=True, window_frames=16)
     with pytest.raises(ValueError):
         select_level(_CANDIDATES, config, calibrated_risk=0.1)
+
+
+# ---- observed_error -----------------------------------------------------------------------
+
+
+def test_compute_per_image_error_all_correct_is_zero() -> None:
+    pred = torch.zeros(2, 3, 3, dtype=torch.long)
+    target = torch.zeros(2, 3, 3, dtype=torch.long)
+    error = compute_per_image_error(pred, target)
+    assert error.shape == (2,)
+    assert torch.allclose(error, torch.zeros(2))
+
+
+def test_compute_per_image_error_matches_known_fraction() -> None:
+    pred = torch.zeros(1, 2, 2, dtype=torch.long)
+    target = torch.zeros(1, 2, 2, dtype=torch.long)
+    target[0, 0, 0] = 1  # 1 of 4 pixels wrong
+    error = compute_per_image_error(pred, target)
+    assert float(error) == pytest.approx(0.25)
+
+
+def test_compute_per_image_error_ignore_index_excluded() -> None:
+    pred = torch.zeros(1, 2, 2, dtype=torch.long)
+    target = torch.zeros(1, 2, 2, dtype=torch.long)
+    target[0, 0, 0] = 1  # 1 wrong pixel
+    target[0, 0, 1] = IGNORE_INDEX  # excluded -- denominator shrinks to 3
+    error = compute_per_image_error(pred, target)
+    assert float(error) == pytest.approx(1 / 3)
+
+
+def test_compute_per_image_error_masking_matches_risk_score_masking() -> None:
+    # Same target/ignore pattern used by compute_risk_score(logits, target) -- both
+    # should agree on which pixels count, since a calibrator is fit on a
+    # (risk_score, error) pair computed over the *same* pixels.
+    logits = torch.zeros(1, 3, 2, 2)
+    logits[:, 0] = 10.0
+    target = torch.zeros(1, 2, 2, dtype=torch.long)
+    target[0, 1, 1] = IGNORE_INDEX
+    risk = compute_risk_score(logits, target)
+    pred = logits.argmax(dim=1)
+    error = compute_per_image_error(pred, target)
+    assert risk.shape == error.shape == (1,)
+
+
+# ---- calibrator serialization -----------------------------------------------------------------------
+
+
+def test_risk_calibrator_round_trips_through_dict() -> None:
+    calibrator = fit_risk_calibrator([0.1, 0.5, 0.9], [0.05, 0.2, 0.4], num_bins=3)
+    restored = RiskCalibrator.from_dict(calibrator.to_dict())
+    assert np.array_equal(calibrator.bin_edges, restored.bin_edges)
+    assert np.array_equal(calibrator.bin_expected_error, restored.bin_expected_error)
+    for score in (0.0, 0.3, 0.6, 1.0):
+        assert calibrator.predict(score) == restored.predict(score)
+
+
+def test_risk_calibrator_round_trips_through_json_file(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    calibrator = fit_risk_calibrator([0.1, 0.5, 0.9], [0.05, 0.2, 0.4], num_bins=3)
+    path = tmp_path / "calibrator.json"
+    calibrator.save(path)
+    restored = RiskCalibrator.load(path)
+    assert np.array_equal(calibrator.bin_edges, restored.bin_edges)
+    assert np.array_equal(calibrator.bin_expected_error, restored.bin_expected_error)
