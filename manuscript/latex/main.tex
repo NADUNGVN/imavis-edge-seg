@@ -135,11 +135,19 @@ and 1.25 mIoU points relative to the FP32 checkpoint it was fine-tuned from,
 across Cityscapes and all four ACDC conditions (worst case: Fast-SCNN seed~0
 on rain, $-1.25$ points). This is within the go/no-go accuracy budget we fixed
 in advance ($\leq 1.0$--$1.5$ mIoU points; Section~\ref{sec:go-no-go}),
-confirmed across two architectures and two seeds rather than a single run.
-% source: reports/qat_v1_20260913.md (2026-09-14/15/16 updates)
-% TODO: QAT has since been extended to the supernet itself (not just the
-% baseline architectures above); update this subsection with real supernet
-% QAT numbers once that training run completes and is evaluated.
+confirmed across two architectures and two seeds rather than a single run ---
+for independent, fixed-architecture baselines. Applying the same recipe to the
+shared supernet's \emph{large} level itself, across the two seeds used in
+Section~\ref{sec:go-no-go}'s comparison, is \textbf{more mixed}: one seed
+stays within budget on every split (worst case $-1.39$ points), while the
+other exceeds it on two of five splits (Cityscapes $-1.60$, ACDC/night
+$-1.66$) --- worse than any independent baseline result. We do not yet have
+enough seeds to say whether this is a real, reproducible effect of quantizing
+weights the sandwich rule shares across elasticity levels, or seed noise, and
+report it as an open question rather than folding it into the ``confirmed''
+claim above.
+% source: reports/qat_v1_20260913.md (2026-09-14/15/16 updates) -- do not
+% average away the seed0 overshoot when citing this result
 
 \subsection{Compiled static engines and calibrated routing}
 \label{sec:router}

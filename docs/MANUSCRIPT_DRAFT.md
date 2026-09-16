@@ -85,7 +85,15 @@ relative to the FP32 checkpoint it was fine-tuned from, across Cityscapes and
 all four ACDC conditions (worst case: Fast-SCNN seed 0 on rain, −1.25 points).
 This is within the go/no-go accuracy budget we fixed in advance (≤1.0–1.5 mIoU
 points; Section 7), confirmed across two architectures and two seeds rather than
-a single run.
+a single run — for independent, fixed-architecture baselines. Applying the same
+recipe to the shared supernet's *large* level itself, across the two seeds used
+in Section 5.2's comparison, is **more mixed**: one seed stays within budget on
+every split (worst case −1.39 points), while the other exceeds it on two of
+five splits (cityscapes −1.60, ACDC/night −1.66) — worse than any independent
+baseline result. We do not yet have enough seeds to say whether this is a real,
+reproducible effect of quantizing weights the sandwich rule shares across
+elasticity levels, or seed noise, and report it as an open question rather than
+folding it into the "confirmed" claim above.
 
 ### 3.4 Compiled static engines and calibrated routing
 
