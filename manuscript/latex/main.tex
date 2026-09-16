@@ -1,0 +1,434 @@
+\documentclass[a4paper,review,12pt]{elsarticle}
+
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\journal{Image and Vision Computing}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{PACE-Seg: Platform-Aware Calibrated Elastic Semantic Segmentation for Reliable Edge Vision}
+
+\author{D\~ung Nguy\~ên}
+\affiliation{organization={}, % TODO: institution/affiliation
+             addressline={},
+             city={},
+             country={}}
+
+\begin{abstract}
+% TODO: abstract cannot be honestly written until Introduction/Related work
+% (blocked on the systematic literature review, RESEARCH_PLAN.md \S2) and the
+% Ablations/Conclusion sections exist. Draft only once those are in place --
+% an abstract written against an incomplete paper tends to overclaim.
+TODO.
+\end{abstract}
+
+\begin{keyword}
+semantic segmentation \sep edge deployment \sep elastic neural networks \sep quantization-aware training \sep calibrated uncertainty \sep hardware-aware neural architecture search
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+% TODO: blocked on the systematic literature review (RESEARCH_PLAN.md \S2) --
+% any novelty claim stronger than a safe "we study the underexplored
+% intersection of..." framing needs the Scopus/Web of Science search that
+% section requires, not yet done. See docs/MANUSCRIPT_SKELETON.md's
+% Introduction section for the safe interim framing and the four gaps
+% (G1-G4) this work addresses, kept out of this .tex file until the review
+% is done and the framing can be written as real prose rather than restated
+% from the skeleton verbatim.
+TODO.
+
+\section{Related work}
+% TODO: blocked on the same literature review as Introduction. Needs: (1)
+% lightweight/real-time segmentation and the FLOPs-vs-latency disconnect;
+% (2) compiler-portability across TensorRT, DLA and Hailo-style dataflow
+% NPUs; (3) adverse-condition segmentation/uncertainty benchmarks (ACDC);
+% (4) dynamic/once-for-all supernet and routing literature. See
+% docs/RESEARCH_PLAN.md \S2 and docs/SOURCE_RESEARCH_GAP_2026.md.
+TODO.
+
+\section{Method}
+\label{sec:method}
+
+\subsection{Compiler-safe elastic supernet}
+\label{sec:supernet}
+
+We train a single shared segmentation network that executes at four discrete
+elasticity levels --- \emph{tiny}, \emph{small}, \emph{medium}, \emph{large}
+--- obtained by varying channel width multiplier, block count, and input
+resolution. Every operator in the network (convolution--batch-norm--activation,
+depthwise/pointwise convolution, pooling, elementwise add/concatenate,
+static-factor bilinear resize) is drawn from the intersection of operators we
+verified compile and execute correctly on all three target compiler backends
+(Section~\ref{sec:compiler-validation}), rather than from an unconstrained
+search space later found to be unsupported on one target. All four levels are
+trained jointly with a sandwich-rule schedule (training the smallest, largest,
+and a randomly sampled subset of middle levels at each step) and in-place
+distillation from the largest level's output to the smaller levels, with a
+boundary-aware auxiliary loss term that up-weights pixels near class
+boundaries --- the region where small classes are disproportionately lost at
+low capacity.
+
+Training uses real Cityscapes (2{,}975 train / 500 val) and ACDC (1{,}600
+train / 406 val, four adverse conditions: fog, night, rain, snow) images at a
+batch size and learning rate schedule held fixed across every experiment in
+this paper. We additionally apply random scale-crop-pad, horizontal flip, and
+color jitter augmentation to the training stream; Section~\ref{sec:aug}
+quantifies this choice's effect across five different segmentation
+architectures rather than assuming it helps uniformly.
+% source: README.md Phase 4; reports/augmentation_effect_all_5_baselines_20260916.md
+
+\subsection{Hardware-in-the-loop Pareto subnet selection}
+\label{sec:pareto}
+
+Rather than selecting among the four trained levels by parameter count or
+FLOPs, we select by measured deployment cost. For each of four deployment
+targets we benchmarked --- a Hailo-8 M.2 accelerator (Raspberry Pi~5 host) and
+three NVIDIA Jetson boards spanning three tiers (Xavier NX, AGX Xavier, Orin
+Nano; TensorRT, FP16) --- we measure end-to-end and kernel-only latency for
+all four levels, pooling three independent runs per level per the protocol in
+Section~\ref{sec:latency-protocol}, and build a per-target Pareto frontier
+over the (latency, mIoU) plane. On every target, all four levels are
+Pareto-optimal (no level is simultaneously slower and less accurate than
+another); the level that is optimal under a fixed 10~ms latency budget differs
+by target --- \emph{small} on the Hailo-8, \emph{small} on Xavier NX,
+\emph{medium} on Orin Nano, \emph{large} on AGX Xavier, whose TensorRT GPU
+path is the fastest of the four by a wide margin. Four real devices producing
+three different choices at one identical budget is concrete evidence that
+hardware-aware subnet selection is not interchangeable with a single,
+device-agnostic choice --- the premise our approach is built on --- though we
+have not yet quantified this against a FLOPs-aware selection baseline
+(Section~\ref{sec:limitations} discusses this gap directly rather than
+treating the qualitative result as sufficient on its own).
+% source: reports/pareto_search_v1_20260912.md; reports/edge/E2_E5_tensorrt_benchmark_all_levels_20260916.md
+
+\subsection{Quantization-aware training}
+\label{sec:qat}
+
+We convert every convolution --- both the plain convolutions in our
+comparison baselines and the width-sliced slimmable convolutions specific to
+the shared supernet --- to a fake-quantized form: dynamic, per-tensor,
+symmetric INT8 quantization of each layer's weight and input activation,
+applied with a straight-through gradient estimator so training proceeds
+unmodified through the quantization op. For the supernet's slimmable
+convolutions, the quantization range is computed from each elasticity level's
+own \emph{active} channel slice at every forward call, so every level
+receives an appropriately scaled range without any additional bookkeeping. We
+deliberately use a dynamic, uncalibrated range rather than a range fit from a
+held-out calibration set spanning all five visual conditions
+(Section~\ref{sec:supernet}) --- a documented simplification that should be
+read as an upper bound on achievable accuracy, not a final number, until a
+calibrated variant is built.
+
+We fine-tune each INT8 model for 10{,}000 steps from a converged FP32
+checkpoint at a reduced learning rate ($3\times10^{-5}$), rather than training
+INT8 from random initialization. Across two representative fixed-budget
+architectures --- Fast-SCNN (1.14~M parameters) and DDRNet-23-slim (5.22~M
+parameters) --- and two random seeds each, INT8 fine-tuning loses between 0.11
+and 1.25 mIoU points relative to the FP32 checkpoint it was fine-tuned from,
+across Cityscapes and all four ACDC conditions (worst case: Fast-SCNN seed~0
+on rain, $-1.25$ points). This is within the go/no-go accuracy budget we fixed
+in advance ($\leq 1.0$--$1.5$ mIoU points; Section~\ref{sec:go-no-go}),
+confirmed across two architectures and two seeds rather than a single run.
+% source: reports/qat_v1_20260913.md (2026-09-14/15/16 updates)
+% TODO: QAT has since been extended to the supernet itself (not just the
+% baseline architectures above); update this subsection with real supernet
+% QAT numbers once that training run completes and is evaluated.
+
+\subsection{Compiled static engines and calibrated routing}
+\label{sec:router}
+
+Each trained elasticity level is exported and compiled independently ---
+never as a single graph with runtime branching --- to a TensorRT engine, a
+DLA-targeted engine, and a Hailo HEF (via ONNX and the Hailo Dataflow
+Compiler); a deployed system picks one compiled engine per inference window
+rather than executing dynamic control flow inside a compiled graph. This
+partition into independently-compiled static engines is what makes
+hardware-aware routing possible without a graph any of the three compiler
+toolchains would reject.
+
+The routing decision is made by a lightweight, calibrated risk probe rather
+than a fixed policy. We run one cheap forward pass --- typically at the
+\emph{tiny} level --- and take the mean per-pixel softmax entropy of its
+output as a raw, uncalibrated risk score; we then map this score to an
+expected pixel-error probability using a monotonic calibrator
+(quantile-binned with a cumulative-max correction) fit on a held-out half of
+each validation split, never on the images a policy is later evaluated
+against. At inference time, a target risk budget determines how many
+elasticity levels to escalate above the cheapest available level.
+
+We evaluate this policy end to end: for the held-out half of each validation
+split, we run every candidate level's forward pass, route each image under
+each candidate policy using only its cheap-pass risk score, and measure the
+resulting \emph{achieved} mIoU and the real measured latency
+(Section~\ref{sec:pareto}) the policy actually spends. Calibrated routing
+achieves higher mIoU than routing on raw, uncalibrated entropy in every one of
+seven tested conditions --- Cityscapes under two risk-budget settings, two
+deployment targets (Hailo-8 and AGX Xavier), and all four ACDC adverse
+conditions --- with margins of $+0.0013$ to $+0.0183$ mIoU. The efficiency
+picture is more mixed: because calibrated routing also spends slightly more
+latency than entropy-only routing in every condition, the
+mIoU-gained-per-millisecond-spent comparison favors calibrated routing in two
+of the seven conditions and entropy-only routing in the other five. We report
+both numbers rather than only the mIoU comparison that favors our method.
+
+A structural property of the current policy is worth stating plainly:
+escalation decisions depend only on each candidate level's latency
+\emph{rank}, not its magnitude, so a calibrator fit once transfers unchanged
+across deployment targets --- confirmed empirically (Hailo-8 and AGX Xavier
+produce numerically identical achieved mIoU on the same validation split,
+despite a $>\!4\times$ difference in absolute per-level latency). This is a
+useful robustness property --- no per-device recalibration is required --- but
+it also means the current policy cannot yet exploit a target-specific cost
+\emph{ratio} between levels, which we flag as a direction for a
+latency-value-aware successor policy rather than treating as resolved.
+% source: reports/router_v1_20260914.md
+
+\section{Deployment protocol}
+\label{sec:deployment}
+
+\subsection{Compiler validation}
+\label{sec:compiler-validation}
+
+We validate each of the three target compiler toolchains independently before
+relying on any of them for a result: TensorRT (GPU and DLA paths, via
+\texttt{trtexec}), and the Hailo Dataflow Compiler (ONNX~$\to$~HAR~$\to$~HEF).
+TensorRT compiles and executes all four elasticity levels in both FP16 and
+INT8 precision on two Jetson devices (8/8 configurations pass); the Hailo
+toolchain compiles all four levels to a working HEF, and all four ran
+successfully on physical Hailo-8 hardware. Xavier's DLA path compiles only the
+encoder half of the network at every elasticity level --- the decoder always
+falls back to the GPU. We traced this to a hard, documented hardware limit (a
+DLA core executes at most 16 subgraphs, a budget the encoder alone exhausts),
+not an unsupported operator, ruling out a fix by further restricting our
+operator set. Because this contingency was anticipated in our go/no-go
+criteria (excessive DLA fallback), we demote DLA to a secondary,
+encoder-only ablation and report TensorRT GPU and Hailo HEF as the two primary
+deployment backends for every headline result in this paper.
+% source: README.md Phase 2; reports/edge/E3_compiler_smoke_test_20260908.md; reports/edge/E1_hailo_dfc_compile_20260909.md
+
+\subsection{Latency measurement protocol}
+\label{sec:latency-protocol}
+
+Latency is measured with a protocol adapted from MLPerf Power's methodology
+(without claiming formal compliance): batch size~1; identical resolution and
+pre/post-processing held fixed within a configuration; a warm-up period before
+timed measurement; three independent runs per (device, backend, precision,
+elasticity level) configuration, pooled into one bootstrap 95\% confidence
+interval rather than reported as three separate point estimates; kernel-only
+and end-to-end latency reported separately, never compared across device
+families where the two are not measuring the same boundary. We report the
+complete measured cross-backend latency table for all four benchmarked
+targets across all four elasticity levels in Section~\ref{sec:latency-results}.
+
+\textbf{Energy is not yet reported.} The Hailo-8 M.2 module used in this work
+exposes no on-board power or current telemetry (\texttt{--measure-power} and
+\texttt{--measure-current} are both unsupported on this hardware), and we do
+not yet have access to an external calibrated power meter for any target ---
+a material gap against our own protocol, disclosed rather than worked around
+with an unaudited on-chip estimate.
+% source: README.md Phase 3; reports/edge/E1_hailo_benchmark_protocol_20260910.md; reports/edge/E3_tensorrt_benchmark_all_levels_20260911.md; RESEARCH_PLAN.md \S9
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Vision quality is monotonic in elasticity level}
+\label{sec:monotonic}
+
+We first confirm the basic premise the elastic supernet depends on: that its
+four trained levels form a genuine accuracy ladder, not four
+arbitrarily-ordered configurations. At 100{,}000 training steps, mIoU is
+monotonic in model size at every one of five evaluation splits
+(Table~\ref{tab:monotonic}), and reproduces within 0.01--0.03 mIoU on an
+independently seeded run.
+
+\begin{table}[h]
+\centering
+\caption{Supernet mIoU by elasticity level (seed 0, 100k steps).}
+\label{tab:monotonic}
+\begin{tabular}{lrrrrr}
+\toprule
+Level & Cityscapes & ACDC/fog & ACDC/night & ACDC/rain & ACDC/snow \\
+\midrule
+tiny   & 0.2986 & 0.3154 & 0.1944 & 0.2901 & 0.2610 \\
+small  & 0.3564 & 0.3658 & 0.2511 & 0.3680 & 0.3304 \\
+medium & 0.4120 & 0.4360 & 0.2898 & 0.4003 & 0.3981 \\
+large  & 0.4712 & 0.4919 & 0.3312 & 0.4517 & 0.4492 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+ACDC/night is the hardest condition throughout, as expected of the
+lowest-light, lowest-contrast adverse condition. That ACDC/fog scores
+\emph{above} clean Cityscapes at every level is a real effect we traced to
+class composition rather than an artifact of unweighted macro-averaging:
+several large structural classes (wall, pole, traffic light, sky) score
+markedly higher in fog's visually simpler scenes, while dynamic road-user
+classes degrade as expected under fog (at the \emph{large} level: person
+$0.471\to0.280$, bicycle $0.472\to0.204$, car $0.828\to0.709$). We report
+per-class breakdowns for exactly these dynamic classes alongside every
+aggregate mIoU number in this paper for this reason --- an aggregate number
+alone would mask a real safety-relevant degradation behind an unrelated
+class-mix effect.
+% source: reports/first_full_supernet_run_100k_20260910.md
+
+\subsection{Shared supernet vs.\ independent per-budget training}
+\label{sec:go-no-go}
+
+RQ2 asks whether a single shared supernet can match independently trained,
+same-parameter-budget models without the cost of training and maintaining one
+model per target --- not whether it can beat them. We compare the supernet's
+\emph{large} level (1.02~M parameters) against Fast-SCNN (1.05~M parameters,
+the one comparison baseline at a matched budget), both trained with identical
+augmentation, over three independent seeds per side, per our go/no-go
+criterion that headline accuracy numbers require three training seeds.
+
+\begin{table}[h]
+\centering
+\caption{Supernet-large vs.\ Fast-SCNN, augmented, 3-seed average.}
+\label{tab:go-no-go}
+\begin{tabular}{lrrr}
+\toprule
+Split & Fast-SCNN (aug) & Supernet-large (aug) & Gap \\
+\midrule
+Cityscapes  & 0.5228 & 0.5338 & $+0.0110$ \\
+ACDC/fog    & 0.5629 & 0.5650 & $+0.0021$ \\
+ACDC/night  & 0.3822 & 0.3757 & $-0.0065$ \\
+ACDC/rain   & 0.5050 & 0.5027 & $-0.0023$ \\
+ACDC/snow   & 0.5048 & 0.5055 & $+0.0007$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The supernet wins three of five splits and loses two, with every margin
+within 1.1~mIoU points --- a near-exact tie on ACDC/snow. We read this as
+\textbf{true near-parity, not a win for either side}: the shared supernet
+matches independently trained, same-budget training within roughly one mIoU
+point across clean and all four adverse conditions, while requiring one
+training run instead of four (or four times four, across our elasticity
+levels). This is RQ2's actual hypothesis, confirmed rather than exceeded, and
+is comfortably clear of our own no-go trigger ($>2$ mIoU loss in either
+direction). We note this result required three successive corrections during
+development --- an un-augmented, single-seed comparison had initially favored
+the supernet by 2.6--6.4 mIoU, an artifact of Fast-SCNN's own augmentation gap
+rather than a real capability difference --- and report only the final,
+3-seed, augmented-vs-augmented number as citable.
+% source: README.md Phase 8; reports/baseline_comparison_gap_check_20260912.md
+
+\subsection{Data augmentation's effect is architecture-dependent, not monotonic in model size}
+\label{sec:aug}
+
+Motivated by an unexplained result on one architecture during the comparison
+above, we trained all five of our required baseline architectures both with
+and without our augmentation policy (random scale-crop, horizontal flip,
+color jitter), spanning almost an order of magnitude in parameter count
+(1.14~M--11.0~M). The effect is not a monotonic function of size
+(Table~\ref{tab:aug}).
+
+\begin{table}[h]
+\centering
+\caption{Augmentation effect (augmented $-$ non-augmented mIoU) by architecture.}
+\label{tab:aug}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Params (M) & No-aug Cityscapes mIoU & Cityscapes $\Delta$ & ACDC-avg $\Delta$ \\
+\midrule
+Fast-SCNN                & 1.14  & 0.408 & $\mathbf{+0.115}$ & $\mathbf{+0.107}$ \\
+BiSeNetV2                & 1.71  & 0.581 & $-0.004$ & $+0.003$ \\
+SegFormer-B0              & 3.72  & 0.567 & $-0.015$ & $+0.016$ \\
+DDRNet-23-slim            & 5.22  & 0.627 & $+0.000$ & $-0.005$ \\
+MobileNetV3+DeepLabV3     & 11.03 & 0.577 & $\mathbf{+0.026}$ & $\mathbf{+0.045}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The smallest model (Fast-SCNN) is, without augmentation, badly underfit ---
+its 0.408 Cityscapes mIoU is far the worst of the five --- and augmentation
+relieves this directly, producing the largest gain of any architecture. The
+\emph{largest} model (MobileNetV3+DeepLabV3) also gains substantially, despite
+showing no sign of underfitting: its non-augmented mIoU (0.577) is in fact
+\emph{worse} than DDRNet-23-slim's (0.627), a model with under half its
+parameters, a pattern consistent with overfitting our comparatively small
+(4{,}575-image) training set --- a failure mode augmentation's regularizing
+effect also relieves, through a different mechanism than Fast-SCNN's. The
+three architectures between these extremes (1.7--5.2~M parameters, the three
+best-fitting models without augmentation) show small, mixed, and sometimes
+slightly negative effects. We read this as a bimodal relationship with how
+comfortably a given architecture fits this particular dataset and training
+budget, not a monotonic function of parameter count --- and caution against
+citing ``augmentation helps small models more'' as a general claim without
+first establishing whether a given architecture is under- or over-fit at its
+evaluated budget.
+% source: reports/augmentation_effect_all_5_baselines_20260916.md
+
+\subsection{Measured latency and hardware-aware subnet selection}
+\label{sec:latency-results}
+
+\begin{table}[h]
+\centering
+\caption{End-to-end latency (ms) by elasticity level, mean over 3 independent runs, across all four benchmarked deployment targets.}
+\label{tab:latency}
+\begin{tabular}{lrrrr}
+\toprule
+Level & Hailo-8 & Xavier NX (TensorRT FP16) & AGX Xavier (TensorRT FP16) & Orin Nano (TensorRT FP16) \\
+\midrule
+tiny   & 3.714 & 2.061 & 0.912 & 1.081 \\
+small  & 6.597 & 4.964 & 1.781 & 2.604 \\
+medium & 20.29 & 15.10 & 4.546 & 7.727 \\
+large  & 41.14 & 40.26 & 9.389 & 17.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Joining this table with Table~\ref{tab:monotonic}'s mIoU numbers per level
+(Section~\ref{sec:pareto}), all four levels lie on the Pareto frontier on
+every target --- none is simultaneously slower and less accurate than
+another --- and the level selected under a fixed 10~ms budget differs by
+target: \emph{small} on the Hailo-8, \emph{small} on Xavier NX, \emph{large}
+on AGX Xavier (whose TensorRT path is the fastest of the four, 4--4.5$\times$
+the Hailo-8's per-level latency), and \emph{medium} on Orin Nano. Four real
+devices producing three distinct choices at one identical latency budget is
+the full device-lineup evidence our protocol calls for --- stronger than a
+two-device demonstration alone, though still only a qualitative confirmation
+that hardware-aware selection matters, not yet the quantitative comparison
+against a FLOPs-aware baseline that would let us claim a specific margin
+(Section~\ref{sec:limitations}).
+% source: reports/pareto_search_v1_20260912.md; reports/edge/E2_E5_tensorrt_benchmark_all_levels_20260916.md
+
+\section{Ablations and failure analysis}
+\label{sec:ablations}
+% TODO: blocked on Phase 9 (RESEARCH_PLAN.md \S10's 10 ablation axes), only
+% ~10-15\% started (a handful of axes touched as side effects of other
+% sections: shared-vs-independent training in \S\ref{sec:go-no-go}, entropy
+% vs.\ calibrated risk in \S\ref{sec:router}). A with/without-distillation
+% ablation run and a second QAT-on-supernet seed are in flight as of
+% 2026-09-16 -- fill this section in once they complete and are evaluated.
+TODO.
+
+\section{Limitations}
+\label{sec:limitations}
+% TODO: draft once Ablations exists -- premature to enumerate limitations
+% before the ablation results that would motivate several of them (e.g. the
+% FLOPs-aware baseline gap, the latency-rank-only router policy, the
+% single-target-pair QAT evidence) are in hand.
+TODO.
+
+\section{Conclusion}
+\label{sec:conclusion}
+% TODO: blocked on the above.
+TODO.
+
+\section*{Traceability note (remove before submission)}
+Every quantitative claim in this draft is annotated with a \texttt{\% source:}
+LaTeX comment pointing to the specific report under \texttt{reports/} in the
+\texttt{imavis-edge-seg} repository it was drawn from. Before final
+submission, verify no number has drifted from its source during editing, then
+delete this section and all \texttt{\% source:} comments.
+
+\end{document}
