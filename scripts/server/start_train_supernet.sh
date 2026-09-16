@@ -35,6 +35,12 @@ fi
 RUN_ID="$(hostname)_train_$(date -u +%Y%m%dT%H%M%SZ)"
 JOB_DIR="outputs/train_supernet/$RUN_ID"
 mkdir -p "$JOB_DIR"
+# outputs/ is a *shared* NFS mount across SERVER-01..05 (docs/INFRA_OVERRIDE.md) --
+# write a per-hostname pointer (what status_train_supernet.sh reads by default) as
+# well as the legacy shared one (kept for any single-server-at-a-time workflow),
+# so a status check on THIS host reports THIS host's own latest launch, not
+# whichever server anywhere launched most recently.
+printf '%s\n' "$RUN_ID" > "outputs/train_supernet/latest_run_id.$(hostname).txt"
 printf '%s\n' "$RUN_ID" > outputs/train_supernet/latest_run_id.txt
 
 nohup setsid bash scripts/server/run_train_supernet.sh "$RUN_ID" "$CONFIG" "$@" \
