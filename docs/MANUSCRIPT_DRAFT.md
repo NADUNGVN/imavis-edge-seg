@@ -42,21 +42,23 @@ uniformly.
 ### 3.2 Hardware-in-the-loop Pareto subnet selection
 
 Rather than selecting among the four trained levels by parameter count or FLOPs,
-we select by measured deployment cost. For each of two deployment targets we
-benchmarked — a Hailo-8 M.2 accelerator (Raspberry Pi 5 host) and an NVIDIA
-Jetson AGX Xavier (TensorRT, FP16) — we measure end-to-end and kernel-only
-latency for all four levels, pooling three independent runs per level per the
-protocol in Section 4, and build a per-target Pareto frontier over the
-(latency, mIoU) plane. On both targets, all four levels are Pareto-optimal (no
-level is simultaneously slower and less accurate than another); the level that
-is optimal under a fixed latency budget differs by target — the *small* level is
-preferred on the Hailo-8 at a 10 ms budget, while the same budget selects the
-*large* level on the AGX Xavier, whose TensorRT GPU path is roughly 4–4.5×
-faster per level. This is concrete evidence that hardware-aware subnet selection
-is not interchangeable with a single, device-agnostic choice — the premise our
-approach is built on — though we have not yet quantified this against a
-FLOPs-aware selection baseline (Section 6 discusses this gap directly rather
-than treating the qualitative result as sufficient on its own).
+we select by measured deployment cost. For each of four deployment targets we
+benchmarked — a Hailo-8 M.2 accelerator (Raspberry Pi 5 host) and three NVIDIA
+Jetson boards spanning three tiers (Xavier NX, AGX Xavier, Orin Nano; TensorRT,
+FP16) — we measure end-to-end and kernel-only latency for all four levels,
+pooling three independent runs per level per the protocol in Section 4, and
+build a per-target Pareto frontier over the (latency, mIoU) plane. On every
+target, all four levels are Pareto-optimal (no level is simultaneously slower
+and less accurate than another); the level that is optimal under a fixed 10 ms
+latency budget differs by target — *small* on the Hailo-8, *small* on Xavier NX,
+*medium* on Orin Nano, *large* on AGX Xavier, whose TensorRT GPU path is the
+fastest of the four by a wide margin. Four real devices producing three
+different choices at one identical budget is concrete evidence that
+hardware-aware subnet selection is not interchangeable with a single,
+device-agnostic choice — the premise our approach is built on — though we have
+not yet quantified this against a FLOPs-aware selection baseline (Section 6
+discusses this gap directly rather than treating the qualitative result as
+sufficient on its own).
 
 ### 3.3 Quantization-aware training
 
@@ -275,24 +277,27 @@ is under- or over-fit at its evaluated budget.
 
 ### 5.4 Measured latency and hardware-aware subnet selection
 
-*Table 4. End-to-end latency by elasticity level, mean over 3 independent runs.*
+*Table 4. End-to-end latency by elasticity level, mean over 3 independent runs,
+across all four benchmarked deployment targets.*
 
-| Level | Hailo-8 (ms) | AGX Xavier, TensorRT FP16 (ms) |
-|---|---:|---:|
-| tiny | 3.714 | 0.912 |
-| small | 6.597 | 1.781 |
-| medium | 20.29 | 4.546 |
-| large | 41.14 | 9.389 |
+| Level | Hailo-8 (ms) | Xavier NX, TensorRT FP16 (ms) | AGX Xavier, TensorRT FP16 (ms) | Orin Nano, TensorRT FP16 (ms) |
+|---|---:|---:|---:|---:|
+| tiny | 3.714 | 2.061 | 0.912 | 1.081 |
+| small | 6.597 | 4.964 | 1.781 | 2.604 |
+| medium | 20.29 | 15.10 | 4.546 | 7.727 |
+| large | 41.14 | 40.26 | 9.389 | 17.95 |
 
 Joining this table with Table 1's mIoU numbers per level (Section 3.2), all four
-levels lie on the Pareto frontier on both targets — none is simultaneously
+levels lie on the Pareto frontier on every target — none is simultaneously
 slower and less accurate than another — and the level selected under a fixed
-10 ms budget differs by target (*small* on Hailo-8, *large* on AGX Xavier, whose
-TensorRT path is 4–4.5× faster per level throughout). We have not yet
-benchmarked our two remaining target devices (a second Jetson-class GPU and a
-second Xavier-class board), so Table 4 should be read as a two-target
-demonstration of device-dependent selection, not yet the full four-device sweep
-our protocol calls for.
+10 ms budget differs by target: *small* on the Hailo-8, *small* on Xavier NX,
+*large* on AGX Xavier (whose TensorRT path is the fastest of the four, 4–4.5×
+the Hailo-8's per-level latency), and *medium* on Orin Nano. Four real devices
+producing three distinct choices at one identical latency budget is the full
+device-lineup evidence our protocol calls for — stronger than a two-device
+demonstration alone, though still only a qualitative confirmation that
+hardware-aware selection matters, not yet the quantitative comparison against a
+FLOPs-aware baseline that would let us claim a specific margin (Section 6).
 
 ---
 
@@ -326,10 +331,10 @@ later editing pass can verify nothing drifted from its source during rewriting:
   `reports/baseline_comparison_gap_check_20260912.md`.
 - §5.3 5-architecture augmentation table:
   `reports/augmentation_effect_all_5_baselines_20260916.md`.
-- §5.4 latency table, Pareto frontier, 10 ms budget example: same sources as
-  §3.2 above; two-target caveat is current as of 2026-09-16 -- **check for an
-  updated E2/E5 benchmark report before citing this caveat**, a same-day
-  extension was in progress when this section was drafted.
+- §3.2/§5.4 4-device latency table, 3-way Pareto selection split at 10ms:
+  `reports/pareto_search_v1_20260912.md` (E1/E3 original);
+  `reports/edge/E2_E5_tensorrt_benchmark_all_levels_20260916.md` (E2/E5
+  extension, same day).
 
 ## Not yet draftable (do not backfill without new results)
 
