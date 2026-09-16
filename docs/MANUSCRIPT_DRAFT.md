@@ -174,6 +174,128 @@ worked around with an unaudited on-chip estimate.
 
 ---
 
+## 5. Experiments
+
+### 5.1 Vision quality is monotonic in elasticity level
+
+We first confirm the basic premise the elastic supernet depends on: that its four
+trained levels form a genuine accuracy ladder, not four arbitrarily-ordered
+configurations. At 100,000 training steps, mIoU is monotonic in model size at
+every one of five evaluation splits (Table 1), and reproduces within 0.01–0.03
+mIoU on an independently seeded run.
+
+*Table 1. Supernet mIoU by elasticity level (seed 0, 100k steps).*
+
+| Level | Cityscapes | ACDC/fog | ACDC/night | ACDC/rain | ACDC/snow |
+|---|---:|---:|---:|---:|---:|
+| tiny | 0.2986 | 0.3154 | 0.1944 | 0.2901 | 0.2610 |
+| small | 0.3564 | 0.3658 | 0.2511 | 0.3680 | 0.3304 |
+| medium | 0.4120 | 0.4360 | 0.2898 | 0.4003 | 0.3981 |
+| large | 0.4712 | 0.4919 | 0.3312 | 0.4517 | 0.4492 |
+
+ACDC/night is the hardest condition throughout, as expected of the lowest-light,
+lowest-contrast adverse condition. That ACDC/fog scores *above* clean Cityscapes
+at every level is a real effect we traced to class composition rather than an
+artifact of unweighted macro-averaging: several large structural classes (wall,
+pole, traffic light, sky) score markedly higher in fog's visually simpler scenes,
+while dynamic road-user classes degrade as expected under fog (at the *large*
+level: person 0.471→0.280, bicycle 0.472→0.204, car 0.828→0.709). We report
+per-class breakdowns for exactly these dynamic classes alongside every aggregate
+mIoU number in this paper for this reason — an aggregate number alone would mask
+a real safety-relevant degradation behind an unrelated class-mix effect.
+
+### 5.2 Shared supernet vs. independent per-budget training
+
+RQ2 asks whether a single shared supernet can match independently trained,
+same-parameter-budget models without the cost of training and maintaining one
+model per target — not whether it can beat them. We compare the supernet's
+*large* level (1.02 M parameters) against Fast-SCNN (1.05 M parameters, the one
+comparison baseline at a matched budget), both trained with identical
+augmentation, over three independent seeds per side, per our go/no-go criterion
+that headline accuracy numbers require three training seeds.
+
+*Table 2. Supernet-large vs. Fast-SCNN, augmented, 3-seed average.*
+
+| Split | Fast-SCNN (aug) | Supernet-large (aug) | Gap |
+|---|---:|---:|---:|
+| Cityscapes | 0.5228 | 0.5338 | +0.0110 |
+| ACDC/fog | 0.5629 | 0.5650 | +0.0021 |
+| ACDC/night | 0.3822 | 0.3757 | −0.0065 |
+| ACDC/rain | 0.5050 | 0.5027 | −0.0023 |
+| ACDC/snow | 0.5048 | 0.5055 | +0.0007 |
+
+The supernet wins three of five splits and loses two, with every margin within
+1.1 mIoU points — a near-exact tie on ACDC/snow. We read this as **true
+near-parity, not a win for either side**: the shared supernet matches
+independently trained, same-budget training within roughly one mIoU point
+across clean and all four adverse conditions, while requiring one training run
+instead of four (or four times four, across our elasticity levels). This is
+RQ2's actual hypothesis, confirmed rather than exceeded, and is comfortably
+clear of our own no-go trigger (>2 mIoU loss in either direction). We note this
+result required three successive corrections during development — an
+un-augmented, single-seed comparison had initially favored the supernet by
+2.6–6.4 mIoU, an artifact of Fast-SCNN's own augmentation gap rather than a real
+capability difference — and report only the final, 3-seed, augmented-vs-augmented
+number as citable.
+
+### 5.3 Data augmentation's effect is architecture-dependent, not monotonic in model size
+
+Motivated by an unexplained result on one architecture during the comparison
+above, we trained all five of our required baseline architectures both with and
+without our augmentation policy (random scale-crop, horizontal flip, color
+jitter), spanning almost an order of magnitude in parameter count (1.14 M–11.0 M).
+The effect is not a monotonic function of size (Table 3).
+
+*Table 3. Augmentation effect (augmented − non-augmented mIoU) by architecture.*
+
+| Model | Params (M) | No-aug Cityscapes mIoU | Cityscapes Δ | ACDC-average Δ |
+|---|---:|---:|---:|---:|
+| Fast-SCNN | 1.14 | 0.408 | **+0.115** | **+0.107** |
+| BiSeNetV2 | 1.71 | 0.581 | −0.004 | +0.003 |
+| SegFormer-B0 | 3.72 | 0.567 | −0.015 | +0.016 |
+| DDRNet-23-slim | 5.22 | 0.627 | +0.000 | −0.005 |
+| MobileNetV3+DeepLabV3 | 11.03 | 0.577 | **+0.026** | **+0.045** |
+
+The smallest model (Fast-SCNN) is, without augmentation, badly underfit — its
+0.408 Cityscapes mIoU is far the worst of the five — and augmentation relieves
+this directly, producing the largest gain of any architecture. The *largest*
+model (MobileNetV3+DeepLabV3) also gains substantially, despite showing no sign
+of underfitting: its non-augmented mIoU (0.577) is in fact *worse* than
+DDRNet-23-slim's (0.627), a model with under half its parameters, a pattern
+consistent with overfitting our comparatively small (4,575-image) training set —
+a failure mode augmentation's regularizing effect also relieves, through a
+different mechanism than Fast-SCNN's. The three architectures between these
+extremes (1.7–5.2 M parameters, the three best-fitting models without
+augmentation) show small, mixed, and sometimes slightly negative effects. We
+read this as a bimodal relationship with how comfortably a given architecture
+fits this particular dataset and training budget, not a monotonic function of
+parameter count — and caution against citing "augmentation helps small models
+more" as a general claim without first establishing whether a given architecture
+is under- or over-fit at its evaluated budget.
+
+### 5.4 Measured latency and hardware-aware subnet selection
+
+*Table 4. End-to-end latency by elasticity level, mean over 3 independent runs.*
+
+| Level | Hailo-8 (ms) | AGX Xavier, TensorRT FP16 (ms) |
+|---|---:|---:|
+| tiny | 3.714 | 0.912 |
+| small | 6.597 | 1.781 |
+| medium | 20.29 | 4.546 |
+| large | 41.14 | 9.389 |
+
+Joining this table with Table 1's mIoU numbers per level (Section 3.2), all four
+levels lie on the Pareto frontier on both targets — none is simultaneously
+slower and less accurate than another — and the level selected under a fixed
+10 ms budget differs by target (*small* on Hailo-8, *large* on AGX Xavier, whose
+TensorRT path is 4–4.5× faster per level throughout). We have not yet
+benchmarked our two remaining target devices (a second Jetson-class GPU and a
+second Xavier-class board), so Table 4 should be read as a two-target
+demonstration of device-dependent selection, not yet the full four-device sweep
+our protocol calls for.
+
+---
+
 ## Traceability (remove before submission; keep while drafting)
 
 Every quantitative claim above traces to a specific report, listed here so a
@@ -198,6 +320,16 @@ later editing pass can verify nothing drifted from its source during rewriting:
   `reports/edge/E1_hailo_benchmark_protocol_20260910.md`;
   `reports/edge/E3_tensorrt_benchmark_all_levels_20260911.md`;
   `RESEARCH_PLAN.md` §9.
+- §5.1 monotonicity table, fog/class-mix finding, per-class numbers:
+  `reports/first_full_supernet_run_100k_20260910.md`.
+- §5.2 go/no-go 3-seed table, correction history: README.md Phase 8;
+  `reports/baseline_comparison_gap_check_20260912.md`.
+- §5.3 5-architecture augmentation table:
+  `reports/augmentation_effect_all_5_baselines_20260916.md`.
+- §5.4 latency table, Pareto frontier, 10 ms budget example: same sources as
+  §3.2 above; two-target caveat is current as of 2026-09-16 -- **check for an
+  updated E2/E5 benchmark report before citing this caveat**, a same-day
+  extension was in progress when this section was drafted.
 
 ## Not yet draftable (do not backfill without new results)
 
