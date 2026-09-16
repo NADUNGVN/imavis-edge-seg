@@ -188,21 +188,27 @@ training one model per device/budget — RQ2's actual hypothesis, confirmed, not
 exceeded.** Earlier "wins 4/5" (1 seed) and "wins 2/5" (2 seeds) framings should not
 be cited; only the 3-seed table above is the citable number.
 
-**Side finding, investigated and explained 2026-09-15**
-(`reports/segformer_augmentation_investigation_20260915.md`): `segformer_b0`
-scored *lower* with augmentation than without on Cityscapes (0.5665 -> 0.5513,
--0.0152), the opposite of `fast_scnn`'s large gain — but this is not a blanket
-"augmentation doesn't help" effect. Per-class analysis shows the drop is
-concentrated almost entirely in 2 rare classes (train -0.109, truck -0.084; every
-common class within ±0.002), while augmentation *improves* `segformer_b0` on
-every ACDC adverse condition (net +0.0155 average). Reading: `fast_scnn` (1.1M
-params) was badly underfit on rare classes without augmentation and augmentation
-fixes that; `segformer_b0` (3.7M params) already fit those classes reasonably, so
-at a fixed training-step budget, augmentation instead trades a little
-clean-domain rare-class accuracy for adverse-domain generalization — a
-capacity/budget-dependent trade-off, not a bug. `bisenetv2`/`ddrnet23_slim`/
-`mobilenetv3_deeplabv3` still have not been re-trained with augmentation, so
-whether this pattern holds at other capacities is untested.
+**Side finding, complete picture 2026-09-16**
+(`reports/augmentation_effect_all_5_baselines_20260916.md`): with all 5 required
+baselines now trained both with and without augmentation, the effect is **not** a
+monotonic function of model size — a 2026-09-15 hypothesis built from only 2 data
+points (`fast_scnn`, `segformer_b0`) did not survive the other 3. `fast_scnn`
+(1.1M params, the worst-fit model without augmentation: 0.408 Cityscapes mIoU,
+catastrophically underfit) gains hugely (+0.115 Cityscapes, +0.107 ACDC average).
+`mobilenetv3_deeplabv3` (11.0M params, the *largest* model tested) also gains a
+lot (+0.026 Cityscapes, +0.045 ACDC average) despite not being underfit — its
+no-augmentation mIoU (0.577) is *worse* than `ddrnet23_slim`'s (0.627, less than
+half the parameters), consistent with overfitting the small (4575-image)
+training set, which augmentation's regularization then relieves. The 3
+architectures in between (`bisenetv2` 1.7M, `segformer_b0` 3.7M, `ddrnet23_slim`
+5.2M — the 3 best-fit models without augmentation) show only small, mixed,
+sometimes slightly negative effects (-0.015 to +0.0003 Cityscapes, -0.0045 to
++0.0155 ACDC average). Reading: a bimodal/U-shaped relationship — augmentation
+helps most at *both* ends of a "how comfortably does this architecture fit this
+budget" axis (underfitting-relief for too-small models, overfitting-relief for
+too-large ones), not simply "smaller models gain more." Parameter count alone
+does not predict which bucket an architecture falls into without first knowing
+its no-augmentation fit quality.
 
 **Latency (measured, not FLOPs)** — the complete cross-backend table
 (`reports/edge/E1_hailo_benchmark_protocol_20260910.md`,
