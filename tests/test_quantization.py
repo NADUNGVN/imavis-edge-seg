@@ -3,8 +3,12 @@ import pytest
 torch = pytest.importorskip("torch")
 from torch import nn  # noqa: E402
 
+from imavis_edge_seg.config import SupernetConfig  # noqa: E402
+from imavis_edge_seg.models.blocks import SlimmableConv2d  # noqa: E402
+from imavis_edge_seg.models.supernet import PaceSegSupernet  # noqa: E402
 from imavis_edge_seg.training.quantization import (  # noqa: E402
     QATConv2d,
+    QATSlimmableConv2d,
     apply_qat,
     fake_quantize_tensor,
 )
@@ -101,3 +105,63 @@ def test_fp32_checkpoint_loads_into_qat_model_and_vice_versa() -> None:
 
     for k in fp32_state:
         assert torch.equal(qat_model.state_dict()[k], fp32_state[k])
+
+
+# ---- QATSlimmableConv2d / supernet coverage ------------------------------------------
+
+
+def test_qat_slimmable_conv2d_preserves_state_dict_keys_and_values() -> None:
+    conv = SlimmableConv2d(3, 8, kernel_size=3, padding=1)
+    before_keys = list(conv.state_dict().keys())
+    before_state = {k: v.clone() for k, v in conv.state_dict().items()}
+
+    q = QATSlimmableConv2d(conv)
+
+    assert list(q.state_dict().keys()) == before_keys
+    after_state = q.state_dict()
+    assert all(torch.equal(before_state[k], after_state[k]) for k in before_keys)
+
+
+def test_qat_slimmable_conv2d_forward_shape_and_gradient_flow() -> None:
+    conv = SlimmableConv2d(8, 8, kernel_size=3, padding=1, depthwise=True)
+    q = QATSlimmableConv2d(conv)
+
+    x = torch.randn(2, 4, 8, 8, requires_grad=True)
+    y = q(x, active_in=4, active_out=4)
+    assert y.shape == (2, 4, 8, 8)
+
+    y.sum().backward()
+    assert q.weight.grad is not None and torch.isfinite(q.weight.grad).all()
+
+
+def test_apply_qat_converts_slimmable_conv2d_in_a_real_supernet() -> None:
+    """Verified end to end against the real PaceSegSupernet architecture (not just
+    an isolated SlimmableConv2d) -- the FP32-vs-QAT-supernet gap this closes is the
+    exact one `reports/qat_v1_20260913.md` flagged as follow-up work."""
+    config = SupernetConfig()
+    for level in config.levels:
+        config.input_resolutions[level] = (64, 64)
+    supernet = PaceSegSupernet(config)
+
+    before_keys = set(supernet.state_dict().keys())
+    apply_qat(supernet)
+    assert set(supernet.state_dict().keys()) == before_keys
+
+    slimmable_count = sum(1 for m in supernet.modules() if isinstance(m, SlimmableConv2d))
+    qat_slimmable_count = sum(1 for m in supernet.modules() if isinstance(m, QATSlimmableConv2d))
+    assert slimmable_count == qat_slimmable_count > 0  # every SlimmableConv2d converted
+
+    x = torch.randn(1, 3, 64, 64)
+    for level in config.levels:
+        logits = supernet(x, level)
+        assert torch.isfinite(logits).all()
+
+
+def test_apply_qat_does_not_double_wrap_slimmable_conv2d() -> None:
+    conv = SlimmableConv2d(3, 4, kernel_size=3, padding=1)
+    model = nn.Module()
+    model.conv = conv  # type: ignore[assignment]
+    apply_qat(model)
+    first_wrap = model.conv
+    apply_qat(model)
+    assert model.conv is first_wrap

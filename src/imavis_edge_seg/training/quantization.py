@@ -7,11 +7,13 @@ quantization applied to every `nn.Conv2d`'s weight and input activation, via
 `torch.fake_quantize_per_tensor_affine` (a differentiable op with a built-in
 straight-through gradient estimator -- the forward pass rounds to INT8 levels, the
 backward pass passes gradients through as if no quantization happened, which is the
-standard QAT training trick). This targets the *baseline* models
-(`models/baseline_architectures.py`, `models/baselines.py`), which use plain
-`nn.Conv2d` -- not yet the supernet's `SlimmableConv2d` (`models/blocks.py`), whose
-per-level active-channel slicing needs its own quantization-range handling and is
-follow-up work, not done here.
+standard QAT training trick). Originally targeted only the *baseline* models
+(`models/baseline_architectures.py`, plain `nn.Conv2d`); `QATSlimmableConv2d` (added
+2026-09-16) extends the same mechanism to the supernet's `SlimmableConv2d`
+(`models/blocks.py`), whose weight is sliced to the active level's channel count on
+every forward call -- the fake-quantization scale is computed from that *sliced*
+sub-tensor each call, so each elasticity level naturally gets its own dynamic range
+without any extra bookkeeping.
 
 A "dynamic per-tensor" range is a real simplification vs. production QAT (which
 usually calibrates per-channel ranges from a running average over many batches) --
@@ -25,6 +27,8 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
+
+from imavis_edge_seg.models.blocks import SlimmableConv2d
 
 
 def fake_quantize_tensor(x: Tensor, num_bits: int = 8) -> Tensor:
@@ -84,16 +88,55 @@ class QATConv2d(nn.Conv2d):
         )
 
 
+class QATSlimmableConv2d(SlimmableConv2d):
+    """A drop-in replacement for an existing `SlimmableConv2d`, fake-quantizing its
+    (per-call, per-level-sliced) weight and input on every forward call. Subclasses
+    `SlimmableConv2d` directly (mirroring `QATConv2d`'s approach for plain
+    `nn.Conv2d`) and takes over the original's `weight`/`bias` `Parameter` objects,
+    so a converted supernet's `state_dict` keys are unchanged."""
+
+    def __init__(self, conv: SlimmableConv2d, num_bits: int = 8) -> None:
+        super().__init__(
+            conv.max_in_channels,
+            conv.max_out_channels,
+            conv.kernel_size,
+            stride=conv.stride,
+            padding=conv.padding,
+            depthwise=conv.depthwise,
+            bias=conv.bias is not None,
+        )
+        self.weight = conv.weight  # share the same Parameter, not a copy
+        if conv.bias is not None:
+            self.bias = conv.bias
+        self.num_bits = num_bits
+
+    def forward(self, x: Tensor, active_in: int, active_out: int) -> Tensor:
+        if self.depthwise:
+            weight = self.weight[:active_out]
+            groups = active_out
+        else:
+            weight = self.weight[:active_out, :active_in]
+            groups = 1
+        bias = self.bias[:active_out] if self.bias is not None else None
+        q_input = fake_quantize_tensor(x, self.num_bits)
+        q_weight = fake_quantize_tensor(weight, self.num_bits)
+        return F.conv2d(q_input, q_weight, bias, stride=self.stride, padding=self.padding, groups=groups)
+
+
 def apply_qat(model: nn.Module, num_bits: int = 8) -> nn.Module:
-    """Recursively replaces every plain `nn.Conv2d` submodule of `model` with a
-    `QATConv2d` sharing its weight/bias, in place, and returns `model`. Safe to call
-    only once per model: `QATConv2d` **is** an `nn.Conv2d` (that is what preserves
-    `state_dict` key names), so a second pass would re-wrap already-wrapped layers,
-    stacking fake-quantization redundantly -- callers needing idempotence should
-    check `isinstance(module, QATConv2d)` themselves before calling again."""
+    """Recursively replaces every plain `nn.Conv2d` submodule with a `QATConv2d`,
+    and every `SlimmableConv2d` submodule with a `QATSlimmableConv2d`, each sharing
+    the original's weight/bias, in place, and returns `model`. Safe to call only
+    once per model: both QAT classes **are** subclasses of the type they replace
+    (that is what preserves `state_dict` key names), so a second pass would re-wrap
+    already-wrapped layers, stacking fake-quantization redundantly -- callers
+    needing idempotence should check `isinstance(module, (QATConv2d,
+    QATSlimmableConv2d))` themselves before calling again."""
     for name, child in list(model.named_children()):
         if isinstance(child, nn.Conv2d) and not isinstance(child, QATConv2d):
             setattr(model, name, QATConv2d(child, num_bits))
+        elif isinstance(child, SlimmableConv2d) and not isinstance(child, QATSlimmableConv2d):
+            setattr(model, name, QATSlimmableConv2d(child, num_bits))
         else:
             apply_qat(child, num_bits)
     return model

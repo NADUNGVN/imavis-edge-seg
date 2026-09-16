@@ -27,6 +27,7 @@ from imavis_edge_seg.evaluation.evaluator import evaluate_level
 from imavis_edge_seg.evaluation.metrics import EvalResult
 from imavis_edge_seg.models.supernet import PaceSegSupernet
 from imavis_edge_seg.training.checkpoint import load_checkpoint
+from imavis_edge_seg.training.quantization import apply_qat
 
 
 def _dataset_root(config: ExperimentConfig, name: str) -> Path | None:
@@ -58,16 +59,28 @@ def main() -> None:
         "changes --output-json's shape from {level: {dataset: miou}} to "
         "{level: {dataset: {miou, num_pixels, per_class_iou}}})",
     )
+    parser.add_argument(
+        "--qat",
+        action="store_true",
+        help="apply_qat before loading the checkpoint -- required to correctly "
+        "evaluate a checkpoint that was *trained* with --qat (train_supernet.py). "
+        "Loading such a checkpoint into a plain, non-QAT supernet would evaluate its "
+        "QAT-trained weights at full FP32 precision, not the INT8 fake-quantized "
+        "inference the checkpoint was actually trained/is meant to be deployed under.",
+    )
     args = parser.parse_args()
 
     console = Console()
     config = load_config(args.config)
-    supernet = PaceSegSupernet(config.supernet).to(args.device)
+    supernet = PaceSegSupernet(config.supernet)
+    if args.qat:
+        supernet = apply_qat(supernet)  # type: ignore[assignment]
+    supernet = supernet.to(args.device)
     checkpoint = load_checkpoint(args.checkpoint, map_location=args.device)
     supernet.load_state_dict(checkpoint["model_state_dict"])
     console.print(
         f"loaded checkpoint step={checkpoint['step']} config_hash={checkpoint['config_hash']} "
-        f"git_commit={checkpoint['git_commit']}"
+        f"git_commit={checkpoint['git_commit']} qat={args.qat}"
     )
 
     levels: list[ElasticityLevel] = args.level or list(config.supernet.levels)

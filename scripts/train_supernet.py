@@ -25,17 +25,44 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=Path("configs/experiment/default.yaml"))
     parser.add_argument("--override", action="append", default=[], help="dotlist override, key=value")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--qat",
+        action="store_true",
+        help="apply QAT (training/quantization.py::apply_qat) before training -- fake-"
+        "quantizes every nn.Conv2d and SlimmableConv2d's weight and input to INT8 "
+        "during the whole run",
+    )
+    parser.add_argument(
+        "--init-checkpoint",
+        type=Path,
+        default=None,
+        help="load an existing (typically FP32) supernet checkpoint's weights before "
+        "training/QAT starts -- RESEARCH_PLAN.md §5.2's 'FP32 teacher -> QAT INT8' "
+        "workflow. Use a distinct --override experiment_id=... so this run's own "
+        "checkpoints don't land in the FP32 run's directory.",
+    )
     args = parser.parse_args()
 
     console = Console()
     config = load_config(args.config, overrides=args.override or None)
-    console.print(f"experiment_id={config.experiment_id} config_hash={config.config_hash()} device={args.device}")
+    console.print(
+        f"experiment_id={config.experiment_id} config_hash={config.config_hash()} "
+        f"device={args.device} qat={args.qat}"
+    )
 
     dataloader = build_train_dataloader(config)
     console.print(f"train dataset size: {len(dataloader.dataset)}")  # type: ignore[arg-type]
 
     output_dir = config.output_root / config.experiment_id
-    run_training(config, dataloader, output_dir, console=console, device=args.device)
+    run_training(
+        config,
+        dataloader,
+        output_dir,
+        console=console,
+        device=args.device,
+        qat=args.qat,
+        init_checkpoint=args.init_checkpoint,
+    )
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ from imavis_edge_seg.training.checkpoint import (
     load_checkpoint,
     save_checkpoint,
 )
+from imavis_edge_seg.training.quantization import apply_qat
 from imavis_edge_seg.training.schedule import lr_lambda
 from imavis_edge_seg.training.step import train_step
 
@@ -44,12 +45,30 @@ def run_training(
     output_dir: Path,
     console: Console | None = None,
     device: str = "cpu",
+    qat: bool = False,
+    init_checkpoint: Path | None = None,
 ) -> PaceSegSupernet:
     console = console or Console()
     torch.manual_seed(config.seed)
     rng = random.Random(config.seed)
 
-    supernet = PaceSegSupernet(config.supernet).to(device)
+    supernet = PaceSegSupernet(config.supernet)
+
+    # Mirrors training.baseline_trainer.run_baseline_training's identical block:
+    # load FP32 weights before apply_qat takes over those (now FP32-initialized)
+    # Parameter objects, and .to(device) last so QAT-converted layers land on the
+    # right device too.
+    if init_checkpoint is not None:
+        init_state = load_checkpoint(init_checkpoint, map_location="cpu")
+        supernet.load_state_dict(init_state["model_state_dict"])
+        console.print(f"initialized from {init_checkpoint} (step={init_state['step']})")
+    if qat:
+        supernet = apply_qat(supernet)  # type: ignore[assignment]
+        console.print(
+            "QAT enabled: all nn.Conv2d and SlimmableConv2d layers fake-quantized (INT8)"
+        )
+    supernet = supernet.to(device)
+
     optimizer = AdamW(
         supernet.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay
     )
