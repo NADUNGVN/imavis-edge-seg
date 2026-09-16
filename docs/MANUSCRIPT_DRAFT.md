@@ -134,10 +134,43 @@ as resolved.
 
 ## 4. Deployment protocol
 
-*(Real content exists for this section — compiler validation across three
-backend families, the MLPerf-Power-inspired latency measurement protocol with
-bootstrap 95% confidence intervals — but it has not yet been converted to
-manuscript prose. Drafted next.)*
+### 4.1 Compiler validation
+
+We validate each of the three target compiler toolchains independently before
+relying on any of them for a result: TensorRT (GPU and DLA paths, via `trtexec`),
+and the Hailo Dataflow Compiler (ONNX → HAR → HEF). TensorRT compiles and
+executes all four elasticity levels in both FP16 and INT8 precision on two
+Jetson devices (8/8 configurations pass); the Hailo toolchain compiles all four
+levels to a working HEF, and all four ran successfully on physical Hailo-8
+hardware. Xavier's DLA path compiles only the encoder half of the network at
+every elasticity level — the decoder always falls back to the GPU. We traced
+this to a hard, documented hardware limit (a DLA core executes at most 16
+subgraphs, a budget the encoder alone exhausts), not an unsupported operator,
+ruling out a fix by further restricting our operator set. Because this
+contingency was anticipated in our go/no-go criteria (excessive DLA fallback),
+we demote DLA to a secondary, encoder-only ablation and report TensorRT GPU and
+Hailo HEF as the two primary deployment backends for every headline result in
+this paper.
+
+### 4.2 Latency measurement protocol
+
+Latency is measured with a protocol adapted from MLPerf Power's methodology
+(without claiming formal compliance): batch size 1; identical resolution and
+pre/post-processing held fixed within a configuration; a warm-up period before
+timed measurement; three independent runs per (device, backend, precision,
+elasticity level) configuration, pooled into one bootstrap 95% confidence
+interval rather than reported as three separate point estimates; kernel-only
+and end-to-end latency reported separately, never compared across device
+families where the two are not measuring the same boundary. We report the
+complete measured cross-backend latency table for the Hailo-8 and AGX Xavier
+targets across all four elasticity levels in Section 5.
+
+**Energy is not yet reported.** The Hailo-8 M.2 module used in this work
+exposes no on-board power or current telemetry (`--measure-power` and
+`--measure-current` are both unsupported on this hardware), and we do not yet
+have access to an external calibrated power meter for either target — a
+material gap against our own protocol (item 6 above), disclosed rather than
+worked around with an unaudited on-chip estimate.
 
 ---
 
@@ -156,6 +189,15 @@ later editing pass can verify nothing drifted from its source during rewriting:
   §4): `README.md` Phase 2; `reports/edge/E3_compiler_smoke_test_20260908.md`.
 - §3.4 router calibration/evaluation protocol, 7/7 result, efficiency split,
   latency-rank-only structural finding: `reports/router_v1_20260914.md`.
+- §4.1 compiler validation counts (8/8 TensorRT, 4/4 Hailo compile+hardware,
+  DLA 16-subgraph limit, DLA demotion decision): `README.md` Phase 2;
+  `reports/edge/E3_compiler_smoke_test_20260908.md`;
+  `reports/edge/E1_hailo_dfc_compile_20260909.md`.
+- §4.2 latency protocol design, bootstrap CI, kernel-only vs. end-to-end
+  separation, Hailo-8 telemetry gap: `README.md` Phase 3;
+  `reports/edge/E1_hailo_benchmark_protocol_20260910.md`;
+  `reports/edge/E3_tensorrt_benchmark_all_levels_20260911.md`;
+  `RESEARCH_PLAN.md` §9.
 
 ## Not yet draftable (do not backfill without new results)
 
