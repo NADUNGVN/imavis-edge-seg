@@ -53,23 +53,59 @@ data — neither available on this dev machine).
   calibrate=True)` integration test against real fixture images). 150/150 tests
   pass, ruff clean, mypy clean.
 
+## Update 2026-09-17, same day: real result -- calibration makes it *worse*, not
+better
+
+Ran the suggested command below (seed0, `large` level, same 10k-step/lr=3e-5
+recipe as every other QAT run) and evaluated with `evaluate_supernet.py --qat`.
+
+| split | FP32 | dynamic QAT (2026-09-16) | calibrated QAT | calibrated − dynamic |
+|---|---|---|---|---|
+| cityscapes | 0.5267 | 0.5107 (−1.60) | 0.5061 (**−2.06**) | −0.46 |
+| acdc/fog | 0.5504 | 0.5492 (−0.12) | 0.5457 (**−0.47**) | −0.35 |
+| acdc/night | 0.3728 | 0.3562 (−1.66) | 0.3507 (**−2.21**) | −0.55 |
+| acdc/rain | 0.4983 | 0.4986 (+0.03) | 0.4851 (**−1.32**) | −1.35 |
+| acdc/snow | 0.4852 | 0.4919 (+0.67) | 0.4802 (**−0.50**) | −1.17 |
+
+**Calibrated ranges lose more than dynamic ranges on every single split** (0.35
+to 1.35 points worse), the opposite of the leading hypothesis this feature was
+built to test. This directly refutes "the supernet's dynamic range is the
+problem, calibration will fix it" in its simplest form -- at least for this
+specific calibration design (a single global max-observed-activation scale from
+a 200-image calibration set).
+
+A plausible explanation: max-based calibration is sensitive to outliers -- a
+single unusually large activation anywhere in the ~200-image, 4-level
+calibration pass sets the frozen scale for *every* later forward call,
+including calls whose actual activations are much smaller and now get quantized
+on a needlessly coarse grid. The dynamic mode's per-call max, by contrast, never
+carries an outlier from one image into the quantization of a completely
+different image. A percentile-based or running-average observer (rather than a
+hard running max) is the natural next thing to try, not yet done.
+
+**§11 QAT go bar on the supernet: still does not reliably pass, and the most
+promising untested fix did not help.** The supernet-vs-independent-baseline QAT
+gap documented in `reports/qat_v1_20260913.md`'s 3-seed dynamic-mode result
+remains unexplained and unresolved.
+
 ## Not yet done
 
-- **No real result yet.** This needs a server: fine-tune with `--qat --calibrate
-  --init-checkpoint <fp32>`, evaluate with `evaluate_supernet.py --qat`, and
-  compare against the existing dynamic-mode supernet QAT results (3 seeds,
-  worst-per-seed loss -1.66/-1.39/-2.54 points, 2/3 exceeding the go bar) --
-  the run command is below.
+- A percentile/running-average calibration observer instead of a hard running
+  max, to test whether outlier-sensitivity specifically is the calibrated
+  mode's problem.
+- Calibrating only some layers (e.g. just the layers nearest the input, where
+  raw pixel-statistics outliers would show up most directly) rather than every
+  layer uniformly.
+- Only tested on seed0 so far -- a second calibrated-mode seed would confirm
+  whether "calibration makes it worse" is a real, reproducible pattern or
+  partly seed noise, the same caution already applied to the dynamic-mode
+  result and the distillation ablation.
 - Only the supernet's `SlimmableConv2d` path is exercised by
   `build_calibration_dataloader`'s wiring so far; the independent baselines'
   `QATConv2d` layers already pass the go bar under dynamic ranges, so calibrating
   them is lower priority, not yet done.
-- `run_calibration`'s max-observed-value approach (not a percentile/histogram
-  observer) is itself a simplification -- a single outlier pixel could set an
-  overly conservative scale. Worth revisiting if the calibrated result doesn't
-  close the gap.
 
-## Suggested run (server, GPU + real data required)
+## Run command (for reference / re-running with a different seed or observer design)
 
 ```bash
 cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml \
@@ -80,5 +116,3 @@ cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/star
   --qat --calibrate \
   --init-checkpoint outputs/pace_seg_v1_aug_seed0/checkpoints/step_00100000.pt
 ```
-
-Then evaluate the same way every other supernet QAT checkpoint has been (`scripts/evaluate_supernet.py --qat --level large --per-class`) and compare against seed0's dynamic-mode result (`reports/qat_v1_20260913.md`: cityscapes -1.60, acdc/night -1.66) to see whether calibration closes those specific overshoots.

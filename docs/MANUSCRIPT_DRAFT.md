@@ -111,12 +111,22 @@ with two of the three seeds exceeding it on at least one split. This is a
 real, disclosed limitation, not an open question we expect to resolve in our
 favor: quantization-aware training is reliable on independently-trained,
 fixed-size architectures, but not (yet) on the shared elastic supernet as
-currently trained and quantized. A plausible, untested explanation is that the
+currently trained and quantized. A plausible explanation is that the
 supernet's `large`-level weights are also exercised by every other elasticity
 level through the sandwich rule, making them a harder quantization target than
-a weight tensor serving a single fixed-size model alone; whether calibrated
-(rather than dynamic) quantization ranges close this gap is the most promising
-untested next step.
+a weight tensor serving a single fixed-size model alone.
+
+We tested the most promising candidate fix — a *calibrated* (fixed,
+calibration-set-observed) activation range in place of the dynamic,
+per-forward-call one — and it made the result **worse, not better**: every
+split lost more under calibration than under the dynamic range (0.35–1.35
+additional points; worst case −2.21 vs. −1.66 for the dynamic range at the
+same seed). A plausible explanation is that our calibration observer uses a
+simple running maximum, which is sensitive to a single outlier activation
+anywhere in the calibration pass setting an overly coarse scale for every
+later, typically smaller-magnitude call; a percentile- or running-average-based
+observer is the natural next thing to try, not yet done. The supernet QAT gap
+remains open.
 
 ### 3.4 Compiled static engines and calibrated routing
 
@@ -332,43 +342,47 @@ two of these four devices regardless of which device it was calibrated from.
 
 ## 6. Ablations
 
-*(Preliminary — one axis of ten, one seed per side. Included here as an honest
-first data point, not a settled result; do not cite the pattern below without
-a repeat run.)*
+*(One axis of ten, now with two seed pairs. Included as an honest data point,
+not a fully settled result for every level — see below.)*
 
 We compare the supernet trained with our default in-place distillation weight
 against an otherwise-identical run with distillation disabled
 (`search.alpha_distill = 0`), both at 100k steps, evaluated at all four
-elasticity levels (Table 5).
+elasticity levels, across two independent seed pairs (Table 5).
 
 *Table 5. Distillation effect (no-distillation − with-distillation mIoU,
-points) by elasticity level.*
+points, mean over 5 splits) by elasticity level and seed pair.*
 
-| Level | Cityscapes | ACDC/fog | ACDC/night | ACDC/rain | ACDC/snow | Mean |
-|---|---:|---:|---:|---:|---:|---:|
-| tiny | +0.53 | −0.27 | +1.04 | +0.02 | +0.16 | +0.30 |
-| small | −0.47 | −0.36 | −0.40 | −1.35 | −0.74 | **−0.66** |
-| medium | −0.69 | +0.68 | −0.22 | +0.48 | +1.12 | +0.27 |
-| large | +1.33 | +1.08 | −0.32 | −0.55 | +1.67 | +0.64 |
+| Level | Seed pair 0 | Seed pair 3 | Agree? |
+|---|---:|---:|---|
+| tiny | +0.30 | −0.95 | **No — opposite sign** |
+| small | **−0.66** | **−0.89** | Yes — distillation helps both times |
+| medium | +0.27 | −0.90 | **No — opposite sign** |
+| large | +0.64 | −0.09 | Roughly — both near neutral |
 
-Distillation's benefit is not uniform across levels: at the *small* level
-every split is worse without it, the only fully one-directional result in the
-table; at *tiny*, *medium*, and *large* the effect is mixed and, in this
-single-seed comparison, slightly favors *not* using distillation. This runs
-against the simple expectation that distillation from the *large* teacher
-level should help every smaller level comparably. We flag this as a real,
-if preliminary, finding rather than noise we assume away — but this project
-has already learned once that a single-seed comparison can flip direction
-(Section 5.2's original supernet-vs-baseline result), so we withhold a
-mechanistic claim until a second seed pair is run.
+Only the *small* level replicates: distillation gives a consistent, real
+benefit there (10 of 10 splits across both seeds favor it). At *tiny* and
+*medium*, the two seed pairs disagree in direction entirely — the first pair
+mildly favored *not* using distillation, the second clearly favors using it,
+by a comparable or larger margin — meaning seed-to-seed noise dominates any
+true effect at those two levels, and we do not report a directional claim for
+them. *Large* (which never receives the distillation loss directly, since it
+is the teacher level itself) stays roughly neutral in both pairs. This is
+precisely the single-seed-comparison risk we flagged when only the first pair
+existed (Section 5.2's original supernet-vs-baseline result already taught us
+this lesson once): the *tiny*/*medium* pattern from the first pair alone did
+not hold up, and we do not cite it.
 
-The remaining nine ablation axes (FLOPs- vs. measured-latency objective,
-latency-only vs. latency+energy, unconstrained vs. compiler-safe operator
-space, PTQ vs. QAT, static routing vs. router — already covered in Section
-3.4's 7/7 result — entropy vs. calibrated-risk routing — also Section 3.4 —
-per-frame vs. temporal-window routing, and behavior across power modes) are
-either untested or blocked on infrastructure we do not yet have (a calibrated
-power meter, principally).
+The remaining nine ablation axes (FLOPs- vs. measured-latency objective —
+Section 3.2 covers the FLOPs-vs-latency comparison itself, though not yet as a
+full ablation sweep — latency-only vs. latency+energy, unconstrained vs.
+compiler-safe operator space, PTQ vs. QAT, static routing vs. router — already
+covered in Section 3.4's 7/7 result — entropy vs. calibrated-risk routing —
+also Section 3.4 — per-frame vs. temporal-window routing, and behavior across
+power modes) are either untested or blocked on infrastructure we do not yet
+have (a calibrated power meter, principally, and by deliberate, documented
+choice: deferred rather than blocking the project, since our go/no-go
+criteria accept a latency-only win).
 
 ---
 
@@ -383,7 +397,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
   `reports/pareto_search_v1_20260912.md`. FLOPs-vs-latency ratio comparison and
   cross-device mis-selection result: `reports/flops_baseline_v1_20260917.md`.
 - §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass/supernet
-  gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates).
+  gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates). Calibrated
+  quantization result (made it worse): `reports/calibrated_qat_v1_20260917.md`.
 - §3.4 compiled-engine partition, DLA 16-subgraph limit (referenced, detailed in
   §4): `README.md` Phase 2; `reports/edge/E3_compiler_smoke_test_20260908.md`.
 - §3.4 router calibration/evaluation protocol, 7/7 result, efficiency split,

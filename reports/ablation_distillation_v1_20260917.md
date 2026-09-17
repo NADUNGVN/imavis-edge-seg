@@ -41,17 +41,56 @@ interact with shared stem/early-layer weights the teacher also uses), not
 distillation acting on `large` directly. `tiny` and `medium`'s mixed results
 have no equally direct explanation yet.
 
+**Superseded below**: a 2nd seed pair (2026-09-17, same day) shows the
+`tiny`/`medium` part of this reading did not replicate -- see the Update
+section. Only the `small`-level finding held up.
+
+## Update 2026-09-17, same day: 2nd seed pair -- the caution above was warranted,
+only `small` replicates
+
+Second pair: `pace_seg_v1_no_distill_seed3` (seed=3, 100k steps, `alpha_distill=0`)
+vs. `pace_seg_v1_aug_seed3` (seed=3, distillation on) -- the exact same design as
+the seed0 pair above, a different random seed.
+
+| level | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow | mean delta |
+|---|---:|---:|---:|---:|---:|---:|
+| tiny | +0.26 | -1.61 | -0.68 | -1.77 | -0.93 | **-0.95** |
+| small | -0.68 | -0.56 | -1.38 | -0.89 | -0.96 | **-0.89** |
+| medium | -0.77 | -1.26 | -1.09 | -0.45 | -0.92 | **-0.90** |
+| large | -0.04 | -0.27 | +1.12 | -0.66 | -0.60 | **-0.09** |
+
+Comparing the two seeds' mean deltas per level:
+
+| level | seed0 mean delta | seed3 mean delta | agree? |
+|---|---:|---:|---|
+| tiny | +0.30 | -0.95 | **NO -- opposite sign** |
+| small | -0.66 | -0.89 | yes -- distillation helps both times |
+| medium | +0.27 | -0.90 | **NO -- opposite sign** |
+| large | +0.64 | -0.09 | roughly -- both near-neutral/small |
+
+**Only `small` replicates**: distillation clearly helps at `small` in both
+seeds (a real effect, not noise). `tiny` and `medium` flip sign entirely
+between seeds -- seed0 mildly favored *not* using distillation there, seed3
+clearly favors *using* it, by a similar or larger margin. This is exactly the
+single-seed-comparison risk flagged as a caveat when only seed0 existed, now
+confirmed to have been real: the `tiny`/`medium` "mixed, slightly negative"
+finding from the first seed did **not** hold up and should not be cited.
+`large` stays roughly neutral in both seeds, the one part of the original
+reading that survived.
+
+**Revised, citable claim**: in-place distillation provides a real, consistent
+benefit at the `small` elasticity level (2/2 seeds, 10/10 splits favor it);
+its effect at `tiny`/`medium` is unresolved (seed-dependent, opposite signs);
+`large` (the teacher level, which never receives the distillation loss term
+directly) shows no clear effect either way.
+
 ## Not yet done
 
-- **This is n=1 per side.** A single-seed comparison is exactly the kind of
-  result this project has previously found unreliable (the original
-  supernet-vs-baseline go/no-go comparison needed 3 seeds before the
-  direction of the result stabilized, `reports/baseline_comparison_gap_check_20260912.md`).
-  Do not cite the level-dependent pattern above as confirmed until repeated
-  on at least one more seed pair.
-- No investigation yet into *why* `small` benefits uniquely -- is it specific
-  to `small`'s position in the architecture, its parameter count, or
-  something about how boundary-aware loss interacts with distillation at that
-  size?
+- A 3rd seed pair would help break the tie at `tiny`/`medium`, though at this
+  point the honest read is that those two levels' distillation effect is small
+  relative to seed-to-seed noise, not that a 3rd seed will obviously reveal a
+  hidden consistent direction.
+- No investigation yet into *why* `small` specifically shows a robust,
+  seed-independent benefit while `tiny`/`medium` do not.
 - Only `alpha_distill=0` (fully off) tested against the default `0.5` -- no
   sweep of intermediate distillation weights.
