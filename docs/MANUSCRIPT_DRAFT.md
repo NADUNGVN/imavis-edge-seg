@@ -78,22 +78,32 @@ calibrated variant is built.
 
 We fine-tune each INT8 model for 10,000 steps from a converged FP32 checkpoint
 at a reduced learning rate ($3\times10^{-5}$), rather than training INT8 from
-random initialization. Across two representative fixed-budget architectures —
-Fast-SCNN (1.14 M parameters) and DDRNet-23-slim (5.22 M parameters) — and two
-random seeds each, INT8 fine-tuning loses between 0.11 and 1.25 mIoU points
-relative to the FP32 checkpoint it was fine-tuned from, across Cityscapes and
-all four ACDC conditions (worst case: Fast-SCNN seed 0 on rain, −1.25 points).
-This is within the go/no-go accuracy budget we fixed in advance (≤1.0–1.5 mIoU
-points; Section 7), confirmed across two architectures and two seeds rather than
-a single run — for independent, fixed-architecture baselines. Applying the same
-recipe to the shared supernet's *large* level itself, across the two seeds used
-in Section 5.2's comparison, is **more mixed**: one seed stays within budget on
-every split (worst case −1.39 points), while the other exceeds it on two of
-five splits (cityscapes −1.60, ACDC/night −1.66) — worse than any independent
-baseline result. We do not yet have enough seeds to say whether this is a real,
-reproducible effect of quantizing weights the sandwich rule shares across
-elasticity levels, or seed noise, and report it as an open question rather than
-folding it into the "confirmed" claim above.
+random initialization. Across three representative fixed-budget architectures
+— Fast-SCNN (1.14 M parameters), DDRNet-23-slim (5.22 M parameters), and
+SegFormer-B0 (3.72 M parameters) — and 4 seeds total, INT8 fine-tuning loses
+between 0.08 and 1.25 mIoU points relative to the FP32 checkpoint it was
+fine-tuned from, across Cityscapes and all four ACDC conditions (worst case:
+Fast-SCNN seed 0 on rain, −1.25 points; SegFormer-B0 loses the least of any
+architecture tested, −0.39 at worst, plausibly because our QAT mechanism only
+fake-quantizes convolutional layers and SegFormer's encoder relies more on
+non-convolutional attention/MLP-mixing operations). This is within the
+go/no-go accuracy budget we fixed in advance (≤1.0–1.5 mIoU points; Section
+7), confirmed across three architectures and four seeds total — **but only for
+independent, fixed-architecture baselines.**
+
+Applying the same recipe to the shared supernet's *large* level itself, across
+three seeds, **does not reliably meet the same budget**: worst-per-seed loss is
+−1.66, −1.39, and −2.54 points (mean −1.86, above the budget's upper bound),
+with two of the three seeds exceeding it on at least one split. This is a
+real, disclosed limitation, not an open question we expect to resolve in our
+favor: quantization-aware training is reliable on independently-trained,
+fixed-size architectures, but not (yet) on the shared elastic supernet as
+currently trained and quantized. A plausible, untested explanation is that the
+supernet's `large`-level weights are also exercised by every other elasticity
+level through the sandwich rule, making them a harder quantization target than
+a weight tensor serving a single fixed-size model alone; whether calibrated
+(rather than dynamic) quantization ranges close this gap is the most promising
+untested next step.
 
 ### 3.4 Compiled static engines and calibrated routing
 
@@ -307,6 +317,46 @@ demonstration alone, though still only a qualitative confirmation that
 hardware-aware selection matters, not yet the quantitative comparison against a
 FLOPs-aware baseline that would let us claim a specific margin (Section 6).
 
+## 6. Ablations
+
+*(Preliminary — one axis of ten, one seed per side. Included here as an honest
+first data point, not a settled result; do not cite the pattern below without
+a repeat run.)*
+
+We compare the supernet trained with our default in-place distillation weight
+against an otherwise-identical run with distillation disabled
+(`search.alpha_distill = 0`), both at 100k steps, evaluated at all four
+elasticity levels (Table 5).
+
+*Table 5. Distillation effect (no-distillation − with-distillation mIoU,
+points) by elasticity level.*
+
+| Level | Cityscapes | ACDC/fog | ACDC/night | ACDC/rain | ACDC/snow | Mean |
+|---|---:|---:|---:|---:|---:|---:|
+| tiny | +0.53 | −0.27 | +1.04 | +0.02 | +0.16 | +0.30 |
+| small | −0.47 | −0.36 | −0.40 | −1.35 | −0.74 | **−0.66** |
+| medium | −0.69 | +0.68 | −0.22 | +0.48 | +1.12 | +0.27 |
+| large | +1.33 | +1.08 | −0.32 | −0.55 | +1.67 | +0.64 |
+
+Distillation's benefit is not uniform across levels: at the *small* level
+every split is worse without it, the only fully one-directional result in the
+table; at *tiny*, *medium*, and *large* the effect is mixed and, in this
+single-seed comparison, slightly favors *not* using distillation. This runs
+against the simple expectation that distillation from the *large* teacher
+level should help every smaller level comparably. We flag this as a real,
+if preliminary, finding rather than noise we assume away — but this project
+has already learned once that a single-seed comparison can flip direction
+(Section 5.2's original supernet-vs-baseline result), so we withhold a
+mechanistic claim until a second seed pair is run.
+
+The remaining nine ablation axes (FLOPs- vs. measured-latency objective,
+latency-only vs. latency+energy, unconstrained vs. compiler-safe operator
+space, PTQ vs. QAT, static routing vs. router — already covered in Section
+3.4's 7/7 result — entropy vs. calibrated-risk routing — also Section 3.4 —
+per-frame vs. temporal-window routing, and behavior across power modes) are
+either untested or blocked on infrastructure we do not yet have (a calibrated
+power meter, principally).
+
 ---
 
 ## Traceability (remove before submission; keep while drafting)
@@ -318,8 +368,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
   `reports/augmentation_effect_all_5_baselines_20260916.md`.
 - §3.2 Pareto frontier, 10 ms budget example, 4–4.5× TensorRT/Hailo ratio:
   `reports/pareto_search_v1_20260912.md`.
-- §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass:
-  `reports/qat_v1_20260913.md` (2026-09-14/15/16 updates).
+- §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass/supernet
+  gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates).
 - §3.4 compiled-engine partition, DLA 16-subgraph limit (referenced, detailed in
   §4): `README.md` Phase 2; `reports/edge/E3_compiler_smoke_test_20260908.md`.
 - §3.4 router calibration/evaluation protocol, 7/7 result, efficiency split,
@@ -343,13 +393,16 @@ later editing pass can verify nothing drifted from its source during rewriting:
   `reports/pareto_search_v1_20260912.md` (E1/E3 original);
   `reports/edge/E2_E5_tensorrt_benchmark_all_levels_20260916.md` (E2/E5
   extension, same day).
+- §6 distillation ablation table: `reports/ablation_distillation_v1_20260917.md`.
 
 ## Not yet draftable (do not backfill without new results)
 
 - §1 Introduction / §2 Related work: blocked on the systematic literature
   review (`RESEARCH_PLAN.md` §2), not started.
-- §5 Experiments: partially draftable (the go/no-go comparison and the 5-model
-  augmentation finding have real numbers) but not started here yet.
-- §6 Ablations and failure analysis: blocked on Phase 9, ~10% started (only
-  2-3 of 10 axes touched as side effects of other work).
-- §7 Limitations / §8 Conclusion: blocked on the above.
+- §6 Ablations: drafted with 1 of 10 axes (distillation), explicitly
+  preliminary (n=1 per side) -- 9 axes remain untested or infrastructure-
+  blocked. Expand as more axes get real results; do not overwrite the
+  preliminary framing until a second seed pair confirms the distillation
+  pattern.
+- §7 Limitations / §8 Conclusion: blocked on Ablations reaching a more
+  complete state, and on Introduction/Related work above.
