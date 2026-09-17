@@ -55,10 +55,23 @@ latency budget differs by target — *small* on the Hailo-8, *small* on Xavier N
 fastest of the four by a wide margin. Four real devices producing three
 different choices at one identical budget is concrete evidence that
 hardware-aware subnet selection is not interchangeable with a single,
-device-agnostic choice — the premise our approach is built on — though we have
-not yet quantified this against a FLOPs-aware selection baseline (Section 6
-discusses this gap directly rather than treating the qualitative result as
-sufficient on its own).
+device-agnostic choice — the premise our approach is built on.
+
+We quantify this against a FLOPs-aware selection baseline directly. FLOPs scales
+with elasticity level far faster than real latency does: the *large*/*tiny*
+FLOPs ratio is 110x, while the real measured latency ratio is only 10–20x
+depending on device — FLOPs overstates the true cost-scaling factor by 6–11x.
+Calibrating a simple FLOPs→latency proxy (a least-squares linear fit) on any one
+real device and using it — as a FLOPs-only method would have to, with no
+per-device measurement of its own — to pick a level under the same 10 ms budget
+on the other three devices **mis-selects on at least two of the four devices,
+regardless of which device supplied the calibration** (with 82–365% per-level
+latency prediction errors); when calibrated on AGX Xavier, the proxy is wrong
+even on that same device, since a single linear rate cannot capture one real
+device's actual latency-vs-FLOPs relationship, let alone transfer to others.
+This is the quantitative complement to the qualitative result above: a
+FLOPs-based proxy cannot reproduce device-specific selection decisions, however
+it is calibrated.
 
 ### 3.3 Quantization-aware training
 
@@ -313,9 +326,9 @@ slower and less accurate than another — and the level selected under a fixed
 the Hailo-8's per-level latency), and *medium* on Orin Nano. Four real devices
 producing three distinct choices at one identical latency budget is the full
 device-lineup evidence our protocol calls for — stronger than a two-device
-demonstration alone, though still only a qualitative confirmation that
-hardware-aware selection matters, not yet the quantitative comparison against a
-FLOPs-aware baseline that would let us claim a specific margin (Section 6).
+demonstration alone. Section 3.2 quantifies this against a FLOPs-aware
+selection baseline directly: a FLOPs-calibrated proxy mis-selects on at least
+two of these four devices regardless of which device it was calibrated from.
 
 ## 6. Ablations
 
@@ -367,7 +380,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
 - §3.1 dataset/split sizes, augmentation: `README.md` Phase 4;
   `reports/augmentation_effect_all_5_baselines_20260916.md`.
 - §3.2 Pareto frontier, 10 ms budget example, 4–4.5× TensorRT/Hailo ratio:
-  `reports/pareto_search_v1_20260912.md`.
+  `reports/pareto_search_v1_20260912.md`. FLOPs-vs-latency ratio comparison and
+  cross-device mis-selection result: `reports/flops_baseline_v1_20260917.md`.
 - §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass/supernet
   gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates).
 - §3.4 compiled-engine partition, DLA 16-subgraph limit (referenced, detailed in
