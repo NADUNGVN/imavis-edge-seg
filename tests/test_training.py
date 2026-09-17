@@ -6,6 +6,7 @@ import pytest
 from rich.console import Console
 
 torch = pytest.importorskip("torch")
+Image = pytest.importorskip("PIL.Image")
 
 from imavis_edge_seg.config import ExperimentConfig  # noqa: E402
 from imavis_edge_seg.models.supernet import PaceSegSupernet  # noqa: E402
@@ -306,6 +307,49 @@ def test_run_training_init_checkpoint_starts_from_fp32_weights(tmp_path: Path) -
         torch.allclose(trained_params[k], fp32_params[k], atol=0.1) for k in fp32_params
     )
     assert any(isinstance(m, QATSlimmableConv2d) for m in trained.modules())
+
+
+def test_run_training_calibrate_fits_and_freezes_real_calibration_data(tmp_path: Path) -> None:
+    """End-to-end: --calibrate builds a real calibration set from config.datasets
+    (not the fake in-memory `dataloader` the main training loop uses) and every
+    QAT-converted layer ends up `calibrated=True` with a nonzero observed max --
+    the actual wiring `scripts/train_supernet.py --calibrate` depends on."""
+    import numpy as np
+
+    from imavis_edge_seg.config import DatasetConfig
+    from imavis_edge_seg.training.quantization import QATSlimmableConv2d
+
+    cityscapes_root = tmp_path / "cityscapes"
+    rgb = (np.random.rand(*_TEST_HW, 3) * 255).astype("uint8")
+    label_ids = np.full(_TEST_HW, 7, dtype="uint8")
+    for i in range(4):
+        img_path = cityscapes_root / f"leftImg8bit/train/city/city_{i:06d}_000019_leftImg8bit.png"
+        lbl_path = cityscapes_root / f"gtFine/train/city/city_{i:06d}_000019_gtFine_labelIds.png"
+        img_path.parent.mkdir(parents=True, exist_ok=True)
+        lbl_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(rgb).save(img_path)
+        Image.fromarray(label_ids).save(lbl_path)
+
+    config = _tiny_config(max_steps=1, checkpoint_interval_steps=1)
+    config.datasets = [DatasetConfig(name="cityscapes", root=cityscapes_root, split="train")]
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    trained = run_training(
+        config, dataloader, output_dir=tmp_path / "run", device="cpu",
+        qat=True, calibrate=True, calibration_images=4,
+    )
+
+    qat_layers = [m for m in trained.modules() if isinstance(m, QATSlimmableConv2d)]
+    assert qat_layers
+    assert all(bool(m.calibrated) for m in qat_layers)
+    assert all(float(m.calibrated_max) > 0.0 for m in qat_layers)
+
+
+def test_run_training_calibrate_without_qat_raises() -> None:
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+    with pytest.raises(ValueError, match="calibrate"):
+        run_training(config, dataloader, output_dir=Path("unused"), device="cpu", calibrate=True)
 
 
 def test_run_training_ignores_checkpoint_with_mismatched_config_hash(tmp_path: Path) -> None:

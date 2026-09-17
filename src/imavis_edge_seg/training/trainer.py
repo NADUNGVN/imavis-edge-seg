@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import itertools
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import torch
@@ -24,7 +24,9 @@ from imavis_edge_seg.training.checkpoint import (
     load_checkpoint,
     save_checkpoint,
 )
-from imavis_edge_seg.training.quantization import apply_qat
+from imavis_edge_seg.training.data import build_calibration_dataloader
+from imavis_edge_seg.training.losses import resize_image
+from imavis_edge_seg.training.quantization import apply_qat, run_calibration
 from imavis_edge_seg.training.schedule import lr_lambda
 from imavis_edge_seg.training.step import train_step
 
@@ -47,6 +49,8 @@ def run_training(
     device: str = "cpu",
     qat: bool = False,
     init_checkpoint: Path | None = None,
+    calibrate: bool = False,
+    calibration_images: int = 200,
 ) -> PaceSegSupernet:
     console = console or Console()
     torch.manual_seed(config.seed)
@@ -68,6 +72,38 @@ def run_training(
             "QAT enabled: all nn.Conv2d and SlimmableConv2d layers fake-quantized (INT8)"
         )
     supernet = supernet.to(device)
+
+    # Calibrated (not dynamic) activation quantization ranges, RESEARCH_PLAN.md §5.2:
+    # fit *before* the resume-checkpoint check below, on a real calibration set
+    # spanning day/night/rain/fog/snow, from whatever weights are in `supernet` right
+    # now (either freshly-initialized-from-`init_checkpoint`, or the FP32 supernet if
+    # this is the very first QAT step from scratch). If a resumable checkpoint is
+    # found next, its own state_dict (calibration buffers included) overwrites this --
+    # correct, since resuming a run should continue with exactly the calibration it
+    # already committed to, not restart calibration mid-fine-tune.
+    if calibrate:
+        if not qat:
+            raise ValueError("--calibrate requires --qat (calibration only affects QAT quantization ranges)")
+        calibration_loader = build_calibration_dataloader(config, max_images=calibration_images)
+        levels = config.supernet.levels
+
+        def _calibration_calls() -> Iterator[Callable[[], None]]:
+            for image, _mask in calibration_loader:
+                image = image.to(device)
+                for level in levels:
+                    height, width = config.supernet.input_resolutions[level]
+                    resized = resize_image(image, (height, width))
+
+                    def _call(x: torch.Tensor = resized, level: str = level) -> None:
+                        supernet(x, level)
+
+                    yield _call
+
+        run_calibration(supernet, _calibration_calls())
+        console.print(
+            f"calibrated activation quantization ranges from {len(calibration_loader.dataset)} "  # type: ignore[arg-type]
+            f"images x {len(levels)} levels"
+        )
 
     optimizer = AdamW(
         supernet.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay

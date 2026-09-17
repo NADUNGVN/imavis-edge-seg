@@ -48,6 +48,25 @@ def build_train_dataset(config: ExperimentConfig) -> Dataset[_Sample]:
     return datasets[0] if len(datasets) == 1 else ConcatDataset(datasets)
 
 
+def build_calibration_dataloader(config: ExperimentConfig, max_images: int = 200) -> DataLoader[_Sample]:
+    """A small, deterministic, un-augmented sample of `build_train_dataset`'s data
+    (Cityscapes + ACDC, so it already spans day/night/rain/fog/snow when both are
+    configured -- `RESEARCH_PLAN.md` §5.2's explicit calibration-set requirement),
+    for `training.quantization.run_calibration`. Un-augmented deliberately: a
+    calibration set should observe representative real activation ranges, not
+    augmented distortions, regardless of whether `config.training.augment` is on
+    for the training run itself. Evenly-spaced (not random) subsampling to
+    `max_images` keeps every condition represented rather than favoring whichever
+    dataset happens to be concatenated first."""
+    calibration_config = config.model_copy(deep=True)
+    calibration_config.training.augment = False
+    dataset = build_train_dataset(calibration_config)
+    if len(dataset) > max_images:  # type: ignore[arg-type]
+        indices = torch.linspace(0, len(dataset) - 1, max_images).round().long().tolist()  # type: ignore[arg-type]
+        dataset = torch.utils.data.Subset(dataset, indices)
+    return DataLoader(dataset, batch_size=config.training.batch_size, shuffle=False, num_workers=0)
+
+
 def build_train_dataloader(config: ExperimentConfig) -> DataLoader[_Sample]:
     dataset = build_train_dataset(config)
     # `training.trainer`/`training.baseline_trainer` both loop training "forever" by
