@@ -9,6 +9,12 @@ loads at that resolution).
 Add --per-class for the same per-class IoU / valid-pixel diagnostic evaluate_supernet.py
 has -- needed to compare against a supernet level's per-class breakdown properly rather
 than aggregate mIoU alone.
+
+Pass --exported-subnet-level instead of --model to evaluate a
+scripts/train_exported_subnet.py checkpoint: builds the matching static
+`extract_subnet` skeleton (its initial weights are irrelevant -- overwritten by
+--checkpoint's load_state_dict) and evaluates at that level's configured resolution,
+not the largest level's.
 """
 
 from __future__ import annotations
@@ -16,15 +22,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import cast
 
 import torch
 from rich.console import Console
 from rich.table import Table
 
-from imavis_edge_seg.config import ExperimentConfig, load_config
+from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig, load_config
 from imavis_edge_seg.data.acdc import ALL_CONDITIONS
 from imavis_edge_seg.evaluation.data import build_acdc_eval_loader, build_cityscapes_eval_loader
 from imavis_edge_seg.evaluation.metrics import ConfusionMatrixAccumulator, EvalResult
+from imavis_edge_seg.models import PaceSegSupernet, extract_subnet
 from imavis_edge_seg.models.baselines import BASELINE_NAMES, build_baseline_model
 from imavis_edge_seg.training.checkpoint import load_checkpoint
 from imavis_edge_seg.training.quantization import apply_qat
@@ -52,7 +60,14 @@ def _evaluate(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, d
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, choices=BASELINE_NAMES)
+    parser.add_argument("--model", default=None, choices=BASELINE_NAMES)
+    parser.add_argument(
+        "--exported-subnet-level",
+        default=None,
+        choices=["tiny", "small", "medium", "large"],
+        help="evaluate a scripts/train_exported_subnet.py checkpoint instead of a "
+        "named baseline architecture. Mutually exclusive with --model.",
+    )
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("configs/experiment/default.yaml"))
     parser.add_argument(
@@ -73,27 +88,41 @@ def main() -> None:
         "inference the checkpoint was actually trained/is meant to be deployed under.",
     )
     args = parser.parse_args()
+    if bool(args.model) == bool(args.exported_subnet_level):
+        parser.error("exactly one of --model or --exported-subnet-level is required")
 
     console = Console()
     config = load_config(args.config)
-    model = build_baseline_model(args.model, num_classes=config.supernet.num_classes)
+
+    model: torch.nn.Module
+    if args.exported_subnet_level is not None:
+        level = cast(ElasticityLevel, args.exported_subnet_level)
+        model = extract_subnet(PaceSegSupernet(config.supernet), level)
+        # Evaluated at this level's own configured resolution -- an exported subnet
+        # only ever sees one resolution, and it isn't always the largest level's.
+        eval_level = level
+        label = f"exported_subnet_{level}"
+    else:
+        model = build_baseline_model(args.model, num_classes=config.supernet.num_classes)
+        # Evaluated at the supernet's largest configured level's resolution -- the
+        # same resolution training.data.build_train_dataloader used for training.
+        eval_level = config.supernet.levels[-1]
+        label = args.model
+
     if args.qat:
         model = apply_qat(model)
     model = model.to(args.device)
     checkpoint = load_checkpoint(args.checkpoint, map_location=args.device)
     model.load_state_dict(checkpoint["model_state_dict"])
     console.print(
-        f"model={args.model} qat={args.qat} loaded checkpoint step={checkpoint['step']} "
+        f"model={label} qat={args.qat} loaded checkpoint step={checkpoint['step']} "
         f"config_hash={checkpoint['config_hash']} git_commit={checkpoint['git_commit']}"
     )
 
-    # Evaluated at the supernet's largest configured level's resolution -- the same
-    # resolution training.data.build_train_dataloader used for this baseline's training.
-    eval_level = config.supernet.levels[-1]
     datasets = args.dataset or ["cityscapes", "acdc"]
     results: dict[str, object] = {}
 
-    table = Table(title=f"mIoU -- {args.model} -- {args.checkpoint}")
+    table = Table(title=f"mIoU -- {label} -- {args.checkpoint}")
     table.add_column("dataset")
     table.add_column("mIoU", justify="right")
     if args.per_class:

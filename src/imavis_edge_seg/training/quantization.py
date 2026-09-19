@@ -23,17 +23,36 @@ Two activation-quantization-range modes, selectable per layer:
   tensor's own min/max is always exactly known (no data-dependent uncertainty the way
   an activation's range has), so computing it dynamically per call is already exact,
   not a simplification.
+
+Within calibrated mode, `run_calibration`'s `observer` argument picks *how* the
+frozen value is derived from the calibration pass:
+
+- **`"max"`** (the original, still the default): a hard running maximum across
+  every calibration call. Real supernet result (2026-09-17,
+  `reports/calibrated_qat_v1_20260917.md`): this made INT8 accuracy *worse* than
+  dynamic mode on every split, plausibly because a single outlier activation
+  anywhere in the calibration pass sets an overly coarse scale for every later,
+  typically smaller-magnitude call.
+- **`"ema_percentile"`** (added 2026-09-20, part of the QAT-rescue 2x2 screen):
+  each call contributes its own high percentile (via `torch.topk`, not
+  `torch.quantile` -- see `_percentile_via_topk`) rather than its raw max, and
+  those per-call percentiles are combined with an exponential moving average
+  rather than a running max -- both changes independently reduce sensitivity to
+  a single extreme call, testing the outlier-sensitivity hypothesis directly.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from typing import Literal
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
 from imavis_edge_seg.models.blocks import SlimmableConv2d
+
+CalibrationObserver = Literal["max", "ema_percentile"]
 
 
 def fake_quantize_tensor(x: Tensor, num_bits: int = 8) -> Tensor:
@@ -72,22 +91,48 @@ def _init_calibration_buffers(module: nn.Module) -> None:
     mismatch this project has caught before and taken care not to repeat.
     `calibrating` (only ever true *during* a `run_calibration` call, never at
     training-resume or eval time) is a plain, non-persistent flag -- there is
-    nothing meaningful to save mid-calibration."""
+    nothing meaningful to save mid-calibration. `calibration_observer`/
+    `_calibration_seen_any` are likewise plain, non-persistent, set fresh by
+    `run_calibration` at the start of every calibration pass."""
     module.register_buffer("calibrated_max", torch.tensor(0.0))
     module.register_buffer("calibrated", torch.tensor(False))
+    module.calibration_observer = "max"  # type: ignore[assignment]
+    module._calibration_seen_any = False  # type: ignore[assignment]
+
+
+def _percentile_via_topk(x: Tensor, percentile: float) -> Tensor:
+    """Approximates the given percentile (e.g. 0.999 for the 99.9th) of `x.abs()`
+    via `torch.topk`, which only needs to find the top `(1-percentile) * numel`
+    elements rather than a full sort -- much cheaper than `torch.quantile` for a
+    small excluded fraction on a large activation tensor, and avoids
+    `torch.quantile`'s ~16M-element ceiling on some PyTorch/CUDA versions."""
+    flat = x.detach().abs().flatten()
+    k = min(max(1, round((1.0 - percentile) * flat.numel())), flat.numel())
+    return torch.topk(flat, k).values.min()
 
 
 def _quantize_activation(module: QATConv2d | QATSlimmableConv2d, x: Tensor, num_bits: int) -> Tensor:
     """Shared input-activation quantization dispatch for QATConv2d/
     QATSlimmableConv2d.forward, reflecting `module`'s calibration state: while
-    `calibrating`, only observe (grow `calibrated_max`, don't quantize yet); once
-    `calibrated`, quantize with that frozen max; otherwise (the original, default
-    behavior), quantize dynamically from this call's own input."""
+    `calibrating`, only observe (grow `calibrated_max` per `calibration_observer`,
+    don't quantize yet); once `calibrated`, quantize with that frozen max;
+    otherwise (the original, default behavior), quantize dynamically from this
+    call's own input."""
     if module.calibrating:
         with torch.no_grad():
-            batch_max = x.detach().abs().max()
-            if batch_max > module.calibrated_max:
-                module.calibrated_max.fill_(float(batch_max))
+            if module.calibration_observer == "ema_percentile":
+                batch_stat = _percentile_via_topk(x, module.calibration_percentile)
+                if module._calibration_seen_any:
+                    module.calibrated_max.mul_(module.calibration_momentum).add_(
+                        batch_stat, alpha=1.0 - module.calibration_momentum
+                    )
+                else:
+                    module.calibrated_max.fill_(float(batch_stat))
+                    module._calibration_seen_any = True
+            else:  # "max"
+                batch_max = x.detach().abs().max()
+                if batch_max > module.calibrated_max:
+                    module.calibrated_max.fill_(float(batch_max))
         return x
     if bool(module.calibrated):
         return fake_quantize_tensor_with_max(x, module.calibrated_max, num_bits)
@@ -107,6 +152,10 @@ class QATConv2d(nn.Conv2d):
     calibrating: bool
     calibrated: Tensor
     calibrated_max: Tensor
+    calibration_observer: CalibrationObserver
+    calibration_percentile: float
+    calibration_momentum: float
+    _calibration_seen_any: bool
 
     def __init__(self, conv: nn.Conv2d, num_bits: int = 8) -> None:
         super().__init__(
@@ -125,6 +174,8 @@ class QATConv2d(nn.Conv2d):
         self.num_bits = num_bits
         _init_calibration_buffers(self)
         self.calibrating = False
+        self.calibration_percentile = 0.999
+        self.calibration_momentum = 0.9
 
     def forward(self, x: Tensor) -> Tensor:
         q_input = _quantize_activation(self, x, self.num_bits)
@@ -150,6 +201,10 @@ class QATSlimmableConv2d(SlimmableConv2d):
     calibrating: bool
     calibrated: Tensor
     calibrated_max: Tensor
+    calibration_observer: CalibrationObserver
+    calibration_percentile: float
+    calibration_momentum: float
+    _calibration_seen_any: bool
 
     def __init__(self, conv: SlimmableConv2d, num_bits: int = 8) -> None:
         super().__init__(
@@ -167,6 +222,8 @@ class QATSlimmableConv2d(SlimmableConv2d):
         self.num_bits = num_bits
         _init_calibration_buffers(self)
         self.calibrating = False
+        self.calibration_percentile = 0.999
+        self.calibration_momentum = 0.9
 
     def forward(self, x: Tensor, active_in: int, active_out: int) -> Tensor:
         if self.depthwise:
@@ -200,15 +257,23 @@ def apply_qat(model: nn.Module, num_bits: int = 8) -> nn.Module:
     return model
 
 
-def run_calibration(model: nn.Module, forward_calls: Iterable[Callable[[], None]]) -> None:
+def run_calibration(
+    model: nn.Module,
+    forward_calls: Iterable[Callable[[], None]],
+    observer: CalibrationObserver = "max",
+    percentile: float = 0.999,
+    momentum: float = 0.9,
+) -> None:
     """Fits a *calibrated* (not dynamic) input-activation quantization range for
     every `QATConv2d`/`QATSlimmableConv2d` in `model`: each `forward_calls` entry is
     a zero-arg callable that should trigger exactly one forward pass through
     `model` (e.g. `lambda: model(x)`, or `lambda: supernet(x, level)` -- callers
     typically pass one such call per (calibration image, elasticity level) pair, so
-    every level's own active-channel slice gets calibrated too). Every layer's
-    observed max activation magnitude grows monotonically across all calls, then is
-    frozen once every call has run -- callers should pass a real, representative
+    every level's own active-channel slice gets calibrated too). The frozen value
+    is derived from all the calibration calls per `observer` (module docstring) --
+    `"max"` (default, a hard running maximum) or `"ema_percentile"` (a per-call high
+    percentile combined via an exponential moving average, both changes aimed at
+    outlier-sensitivity specifically). Callers should pass a real, representative
     calibration set (`RESEARCH_PLAN.md` §5.2: day/night/rain/fog/snow), never the
     same data a policy or checkpoint is later evaluated against.
 
@@ -223,6 +288,10 @@ def run_calibration(model: nn.Module, forward_calls: Iterable[Callable[[], None]
         m.calibrating = True
         m.calibrated.fill_(False)
         m.calibrated_max.fill_(0.0)  # discard any previous calibration, start fresh
+        m.calibration_observer = observer
+        m.calibration_percentile = percentile
+        m.calibration_momentum = momentum
+        m._calibration_seen_any = False
     with torch.no_grad():
         for call in forward_calls:
             call()

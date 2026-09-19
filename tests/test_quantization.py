@@ -9,6 +9,7 @@ from imavis_edge_seg.models.supernet import PaceSegSupernet  # noqa: E402
 from imavis_edge_seg.training.quantization import (  # noqa: E402
     QATConv2d,
     QATSlimmableConv2d,
+    _percentile_via_topk,
     apply_qat,
     fake_quantize_tensor,
     fake_quantize_tensor_with_max,
@@ -295,6 +296,67 @@ def test_run_calibration_covers_every_qat_layer_in_a_real_supernet() -> None:
 
     x = torch.randn(1, 3, 64, 64)
     run_calibration(supernet, [lambda level=level: supernet(x, level) for level in config.levels])
+
+    qat_layers = [m for m in supernet.modules() if isinstance(m, QATSlimmableConv2d)]
+    assert qat_layers
+    assert all(m.calibrated for m in qat_layers)
+    assert all(float(m.calibrated_max) > 0.0 for m in qat_layers)
+
+
+# ---- ema_percentile observer (2026-09-20, QAT-rescue 2x2 screen) ---------------------
+
+
+def test_percentile_via_topk_matches_known_value() -> None:
+    # 1000 values 1..1000 -- the 99.9th percentile should be very close to 999.
+    x = torch.arange(1, 1001, dtype=torch.float32)
+    result = _percentile_via_topk(x, percentile=0.999)
+    assert float(result) == pytest.approx(999.0, abs=1.0)
+
+
+def test_percentile_via_topk_ignores_a_single_extreme_outlier() -> None:
+    # 2000 values -- the 99.9th percentile excludes the top 2 (round(0.001*2000)=2),
+    # so with exactly one outlier, the 2nd-largest ("normal") value is returned, not
+    # the outlier itself.
+    x = torch.cat([torch.ones(1999), torch.tensor([1e6])])
+    p999 = _percentile_via_topk(x, percentile=0.999)
+    p_max = x.abs().max()
+    assert float(p999) < float(p_max)  # the outlier itself is excluded from the 99.9th percentile
+    assert float(p999) == pytest.approx(1.0, abs=0.1)
+
+
+def test_run_calibration_ema_percentile_ignores_a_single_extreme_outlier_batch() -> None:
+    model = nn.Sequential(nn.Conv2d(3, 4, 3, padding=1))
+    apply_qat(model)
+    normal_batches = [lambda: model(torch.full((1, 3, 8, 8), 2.0)) for _ in range(5)]
+    outlier_batch = [lambda: model(torch.full((1, 3, 8, 8), 1000.0))]
+    run_calibration(model, normal_batches + outlier_batch, observer="ema_percentile", momentum=0.9)
+    # A hard running max would jump straight to ~1000; the EMA should stay far below it,
+    # since the outlier batch is downweighted by (1 - momentum) rather than taking over.
+    assert float(model[0].calibrated_max) < 500.0
+
+
+def test_run_calibration_max_observer_is_unaffected_by_the_new_ema_percentile_path() -> None:
+    """Default observer="max" must behave exactly as before -- a regression check
+    that adding ema_percentile did not change the original behavior."""
+    model = nn.Sequential(nn.Conv2d(3, 4, 3, padding=1))
+    apply_qat(model)
+    run_calibration(model, [lambda v=v: model(torch.full((1, 3, 8, 8), v)) for v in (1.0, 5.0, 2.0)])
+    assert float(model[0].calibrated_max) == pytest.approx(5.0)
+
+
+def test_run_calibration_ema_percentile_covers_every_qat_layer_in_a_real_supernet() -> None:
+    config = SupernetConfig()
+    for level in config.levels:
+        config.input_resolutions[level] = (64, 64)
+    supernet = PaceSegSupernet(config)
+    apply_qat(supernet)
+
+    x = torch.randn(1, 3, 64, 64)
+    run_calibration(
+        supernet,
+        [lambda level=level: supernet(x, level) for level in config.levels],
+        observer="ema_percentile",
+    )
 
     qat_layers = [m for m in supernet.modules() if isinstance(m, QATSlimmableConv2d)]
     assert qat_layers

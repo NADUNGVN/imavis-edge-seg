@@ -9,7 +9,7 @@ recipe, not two different ones invented for baselines vs. the proposed method.
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import torch
@@ -19,15 +19,16 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
-from imavis_edge_seg.config import ExperimentConfig
+from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig
 from imavis_edge_seg.models.baselines import build_baseline_model
 from imavis_edge_seg.training.checkpoint import (
     find_latest_checkpoint,
     load_checkpoint,
     save_checkpoint,
 )
+from imavis_edge_seg.training.data import build_calibration_dataloader
 from imavis_edge_seg.training.losses import boundary_aware_segmentation_loss
-from imavis_edge_seg.training.quantization import apply_qat
+from imavis_edge_seg.training.quantization import CalibrationObserver, apply_qat, run_calibration
 from imavis_edge_seg.training.schedule import lr_lambda
 
 _Sample = tuple[torch.Tensor, torch.Tensor]
@@ -47,11 +48,23 @@ def run_baseline_training(
     device: str = "cpu",
     qat: bool = False,
     init_checkpoint: Path | None = None,
+    model: nn.Module | None = None,
+    calibrate: bool = False,
+    calibration_images: int = 200,
+    calibration_observer: CalibrationObserver = "max",
+    calibration_percentile: float = 0.999,
+    calibration_momentum: float = 0.9,
+    calibration_level: ElasticityLevel | None = None,
 ) -> nn.Module:
     console = console or Console()
     torch.manual_seed(config.seed)
 
-    model = build_baseline_model(baseline_name, num_classes=config.supernet.num_classes)
+    # `model` lets a caller (e.g. an exported-subnet QAT fine-tuning script) hand in an
+    # already-built model -- e.g. models.subnet.extract_subnet's output -- instead of
+    # building `baseline_name` fresh via build_baseline_model. Both take a single `x`
+    # (no elasticity `level` argument), so the rest of this loop is unchanged either way.
+    if model is None:
+        model = build_baseline_model(baseline_name, num_classes=config.supernet.num_classes)
 
     # RESEARCH_PLAN.md §5.2's "FP32 teacher -> shared supernet -> QAT INT8" workflow:
     # start QAT from an already-trained FP32 checkpoint's weights, not from scratch.
@@ -68,6 +81,37 @@ def run_baseline_training(
         model = apply_qat(model)
         console.print(f"[{baseline_name}] QAT enabled: all nn.Conv2d layers fake-quantized (INT8)")
     model = model.to(device)
+
+    # Calibrated (not dynamic) activation quantization ranges -- mirrors
+    # training.trainer.run_training's identical block, minus the per-level loop (a
+    # baseline/exported-subnet model has exactly one resolution/forward signature).
+    if calibrate:
+        if not qat:
+            raise ValueError("--calibrate requires --qat (calibration only affects QAT quantization ranges)")
+        calibration_loader = build_calibration_dataloader(
+            config, max_images=calibration_images, level=calibration_level
+        )
+
+        def _calibration_calls() -> Iterator[Callable[[], None]]:
+            for image, _mask in calibration_loader:
+                image = image.to(device)
+
+                def _call(x: torch.Tensor = image) -> None:
+                    model(x)
+
+                yield _call
+
+        run_calibration(
+            model,
+            _calibration_calls(),
+            observer=calibration_observer,
+            percentile=calibration_percentile,
+            momentum=calibration_momentum,
+        )
+        console.print(
+            f"[{baseline_name}] calibrated activation quantization ranges from "
+            f"{len(calibration_loader.dataset)} images (observer={calibration_observer})"  # type: ignore[arg-type]
+        )
 
     optimizer = AdamW(model.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: lr_lambda(step, config))

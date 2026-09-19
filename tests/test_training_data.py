@@ -7,7 +7,10 @@ torch = pytest.importorskip("torch")
 Image = pytest.importorskip("PIL.Image")
 
 from imavis_edge_seg.config import DatasetConfig, ExperimentConfig  # noqa: E402
-from imavis_edge_seg.training.data import build_calibration_dataloader  # noqa: E402
+from imavis_edge_seg.training.data import (  # noqa: E402
+    build_calibration_dataloader,
+    build_train_dataloader,
+)
 
 
 def _write_png(path: Path, array: np.ndarray) -> None:
@@ -69,3 +72,29 @@ def test_build_calibration_dataloader_yields_real_batches(fake_cityscapes: Path)
     assert image.shape[0] == config.training.batch_size
     assert image.shape[-2:] == (32, 64)
     assert mask.shape[-2:] == (32, 64)
+
+
+def test_build_train_dataloader_defaults_to_largest_level_resolution(fake_cityscapes: Path) -> None:
+    config = _tiny_config(fake_cityscapes)
+    config.supernet.input_resolutions["tiny"] = (16, 32)
+    config.supernet.input_resolutions[config.supernet.levels[-1]] = (32, 64)
+    loader = build_train_dataloader(config)
+    image, _mask = next(iter(loader))
+    assert image.shape[-2:] == (32, 64)
+
+
+def test_build_train_dataloader_level_overrides_resolution(fake_cityscapes: Path) -> None:
+    config = _tiny_config(fake_cityscapes)
+    config.supernet.input_resolutions["tiny"] = (16, 32)
+    loader = build_train_dataloader(config, level="tiny")  # type: ignore[arg-type]
+    image, mask = next(iter(loader))
+    assert image.shape[-2:] == (16, 32)
+    assert mask.shape[-2:] == (16, 32)
+
+
+def test_build_calibration_dataloader_level_overrides_resolution(fake_cityscapes: Path) -> None:
+    config = _tiny_config(fake_cityscapes)
+    config.supernet.input_resolutions["tiny"] = (16, 32)
+    loader = build_calibration_dataloader(config, max_images=4, level="tiny")  # type: ignore[arg-type]
+    image, _mask = next(iter(loader))
+    assert image.shape[-2:] == (16, 32)

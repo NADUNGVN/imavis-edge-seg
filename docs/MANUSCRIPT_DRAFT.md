@@ -136,7 +136,15 @@ same seed). A plausible explanation is that our calibration observer uses a
 simple running maximum, which is sensitive to a single outlier activation
 anywhere in the calibration pass setting an overly coarse scale for every
 later, typically smaller-magnitude call; a percentile- or running-average-based
-observer is the natural next thing to try, not yet done. The supernet QAT gap
+observer is the natural next thing to try. We treat this as a bounded rescue
+attempt, not a required capability for the paper's central claim: we built and
+unit-tested (but have not yet run) a four-cell factorial screen isolating two
+independent factors — shared supernet weights vs. independently fine-tuned,
+exported-per-level weights, crossed with the dynamic range vs. a new
+percentile/EMA-based observer — with only the winning cell, if any, to be
+confirmed on a second seed. If this screen does not close the gap, we report
+it as a disclosed failure mode of the shared/elastic representation under
+INT8 quantization rather than continue indefinitely. The supernet QAT gap
 remains open.
 
 ### 3.4 Compiled static engines and calibrated routing

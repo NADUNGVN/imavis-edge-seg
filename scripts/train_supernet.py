@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import cast
 
 import torch
 from rich.console import Console
 
 from imavis_edge_seg.config import load_config
 from imavis_edge_seg.training.data import build_train_dataloader
+from imavis_edge_seg.training.quantization import CalibrationObserver
 from imavis_edge_seg.training.trainer import run_training
 
 
@@ -55,6 +57,29 @@ def main() -> None:
         default=200,
         help="max images in the calibration set (default: 200)",
     )
+    parser.add_argument(
+        "--calibration-observer",
+        choices=["max", "ema_percentile"],
+        default="max",
+        help="'max': hard running maximum (original, RESEARCH_PLAN.md §5.2 baseline, "
+        "found to make QAT worse than dynamic ranges -- reports/calibrated_qat_v1_"
+        "20260917.md). 'ema_percentile': per-call high percentile (--calibration-"
+        "percentile) combined across calls via an EMA (--calibration-momentum) -- "
+        "part of the 2026-09-20 QAT-rescue 2x2 screen, tests whether the 'max' "
+        "observer's outlier sensitivity was the actual problem.",
+    )
+    parser.add_argument(
+        "--calibration-percentile",
+        type=float,
+        default=0.999,
+        help="only used with --calibration-observer ema_percentile (default: 0.999)",
+    )
+    parser.add_argument(
+        "--calibration-momentum",
+        type=float,
+        default=0.9,
+        help="only used with --calibration-observer ema_percentile (default: 0.9)",
+    )
     args = parser.parse_args()
 
     console = Console()
@@ -78,6 +103,9 @@ def main() -> None:
         init_checkpoint=args.init_checkpoint,
         calibrate=args.calibrate,
         calibration_images=args.calibration_images,
+        calibration_observer=cast(CalibrationObserver, args.calibration_observer),
+        calibration_percentile=args.calibration_percentile,
+        calibration_momentum=args.calibration_momentum,
     )
 
 

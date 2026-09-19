@@ -35,7 +35,9 @@
 
 | experiment_id | owner | purpose | status |
 |---|---|---|---|
-| (none active as of 2026-09-20) | | | |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 2: shared supernet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
+| `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | claimed, not yet launched |
+| `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -70,11 +72,17 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
 
 1. **QAT rescue — 2×2 factorial screening, seed0 first, replicate winner on a
    2nd seed.** Cells: (shared weights × dynamic range) — **already done**, 3
-   seeds, worst case −2.54; (shared × per-level EMA/percentile observer) — not
-   started; (exported-subnet × dynamic) — not started; (exported-subnet ×
-   EMA/percentile) — not started. Deliberately *not* combining both axes in a
-   single first attempt (would not distinguish which factor helped) — do the
-   full 4-cell screen, then confirm only the winning cell on a second seed.
+   seeds, worst case −2.54; (shared × per-level EMA/percentile observer),
+   (exported-subnet × dynamic), (exported-subnet × EMA/percentile) — **infra
+   built and unit-tested 2026-09-20** (`training/quantization.py`'s new
+   `ema_percentile` observer; `training/baseline_trainer.py`'s new `model=`/
+   `calibration_level=` params; `training/data.py`'s new `level=` param;
+   `scripts/train_exported_subnet.py`; `scripts/server/{start,run,status}_
+   train_exported_subnet.sh`), **not yet run on a server** — 3 commands ready,
+   see `reports/qat_rescue_2x2_screen_infra_20260920.md`. Deliberately *not*
+   combining both axes in a single first attempt (would not distinguish which
+   factor helped) — do the full 4-cell screen, then confirm only the winning
+   cell on a second seed.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half

@@ -5,8 +5,10 @@ import pytest
 from rich.console import Console
 
 torch = pytest.importorskip("torch")
+Image = pytest.importorskip("PIL.Image")
 
 from imavis_edge_seg.config import ExperimentConfig  # noqa: E402
+from imavis_edge_seg.models import PaceSegSupernet, extract_subnet  # noqa: E402
 from imavis_edge_seg.models.baselines import BASELINE_NAMES, build_baseline_model  # noqa: E402
 from imavis_edge_seg.training.baseline_trainer import run_baseline_training  # noqa: E402
 from imavis_edge_seg.training.checkpoint import load_checkpoint, save_checkpoint  # noqa: E402
@@ -169,3 +171,143 @@ def test_run_baseline_training_init_checkpoint_starts_from_fp32_weights(tmp_path
     trained_weight = trained.downsample[0][0].weight
     assert torch.allclose(trained_weight, fp32_weight, atol=0.1)
     assert isinstance(trained.downsample[0][0], QATConv2d)
+
+
+def test_run_baseline_training_model_override_skips_build_baseline_model(tmp_path: Path) -> None:
+    # scripts/train_exported_subnet.py's whole reason for the `model=` parameter: hand
+    # in an already-built module (e.g. models.subnet.extract_subnet's output) and have
+    # it trained in place, without run_baseline_training building `baseline_name` itself.
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    given_model = build_baseline_model("fast_scnn", num_classes=config.supernet.num_classes)
+    torch.manual_seed(config.seed)
+    before_state = {k: v.clone() for k, v in given_model.state_dict().items()}
+
+    trained = run_baseline_training(
+        "not_a_real_baseline_name",
+        config,
+        dataloader,
+        output_dir=tmp_path,
+        device="cpu",
+        model=given_model,
+    )
+
+    assert trained is given_model
+    changed = any(not torch.equal(before_state[k], v) for k, v in trained.state_dict().items())
+    assert changed, "weights should change after training steps"
+
+
+def test_run_baseline_training_calibrate_fits_and_freezes_real_calibration_data(tmp_path: Path) -> None:
+    """Mirrors test_training.py's identical supernet-side test: --calibrate builds a
+    real calibration set from config.datasets and every QAT-converted layer ends up
+    `calibrated=True` with a nonzero observed max -- the wiring
+    scripts/train_baseline.py --calibrate and scripts/train_exported_subnet.py
+    --calibrate both depend on."""
+    import numpy as np
+
+    from imavis_edge_seg.config import DatasetConfig
+
+    cityscapes_root = tmp_path / "cityscapes"
+    rgb = (np.random.rand(*_TEST_HW, 3) * 255).astype("uint8")
+    label_ids = np.full(_TEST_HW, 7, dtype="uint8")
+    for i in range(4):
+        img_path = cityscapes_root / f"leftImg8bit/train/city/city_{i:06d}_000019_leftImg8bit.png"
+        lbl_path = cityscapes_root / f"gtFine/train/city/city_{i:06d}_000019_gtFine_labelIds.png"
+        img_path.parent.mkdir(parents=True, exist_ok=True)
+        lbl_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(rgb).save(img_path)
+        Image.fromarray(label_ids).save(lbl_path)
+
+    config = _tiny_config(max_steps=1, checkpoint_interval_steps=1)
+    config.datasets = [DatasetConfig(name="cityscapes", root=cityscapes_root, split="train")]
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+
+    trained = run_baseline_training(
+        "fast_scnn", config, dataloader, output_dir=tmp_path / "run", device="cpu",
+        qat=True, calibrate=True, calibration_images=4,
+    )
+
+    qat_layers = [m for m in trained.modules() if isinstance(m, QATConv2d)]
+    assert qat_layers
+    assert all(bool(m.calibrated) for m in qat_layers)
+    assert all(float(m.calibrated_max) > 0.0 for m in qat_layers)
+
+
+def test_run_baseline_training_calibrate_without_qat_raises() -> None:
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+    with pytest.raises(ValueError, match="calibrate"):
+        run_baseline_training(
+            "fast_scnn", config, dataloader, output_dir=Path("unused"), device="cpu", calibrate=True
+        )
+
+
+def test_run_baseline_training_on_extracted_subnet_end_to_end(tmp_path: Path) -> None:
+    """The exported-subnet QAT-rescue path (scripts/train_exported_subnet.py, QAT 2x2
+    screen cells 3-4, docs/COORDINATION_LOG.md open thread #1): extract_subnet's
+    output -- despite being an independent nn.Conv2d graph, not fast_scnn/etc. --
+    trains through run_baseline_training exactly like any other baseline model, and
+    QAT converts every one of its conv layers to QATConv2d (never QATSlimmableConv2d,
+    confirming extract_subnet really did produce plain, independent layers)."""
+    config = _tiny_config()
+    for level in config.supernet.levels:
+        config.supernet.input_resolutions[level] = _TEST_HW
+    supernet = PaceSegSupernet(config.supernet)
+
+    subnet = extract_subnet(supernet, "small")  # type: ignore[arg-type]
+    assert not subnet.training, "extract_subnet's output starts in eval() mode"
+    subnet.train()
+
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+    before_state = {k: v.clone() for k, v in subnet.state_dict().items()}
+
+    trained = run_baseline_training(
+        "exported_subnet_small", config, dataloader, output_dir=tmp_path, device="cpu",
+        qat=True, model=subnet,
+    )
+
+    assert trained is subnet
+    assert any(isinstance(m, QATConv2d) for m in trained.modules())
+    from imavis_edge_seg.training.quantization import QATSlimmableConv2d
+
+    assert not any(isinstance(m, QATSlimmableConv2d) for m in trained.modules())
+    changed = any(not torch.equal(before_state[k], v) for k, v in trained.state_dict().items())
+    assert changed, "weights should change after training steps"
+
+
+def test_exported_subnet_qat_checkpoint_reloads_into_a_fresh_skeleton(tmp_path: Path) -> None:
+    """scripts/evaluate_baseline.py --exported-subnet-level rebuilds the architecture
+    as `apply_qat(extract_subnet(PaceSegSupernet(config.supernet), level))` from a
+    freshly-constructed (differently-weighted) supernet, then load_state_dict's a
+    checkpoint saved by scripts/train_exported_subnet.py's training path. This is the
+    exact state_dict round trip that path depends on -- covers the gap flagged in
+    reports/qat_rescue_2x2_screen_infra_20260920.md."""
+    from imavis_edge_seg.training.quantization import apply_qat
+
+    config = _tiny_config()
+    for level in config.supernet.levels:
+        config.supernet.input_resolutions[level] = _TEST_HW
+
+    train_supernet = PaceSegSupernet(config.supernet)
+    subnet = extract_subnet(train_supernet, "small")  # type: ignore[arg-type]
+    subnet.train()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+    trained = run_baseline_training(
+        "exported_subnet_small", config, dataloader, output_dir=tmp_path, device="cpu",
+        qat=True, model=subnet,
+    )
+    checkpoint_path = sorted((tmp_path / "checkpoints").glob("*.pt"))[-1]
+
+    # A *different* random supernet init -- evaluate_baseline.py never sees the
+    # trained weights before load_state_dict, only the architecture.
+    fresh_supernet = PaceSegSupernet(config.supernet)
+    skeleton = extract_subnet(fresh_supernet, "small")  # type: ignore[arg-type]
+    skeleton = apply_qat(skeleton)  # type: ignore[assignment]
+
+    checkpoint = load_checkpoint(checkpoint_path, map_location="cpu")
+    skeleton.load_state_dict(checkpoint["model_state_dict"])  # must not raise
+
+    trained_state = trained.state_dict()
+    for key, value in skeleton.state_dict().items():
+        assert torch.equal(value, trained_state[key])

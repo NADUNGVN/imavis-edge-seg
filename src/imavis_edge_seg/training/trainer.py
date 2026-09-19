@@ -26,7 +26,7 @@ from imavis_edge_seg.training.checkpoint import (
 )
 from imavis_edge_seg.training.data import build_calibration_dataloader
 from imavis_edge_seg.training.losses import resize_image
-from imavis_edge_seg.training.quantization import apply_qat, run_calibration
+from imavis_edge_seg.training.quantization import CalibrationObserver, apply_qat, run_calibration
 from imavis_edge_seg.training.schedule import lr_lambda
 from imavis_edge_seg.training.step import train_step
 
@@ -51,6 +51,9 @@ def run_training(
     init_checkpoint: Path | None = None,
     calibrate: bool = False,
     calibration_images: int = 200,
+    calibration_observer: CalibrationObserver = "max",
+    calibration_percentile: float = 0.999,
+    calibration_momentum: float = 0.9,
 ) -> PaceSegSupernet:
     console = console or Console()
     torch.manual_seed(config.seed)
@@ -99,10 +102,16 @@ def run_training(
 
                     yield _call
 
-        run_calibration(supernet, _calibration_calls())
+        run_calibration(
+            supernet,
+            _calibration_calls(),
+            observer=calibration_observer,
+            percentile=calibration_percentile,
+            momentum=calibration_momentum,
+        )
         console.print(
             f"calibrated activation quantization ranges from {len(calibration_loader.dataset)} "  # type: ignore[arg-type]
-            f"images x {len(levels)} levels"
+            f"images x {len(levels)} levels (observer={calibration_observer})"
         )
 
     optimizer = AdamW(

@@ -1,7 +1,9 @@
-"""Builds the training DataLoader from `ExperimentConfig.datasets`. Every dataset is
-loaded at the *largest* elasticity level's resolution -- `training.step.train_step`
-downsamples per-level from there, so the loader itself never needs to know about the
-sandwich rule.
+"""Builds the training DataLoader from `ExperimentConfig.datasets`. By default every
+dataset is loaded at the *largest* elasticity level's resolution --
+`training.step.train_step` downsamples per-level from there, so the supernet loader
+itself never needs to know about the sandwich rule. Pass `level` to load at a single,
+specific level's resolution instead -- used for exported-subnet fine-tuning
+(`scripts/train_exported_subnet.py`), where the model only ever sees one resolution.
 """
 
 from __future__ import annotations
@@ -10,7 +12,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 
-from imavis_edge_seg.config import ExperimentConfig
+from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig
 from imavis_edge_seg.data.acdc import ACDCDataset
 from imavis_edge_seg.data.cityscapes import CityscapesDataset
 from imavis_edge_seg.data.transforms import SegmentationResizeToTensor, SegmentationTrainAugment
@@ -18,9 +20,9 @@ from imavis_edge_seg.data.transforms import SegmentationResizeToTensor, Segmenta
 _Sample = tuple[Tensor, Tensor]
 
 
-def build_train_dataset(config: ExperimentConfig) -> Dataset[_Sample]:
-    largest_level = config.supernet.levels[-1]
-    height, width = config.supernet.input_resolutions[largest_level]
+def build_train_dataset(config: ExperimentConfig, level: ElasticityLevel | None = None) -> Dataset[_Sample]:
+    resolved_level = level if level is not None else config.supernet.levels[-1]
+    height, width = config.supernet.input_resolutions[resolved_level]
     transform: SegmentationResizeToTensor | SegmentationTrainAugment
     if config.training.augment:
         transform = SegmentationTrainAugment(height=height, width=width)
@@ -48,7 +50,9 @@ def build_train_dataset(config: ExperimentConfig) -> Dataset[_Sample]:
     return datasets[0] if len(datasets) == 1 else ConcatDataset(datasets)
 
 
-def build_calibration_dataloader(config: ExperimentConfig, max_images: int = 200) -> DataLoader[_Sample]:
+def build_calibration_dataloader(
+    config: ExperimentConfig, max_images: int = 200, level: ElasticityLevel | None = None
+) -> DataLoader[_Sample]:
     """A small, deterministic, un-augmented sample of `build_train_dataset`'s data
     (Cityscapes + ACDC, so it already spans day/night/rain/fog/snow when both are
     configured -- `RESEARCH_PLAN.md` §5.2's explicit calibration-set requirement),
@@ -60,15 +64,15 @@ def build_calibration_dataloader(config: ExperimentConfig, max_images: int = 200
     dataset happens to be concatenated first."""
     calibration_config = config.model_copy(deep=True)
     calibration_config.training.augment = False
-    dataset = build_train_dataset(calibration_config)
+    dataset = build_train_dataset(calibration_config, level=level)
     if len(dataset) > max_images:  # type: ignore[arg-type]
         indices = torch.linspace(0, len(dataset) - 1, max_images).round().long().tolist()  # type: ignore[arg-type]
         dataset = torch.utils.data.Subset(dataset, indices)
     return DataLoader(dataset, batch_size=config.training.batch_size, shuffle=False, num_workers=0)
 
 
-def build_train_dataloader(config: ExperimentConfig) -> DataLoader[_Sample]:
-    dataset = build_train_dataset(config)
+def build_train_dataloader(config: ExperimentConfig, level: ElasticityLevel | None = None) -> DataLoader[_Sample]:
+    dataset = build_train_dataset(config, level=level)
     # `training.trainer`/`training.baseline_trainer` both loop training "forever" by
     # re-iterating this same DataLoader (`for _ in itertools.count(): yield from
     # loader`) rather than re-creating it -- without persistent_workers, every epoch
