@@ -17,7 +17,7 @@ a standard simplification in FLOPs-counting literature, not an oversight.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import torch
@@ -25,6 +25,7 @@ from torch import Tensor, nn
 
 from imavis_edge_seg.config import ElasticityLevel
 from imavis_edge_seg.models.blocks import SlimmableConv2d
+from imavis_edge_seg.search.pareto import ParetoPoint, select_under_latency_budget
 
 
 def _flops_for_call(module: nn.Module, inputs: tuple[Any, ...], output: Tensor) -> int:
@@ -115,3 +116,58 @@ def fit_flops_to_latency_rate(
     numerator = sum(flops_by_level[level] * latency_by_level[level] for level in levels)
     denominator = sum(flops_by_level[level] ** 2 for level in levels)
     return numerator / denominator if denominator > 0 else 0.0
+
+
+@dataclass(frozen=True)
+class BudgetSweepResult:
+    """One (target device, FLOPs-proxy reference device, latency budget) comparison
+    -- the unit `sweep_flops_proxy_vs_measured` produces many of, for RQ1's budget
+    sweep (`scripts/rq1_budget_sweep.py`)."""
+
+    real_level: ElasticityLevel | None
+    proxy_level: ElasticityLevel | None
+    mis_selected: bool
+    accuracy_regret: float | None  # real mIoU - proxy's REAL mIoU; None if either side infeasible
+    proxy_real_latency_ms: float | None  # the target device's REAL latency for whatever the proxy chose
+    slack_ms: float | None  # budget - proxy_real_latency_ms; negative = proxy's pick violates the real budget
+
+
+def evaluate_flops_proxy_at_budget(
+    real_points: list[ParetoPoint],
+    predicted_latency_by_level: dict[ElasticityLevel, float],
+    budget_ms: float,
+) -> BudgetSweepResult:
+    """Compares what real measured latency would select under `budget_ms` against
+    what a FLOPs proxy (`predicted_latency_by_level`, from `fit_flops_to_latency_rate`
+    calibrated on some reference device) would select under the *same* budget, on
+    one target device. `real_points` must already be scoped to that one (device_id,
+    backend) target, the same convention `search.pareto` uses.
+
+    `accuracy_regret` and `slack_ms` are both measured against the proxy's chosen
+    level's *real* numbers on this device (never the proxy's own predicted ones) --
+    the whole point is how the proxy's decision plays out in reality, not how
+    internally consistent the proxy's own predictions are."""
+    real_pick = select_under_latency_budget(real_points, budget_ms)
+    proxy_points = [replace(p, latency_ms=predicted_latency_by_level[p.level]) for p in real_points]
+    proxy_pick = select_under_latency_budget(proxy_points, budget_ms)
+
+    proxy_real_latency_ms: float | None = None
+    slack_ms: float | None = None
+    accuracy_regret: float | None = None
+    if proxy_pick is not None:
+        proxy_real_point = next(p for p in real_points if p.level == proxy_pick.level)
+        proxy_real_latency_ms = proxy_real_point.latency_ms
+        slack_ms = budget_ms - proxy_real_latency_ms
+        if real_pick is not None:
+            accuracy_regret = real_pick.miou - proxy_real_point.miou
+
+    real_level = real_pick.level if real_pick is not None else None
+    proxy_level = proxy_pick.level if proxy_pick is not None else None
+    return BudgetSweepResult(
+        real_level=real_level,
+        proxy_level=proxy_level,
+        mis_selected=real_level != proxy_level,
+        accuracy_regret=accuracy_regret,
+        proxy_real_latency_ms=proxy_real_latency_ms,
+        slack_ms=slack_ms,
+    )

@@ -64,14 +64,25 @@ depending on device — FLOPs overstates the true cost-scaling factor by 6–11x
 Calibrating a simple FLOPs→latency proxy (a least-squares linear fit) on any one
 real device and using it — as a FLOPs-only method would have to, with no
 per-device measurement of its own — to pick a level under the same 10 ms budget
-on the other three devices **mis-selects on at least two of the four devices,
-regardless of which device supplied the calibration** (with 82–365% per-level
-latency prediction errors); when calibrated on AGX Xavier, the proxy is wrong
-even on that same device, since a single linear rate cannot capture one real
-device's actual latency-vs-FLOPs relationship, let alone transfer to others.
-This is the quantitative complement to the qualitative result above: a
-FLOPs-based proxy cannot reproduce device-specific selection decisions, however
-it is calibrated.
+on the other three devices mis-selects on at least two of the four devices,
+regardless of which device supplied the calibration, with 82–365% per-level
+latency prediction errors.
+
+We repeat this comparison as a full sweep — 40 log-spaced latency budgets
+(0.75–49 ms) × every device as the calibration reference × every device as the
+target, 640 evaluations in total, rather than one 10 ms snapshot. **Even
+self-calibration (reference and target the same device) mis-selects 37.5–65%
+of the time**: a simple linear fit is not merely a poor *transfer* across
+devices, it is a poor model of even one device's own latency-vs-FLOPs
+relationship. Transfer from either of the two fastest devices we measured (AGX
+Xavier, Orin Nano) to either of the two slower ones (Hailo-8, Xavier NX) is
+frequently not just inaccurate but unsafe: 85–95% mis-selection, with the
+proxy's chosen level's real latency exceeding the stated budget on average
+(mean slack −3.9 to −12.1 ms) — the proxy is not merely leaving accuracy on
+the table in these cells, it is silently violating the budget it was asked to
+respect. This is the quantitative core of our claim: a FLOPs-based proxy cannot
+substitute for real per-device measurement, and the failure mode is frequent
+and sometimes severe, not occasional noise.
 
 ### 3.3 Quantization-aware training
 
@@ -396,6 +407,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
 - §3.2 Pareto frontier, 10 ms budget example, 4–4.5× TensorRT/Hailo ratio:
   `reports/pareto_search_v1_20260912.md`. FLOPs-vs-latency ratio comparison and
   cross-device mis-selection result: `reports/flops_baseline_v1_20260917.md`.
+  Full 640-evaluation budget sweep (self-calibration failure rate, budget
+  violation rates): `reports/rq1_budget_sweep_v1_20260920.md`.
 - §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass/supernet
   gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates). Calibrated
   quantization result (made it worse): `reports/calibrated_qat_v1_20260917.md`.

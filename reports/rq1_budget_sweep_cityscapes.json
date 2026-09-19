@@ -1,0 +1,151 @@
+{
+  "dataset": "cityscapes",
+  "budgets_ms": [
+    0.7531248,
+    0.8384108711522035,
+    0.9333549882651543,
+    1.0390508569172632,
+    1.1567160371288348,
+    1.2877059690039563,
+    1.4335295866773994,
+    1.595866700430867,
+    1.776587347211293,
+    1.9777733324588462,
+    2.2017422113950005,
+    2.4510739860223185,
+    2.728640825371141,
+    3.0376401513545774,
+    3.3816314713631814,
+    3.7645773818911716,
+    4.190889215534076,
+    4.6654778571868825,
+    5.193810314818168,
+    5.781972696485362,
+    6.436740319052762,
+    7.165655756227305,
+    7.977115724983875,
+    8.88046781126537,
+    9.886118149186032,
+    11.005651294144968,
+    12.251963670724239,
+    13.639412132620059,
+    15.183979345938305,
+    16.903457900981614,
+    18.8176552733977,
+    20.948621995731944,
+    23.32090566779879,
+    25.96183373193598,
+    28.901828270561673,
+    32.174756452334314,
+    35.81832066386818,
+    39.8744928211137,
+    44.38999786343806,
+    49.416851999999935
+  ],
+  "by_reference": {
+    "E1": {
+      "E1/hailo_hef": {
+        "mis_selection_pct": 65.0,
+        "mean_accuracy_regret": -0.03125571846961975,
+        "budget_violation_pct": 65.0,
+        "mean_unused_slack_ms": 0.26775006114931216
+      },
+      "E2/tensorrt_gpu": {
+        "mis_selection_pct": 47.5,
+        "mean_accuracy_regret": -0.020901769399642944,
+        "budget_violation_pct": 47.5,
+        "mean_unused_slack_ms": 2.9277758361493125
+      },
+      "E3/tensorrt_gpu": {
+        "mis_selection_pct": 65.0,
+        "mean_accuracy_regret": 0.054361872576378485,
+        "budget_violation_pct": 7.5,
+        "mean_unused_slack_ms": 9.193356936149312
+      },
+      "E5/tensorrt_gpu": {
+        "mis_selection_pct": 42.5,
+        "mean_accuracy_regret": 0.025500545899073284,
+        "budget_violation_pct": 12.5,
+        "mean_unused_slack_ms": 7.409384336149313
+      }
+    },
+    "E2": {
+      "E1/hailo_hef": {
+        "mis_selection_pct": 65.0,
+        "mean_accuracy_regret": -0.03125571846961975,
+        "budget_violation_pct": 65.0,
+        "mean_unused_slack_ms": 0.19495293614931217
+      },
+      "E2/tensorrt_gpu": {
+        "mis_selection_pct": 50.0,
+        "mean_accuracy_regret": -0.02318072517712911,
+        "budget_violation_pct": 50.0,
+        "mean_unused_slack_ms": 2.856853086149312
+      },
+      "E3/tensorrt_gpu": {
+        "mis_selection_pct": 62.5,
+        "mean_accuracy_regret": 0.05251407059463295,
+        "budget_violation_pct": 7.5,
+        "mean_unused_slack_ms": 9.171994586149314
+      },
+      "E5/tensorrt_gpu": {
+        "mis_selection_pct": 45.0,
+        "mean_accuracy_regret": 0.02360141608450148,
+        "budget_violation_pct": 15.0,
+        "mean_unused_slack_ms": 7.369919086149312
+      }
+    },
+    "E3": {
+      "E1/hailo_hef": {
+        "mis_selection_pct": 95.0,
+        "mean_accuracy_regret": -0.10873347282409668,
+        "budget_violation_pct": 95.0,
+        "mean_unused_slack_ms": -12.107405213850686
+      },
+      "E2/tensorrt_gpu": {
+        "mis_selection_pct": 95.0,
+        "mean_accuracy_regret": -0.09516913890838623,
+        "budget_violation_pct": 95.0,
+        "mean_unused_slack_ms": -9.658892413850689
+      },
+      "E3/tensorrt_gpu": {
+        "mis_selection_pct": 37.5,
+        "mean_accuracy_regret": -0.01878952738401052,
+        "budget_violation_pct": 35.0,
+        "mean_unused_slack_ms": 6.412181086149313
+      },
+      "E5/tensorrt_gpu": {
+        "mis_selection_pct": 67.5,
+        "mean_accuracy_regret": -0.04778370757897695,
+        "budget_violation_pct": 67.5,
+        "mean_unused_slack_ms": 1.7540693361493127
+      }
+    },
+    "E5": {
+      "E1/hailo_hef": {
+        "mis_selection_pct": 95.0,
+        "mean_accuracy_regret": -0.07617237567901611,
+        "budget_violation_pct": 95.0,
+        "mean_unused_slack_ms": -6.360667638850687
+      },
+      "E2/tensorrt_gpu": {
+        "mis_selection_pct": 85.0,
+        "mean_accuracy_regret": -0.060611272851626076,
+        "budget_violation_pct": 85.0,
+        "mean_unused_slack_ms": -3.8600669138506882
+      },
+      "E3/tensorrt_gpu": {
+        "mis_selection_pct": 45.0,
+        "mean_accuracy_regret": 0.009230364013362575,
+        "budget_violation_pct": 22.5,
+        "mean_unused_slack_ms": 7.689280136149312
+      },
+      "E5/tensorrt_gpu": {
+        "mis_selection_pct": 40.0,
+        "mean_accuracy_regret": -0.018985485865010157,
+        "budget_violation_pct": 37.5,
+        "mean_unused_slack_ms": 4.351935586149312
+      }
+    }
+  }
+}

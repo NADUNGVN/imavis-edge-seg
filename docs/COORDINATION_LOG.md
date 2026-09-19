@@ -84,11 +84,13 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    currently uses only each candidate's latency *rank* after sorting, never the
    magnitude. Data to fix this already exists (`outputs/benchmark_lookup_table.csv`,
    4 real devices). No new server run needed for the policy change itself.
-4. **RQ1 budget sweep** (Codex's proposal, stronger than the single 10ms-budget
-   table currently in the manuscript): multiple budgets x 4 devices, using the
-   existing LUT + eval JSON, no training needed. Report mis-selection,
-   accuracy-regret, and unused-latency-budget per (device, budget). In progress
-   this session.
+4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
+   `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
+   `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
+   target devices). Headline: even self-calibration mis-selects 37.5-65% of the
+   time; cross-device transfer from the 2 fastest devices to the 2 slowest is
+   often a real budget *violation* (mean slack -3.9 to -12.1ms), not just
+   accuracy loss. README Phase 5 and `docs/MANUSCRIPT_DRAFT.md` §3.2 updated.
 5. **Router overhead measurement**, **temporal-window routing**, **UIoU** — not
    started, see `reports/router_v1_20260914.md`'s "Not yet done".
 

@@ -8,9 +8,11 @@ from imavis_edge_seg.search.flops import (  # noqa: E402
     FlopsPoint,
     build_flops_points,
     count_flops,
+    evaluate_flops_proxy_at_budget,
     fit_flops_to_latency_rate,
     select_under_flops_budget,
 )
+from imavis_edge_seg.search.pareto import ParetoPoint  # noqa: E402
 
 
 def test_count_flops_matches_hand_computed_value_for_plain_conv2d() -> None:
@@ -121,3 +123,61 @@ def test_fit_flops_to_latency_rate_only_uses_overlapping_levels() -> None:
 
 def test_fit_flops_to_latency_rate_returns_zero_for_no_overlap() -> None:
     assert fit_flops_to_latency_rate({"tiny": 1000}, {"large": 5.0}) == 0.0
+
+
+# ---- evaluate_flops_proxy_at_budget (RQ1 budget sweep) --------------------------------
+
+
+def _real_points() -> list[ParetoPoint]:
+    return [
+        ParetoPoint(level="tiny", device_id="E_TEST", backend="tensorrt_gpu", precision="fp16", latency_ms=1.0, miou=0.30, dataset="cityscapes"),  # type: ignore[arg-type]
+        ParetoPoint(level="small", device_id="E_TEST", backend="tensorrt_gpu", precision="fp16", latency_ms=2.0, miou=0.40, dataset="cityscapes"),  # type: ignore[arg-type]
+        ParetoPoint(level="medium", device_id="E_TEST", backend="tensorrt_gpu", precision="fp16", latency_ms=5.0, miou=0.50, dataset="cityscapes"),  # type: ignore[arg-type]
+        ParetoPoint(level="large", device_id="E_TEST", backend="tensorrt_gpu", precision="fp16", latency_ms=10.0, miou=0.60, dataset="cityscapes"),  # type: ignore[arg-type]
+    ]
+
+
+def test_evaluate_flops_proxy_at_budget_matches_when_proxy_predicts_correctly() -> None:
+    real_points = _real_points()
+    perfect_proxy = {p.level: p.latency_ms for p in real_points}
+    result = evaluate_flops_proxy_at_budget(real_points, perfect_proxy, budget_ms=3.5)
+    assert result.real_level == result.proxy_level == "small"
+    assert not result.mis_selected
+    assert result.accuracy_regret == pytest.approx(0.0)
+    assert result.slack_ms == pytest.approx(3.5 - 2.0)
+
+
+def test_evaluate_flops_proxy_at_budget_detects_misselection_and_budget_violation() -> None:
+    real_points = _real_points()
+    # Proxy badly overestimates "small" and underestimates "medium" -- at budget=3.5
+    # the real device should pick "small" (real 2.0ms), but the proxy picks "medium"
+    # (predicted 3.0ms fits the budget; medium's REAL latency, 5.0ms, does not).
+    bad_proxy = {"tiny": 1.0, "small": 5.0, "medium": 3.0, "large": 20.0}
+    result = evaluate_flops_proxy_at_budget(real_points, bad_proxy, budget_ms=3.5)
+    assert result.real_level == "small"
+    assert result.proxy_level == "medium"
+    assert result.mis_selected
+    assert result.proxy_real_latency_ms == pytest.approx(5.0)
+    assert result.slack_ms == pytest.approx(3.5 - 5.0)
+    assert result.slack_ms is not None and result.slack_ms < 0  # proxy's pick violates the real budget
+    assert result.accuracy_regret == pytest.approx(0.40 - 0.50)  # real(small) - proxy's real(medium)
+
+
+def test_evaluate_flops_proxy_at_budget_proxy_refuses_service_real_could_serve() -> None:
+    real_points = _real_points()
+    impossible_proxy = {level: 1000.0 for level in ("tiny", "small", "medium", "large")}
+    result = evaluate_flops_proxy_at_budget(real_points, impossible_proxy, budget_ms=3.5)
+    assert result.real_level == "small"
+    assert result.proxy_level is None
+    assert result.mis_selected
+    assert result.accuracy_regret is None
+    assert result.slack_ms is None
+
+
+def test_evaluate_flops_proxy_at_budget_both_infeasible_is_not_a_misselection() -> None:
+    real_points = _real_points()
+    proxy = {p.level: p.latency_ms for p in real_points}
+    result = evaluate_flops_proxy_at_budget(real_points, proxy, budget_ms=0.1)  # below even "tiny"
+    assert result.real_level is None
+    assert result.proxy_level is None
+    assert not result.mis_selected  # None == None -- both correctly refuse, not a disagreement
