@@ -26,10 +26,18 @@
 - `outputs/` is a **shared NFS mount** across `SERVER-01..05` (`docs/INFRA_OVERRIDE.md`).
   Any new training/eval run must use an `experiment_id` not already present in
   `reports/server/*.md` or in the "Active/claimed experiment_ids" table below.
-  This is not a formality — two real bugs already happened this way this session
+  This is not a formality — three real bugs already happened this way this session
   (a baseline checkpoint silently overwritten by a same-named concurrent run; a
   status script reading the wrong server's job through a shared pointer file,
-  since fixed in `scripts/server/status_train_supernet.sh`).
+  since fixed in `scripts/server/status_train_supernet.sh`; the same shared-pointer
+  bug class recurring 2026-09-20 in the brand-new
+  `scripts/server/{start,status}_train_exported_subnet.sh` — keyed the "latest run"
+  pointer by level only, not by (level, hostname), so cell 4's launch on SERVER-04
+  could silently overwrite cell 3's pointer on SERVER-03, making a bare status
+  command on either host unreliable once both used `--level large`; fixed the same
+  way as `status_train_supernet.sh`, plus an explicit `<experiment_id>` search mode
+  that doesn't depend on the pointer file at all. Whether cell 3's actual training
+  job ran or never started is still being diagnosed separately, see below).
 
 ## Active / claimed experiment_ids
 

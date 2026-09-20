@@ -27,7 +27,7 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 if pgrep -af "[t]rain_exported_subnet.py --level $LEVEL " >/dev/null; then
-  printf 'A training run for level=%s is already active.\n' "$LEVEL"
+  printf 'A training run for level=%s is already active on this host.\n' "$LEVEL"
   exit 1
 fi
 
@@ -41,7 +41,14 @@ fi
 RUN_ID="$(hostname)_exported_subnet_${LEVEL}_$(date -u +%Y%m%dT%H%M%SZ)"
 JOB_DIR="outputs/train_exported_subnet/$LEVEL/$RUN_ID"
 mkdir -p "$JOB_DIR"
-printf '%s\n' "$RUN_ID" > "outputs/train_exported_subnet/$LEVEL/latest_run_id.txt"
+# outputs/ is a *shared* NFS mount across SERVER-01..05 (docs/INFRA_OVERRIDE.md) --
+# same level can run concurrently on different servers (e.g. the 2026-09-20 QAT 2x2
+# screen's cells 3/4 both use --level large, on different hosts), so the "latest run"
+# pointer must be per-(level, hostname), not per-level alone -- a shared per-level-only
+# pointer file gets silently overwritten by whichever host launches later, exactly the
+# same failure mode status_train_supernet.sh was fixed for on 2026-09-16. Pass an
+# experiment_id to status_train_exported_subnet.sh to find a run started elsewhere.
+printf '%s\n' "$RUN_ID" > "outputs/train_exported_subnet/$LEVEL/latest_run_id.$(hostname).txt"
 
 nohup setsid bash scripts/server/run_train_exported_subnet.sh "$LEVEL" "$FP32_CHECKPOINT" "$RUN_ID" "$CONFIG" "$@" \
   >"$JOB_DIR/launcher.log" 2>&1 </dev/null &
