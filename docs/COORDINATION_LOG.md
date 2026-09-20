@@ -43,9 +43,10 @@
 
 | experiment_id | owner | purpose | status |
 |---|---|---|---|
-| `pace_seg_v1_qat_calibrated_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 2: shared supernet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
-| `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | **failed 2026-09-20** (CUDA OOM on SERVER-03, another process held ~17GB on the same GPU; no checkpoint written) — retry pending, check `nvitop` first |
-| `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 2: shared supernet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.97, see below |
+| `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | **done** (first attempt failed with CUDA OOM on SERVER-03, no checkpoint written; retried successfully) — worst-case −1.55, see below |
+| `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.70 (best cell), see below |
+| `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | claimed, not yet launched |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -78,19 +79,25 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
 
 ## Open threads (owner: Claude unless noted)
 
-1. **QAT rescue — 2×2 factorial screening, seed0 first, replicate winner on a
-   2nd seed.** Cells: (shared weights × dynamic range) — **already done**, 3
-   seeds, worst case −2.54; (shared × per-level EMA/percentile observer),
-   (exported-subnet × dynamic), (exported-subnet × EMA/percentile) — **infra
-   built and unit-tested 2026-09-20** (`training/quantization.py`'s new
-   `ema_percentile` observer; `training/baseline_trainer.py`'s new `model=`/
-   `calibration_level=` params; `training/data.py`'s new `level=` param;
-   `scripts/train_exported_subnet.py`; `scripts/server/{start,run,status}_
-   train_exported_subnet.sh`), **not yet run on a server** — 3 commands ready,
-   see `reports/qat_rescue_2x2_screen_infra_20260920.md`. Deliberately *not*
-   combining both axes in a single first attempt (would not distinguish which
-   factor helped) — do the full 4-cell screen, then confirm only the winning
-   cell on a second seed.
+1. **QAT rescue — 2×2 factorial screening.** All 4 cells done on seed0, `large`
+   level (`reports/qat_rescue_2x2_screen_infra_20260920.md`). Worst-case mIoU
+   delta vs. FP32: **cell 1 (shared×dynamic) −1.66**; **cell 2
+   (shared×ema_percentile) −0.97**; **cell 3 (exported×dynamic) −1.55**; **cell 4
+   (exported×ema_percentile) −0.70**. Cells 2 and 4 pass the §11 go bar
+   comfortably; cell 3 sits right at the edge; cell 1 fails it (matches the
+   already-known 3-seed result). Attribution (holding one factor fixed at a
+   time): switching the observer (dynamic → ema_percentile) improves worst-case
+   by +0.69 to +0.85 points; switching to independent exported weights improves
+   it by only +0.11 to +0.27 points — **the observer is the dominant factor,
+   not shared-vs-independent weights**. This is stronger evidence for the
+   2026-09-17 report's outlier-sensitivity hypothesis about the `max` observer,
+   and weakens (without ruling out entirely) the shared-weight-interference
+   hypothesis as the primary explanation. Per Codex's pre-agreed decision rule,
+   the best cell (4) now needs a second-seed confirmation
+   (`qat_exported_large_ema_percentile_seed3`, claimed above, not yet launched)
+   before any go/stop conclusion. No further observer/hyperparameter changes
+   until that confirmation is in, per the same agreement. Codex owns the fuller
+   observer-vs-weight-sharing analysis and the go/stop recommendation.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half

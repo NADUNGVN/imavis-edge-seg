@@ -137,15 +137,23 @@ simple running maximum, which is sensitive to a single outlier activation
 anywhere in the calibration pass setting an overly coarse scale for every
 later, typically smaller-magnitude call; a percentile- or running-average-based
 observer is the natural next thing to try. We treat this as a bounded rescue
-attempt, not a required capability for the paper's central claim: we built and
-unit-tested (but have not yet run) a four-cell factorial screen isolating two
-independent factors — shared supernet weights vs. independently fine-tuned,
-exported-per-level weights, crossed with the dynamic range vs. a new
-percentile/EMA-based observer — with only the winning cell, if any, to be
-confirmed on a second seed. If this screen does not close the gap, we report
-it as a disclosed failure mode of the shared/elastic representation under
-INT8 quantization rather than continue indefinitely. The supernet QAT gap
-remains open.
+attempt, not a required capability for the paper's central claim: we ran a
+four-cell factorial screen (seed0, same level) isolating two independent
+factors — shared supernet weights vs. independently fine-tuned, exported-per-
+level weights, crossed with the dynamic range vs. a new percentile/EMA-based
+observer. Worst-case mIoU loss vs. FP32 was −1.66 (shared × dynamic, the
+already-reported result), −0.97 (shared × percentile/EMA), −1.55 (exported ×
+dynamic), and −0.70 (exported × percentile/EMA). Holding one factor fixed at a
+time, the observer accounts for a +0.69 to +0.85 point improvement while
+independent weights account for only +0.11 to +0.27 — the activation-range
+observer, not weight sharing, is the dominant factor, which is evidence *for*
+the outlier-sensitivity explanation above and *against* the sandwich-rule
+weight-interference hypothesis as the primary cause. A second-seed
+confirmation of the best cell is pending before we treat this as resolved; if
+it does not hold up, or if the gap does not close further, we report this as a
+disclosed failure mode of the shared/elastic representation under INT8
+quantization rather than continue indefinitely. The supernet QAT gap is
+narrowed but not yet closed.
 
 ### 3.4 Compiled static engines and calibrated routing
 
@@ -420,6 +428,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
 - §3.3 QAT recipe, fine-tune steps/LR, mIoU-loss range, go/no-go pass/supernet
   gap: `reports/qat_v1_20260913.md` (2026-09-14/15/16/17 updates). Calibrated
   quantization result (made it worse): `reports/calibrated_qat_v1_20260917.md`.
+  2x2 factorial screen (observer vs. weight-sharing attribution, seed0 result,
+  second-seed confirmation pending): `reports/qat_rescue_2x2_screen_infra_20260920.md`.
 - §3.4 compiled-engine partition, DLA 16-subgraph limit (referenced, detailed in
   §4): `README.md` Phase 2; `reports/edge/E3_compiler_smoke_test_20260908.md`.
 - §3.4 router calibration/evaluation protocol, 7/7 result, efficiency split,

@@ -6,8 +6,8 @@ which of two independent factors — shared vs. independently-fine-tuned weights
 dynamic vs. calibrated activation range — actually matters for the supernet QAT gap
 first documented in `reports/qat_v1_20260913.md` and left unresolved after
 `reports/calibrated_qat_v1_20260917.md`'s max-observer calibration made things worse.
-This report covers **infrastructure only** — no server (GPU + real Cityscapes/ACDC
-data) is available on this dev machine, so none of the 4 cells has a real result yet.
+This report originally covered **infrastructure only**; see "Update: real 2×2
+results" below for the completed screen, run same day on real hardware.
 
 ## The 4 cells
 
@@ -158,3 +158,82 @@ exported subnet, saves a checkpoint, then reconstructs the same architecture fro
 *differently-initialized* fresh supernet and confirms `load_state_dict` restores the
 exact trained weights — the precise round trip `evaluate_baseline.py
 --exported-subnet-level` depends on. 167/167 tests pass, ruff clean, mypy clean.
+
+## Update, same day: real 2×2 results (seed0, `large` level)
+
+All 4 cells ran on real hardware, evaluated with `evaluate_supernet.py --qat` (cell
+1/2) or `evaluate_baseline.py --exported-subnet-level large --qat` (cell 3/4)
+against the same FP32 reference checkpoint
+(`outputs/pace_seg_v1_aug_seed0/checkpoints/step_00100000.pt`, `large` level:
+cityscapes 0.5267, acdc/fog 0.5504, acdc/night 0.3728, acdc/rain 0.4983, acdc/snow
+0.4852). One real incident along the way: cell 3's first launch (SERVER-03) crashed
+with a CUDA OOM before writing any checkpoint (another process held ~17GB on the
+same GPU) — not a code issue, resolved by a plain retry once VRAM was free.
+
+Also caught and fixed live: `scripts/server/{start,status}_train_exported_subnet.sh`
+keyed their "latest run" pointer by level only, not by (level, hostname) — cells 3
+and 4 both used `--level large` on different hosts, so the later launch silently
+overwrote the earlier one's pointer, making cell 3 briefly unfindable via a bare
+status check. Fixed the same way `status_train_supernet.sh` was fixed for the
+identical bug class on 2026-09-16, plus an `<experiment_id>` search mode that
+doesn't depend on the pointer file at all.
+
+| cell | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow | worst-case |
+|---|---|---|---|---|---|---|
+| 1: shared × dynamic | −1.60 | −0.12 | −1.66 | +0.03 | +0.67 | **−1.66** |
+| 2: shared × ema_percentile | −0.65 | −0.97 | −0.59 | −0.59 | −0.09 | **−0.97** |
+| 3: exported × dynamic | −1.55 | +0.05 | −0.49 | −0.93 | +0.47 | **−1.55** |
+| 4: exported × ema_percentile | −0.70 | −0.59 | −0.57 | +0.17 | +0.30 | **−0.70** |
+
+(all values are mIoU points vs. the FP32 reference; positive = QAT *beats* FP32 on
+that split)
+
+**Against the §11 go bar (≤~1.0–1.5 points worst-case):** cells 2 and 4 pass
+comfortably; cell 3 is right at the edge (−1.55, essentially tied with the bar);
+cell 1 (the only previously-known cell) fails it, consistent with
+`reports/qat_v1_20260913.md`'s 3-seed result.
+
+**Attribution — holding one factor fixed at a time:**
+
+- **Observer effect** (dynamic → ema_percentile), weights held fixed:
+  shared: −1.66 → −0.97 (**+0.69** points); exported: −1.55 → −0.70 (**+0.85**
+  points). Large, consistent improvement in both weight-sharing conditions.
+- **Weight-sharing effect** (shared → exported), observer held fixed:
+  dynamic: −1.66 → −1.55 (+0.11 points); ema_percentile: −0.97 → −0.70 (+0.27
+  points). A real but much smaller improvement in both observer conditions.
+
+**Preliminary reading (Codex owns the fuller observer-vs-weight-sharing analysis
+and the go/stop recommendation per the agreed division of labor)**: the activation-
+range observer is the dominant factor here, not shared-vs-independent weights. This
+is consistent with — and stronger evidence for — the 2026-09-17 report's outlier-
+sensitivity hypothesis about the `max` observer, and weakens the untested
+"supernet's `large`-level weights are a harder quantization target because every
+other elasticity level also exercises them" hypothesis as the primary explanation
+(it may still contribute the smaller ~0.1–0.3 point weight-sharing effect observed
+above, just not the dominant one).
+
+**Best cell: 4 (exported subnet × ema_percentile), worst-case −0.70.** Per Codex's
+pre-agreed decision rule (at least one cell reached the bar → confirm the best
+config on a second seed), the next step is a seed1 confirmation run of cell 4 —
+command below. No further observer/hyperparameter changes before that confirmation,
+per the same agreement.
+
+```bash
+cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/start_train_exported_subnet.sh large \
+  outputs/pace_seg_v1_aug_seed3/checkpoints/step_00100000.pt \
+  configs/experiment/default.yaml \
+  --override experiment_id=qat_exported_large_ema_percentile_seed3 \
+  --override seed=3 \
+  --override training.max_steps=10000 \
+  --override training.lr=3e-5 \
+  --qat --calibrate --calibration-observer ema_percentile
+```
+
+Note: uses `pace_seg_v1_aug_seed3` (seed=3) as the confirmation seed, not seed1 --
+there is no `pace_seg_v1_aug_seed1` checkpoint. This repo's 3 existing supernet
+seeds are `pace_seg_v1_aug_seed0`, `pace_seg_v1_aug_seed3`, `pace_seg_v1_seed2`
+(`reports/qat_v1_20260913.md`); seed3 is also cell 1's own second seed
+(worst-case −1.39 there), so this confirmation run doubles as a direct
+apples-to-apples comparison against cell 1 on the same seed. A second-seed
+confirmation must start from that seed's own FP32 weights, not reuse seed0's, or
+it wouldn't really test seed-to-seed reproducibility.
