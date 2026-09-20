@@ -439,3 +439,37 @@ everything so far is PyTorch fake-quantization simulation. The
 outlier-sensitivity explanation remains consistent with the data, not
 directly demonstrated (would need activation max/percentile diagnostics) —
 noted as future work, not blocking the freeze.
+
+## Update, same day: closing step 2 — rescue generalizes across the whole
+elastic family, not just `large`
+
+No new training: evaluated the existing seed0/seed3 `pace_seg_v1_qat_
+calibrated_ema_percentile_*` checkpoints at all 4 levels (`evaluate_supernet.py
+--qat` with no `--level` restriction), against the already-existing FP32
+references for all 4 levels.
+
+| level | seed0 worst-case / mean | seed3 worst-case / mean |
+|---|---|---|
+| tiny | −0.32 / +0.06 | −0.36 / +0.00 |
+| small | −0.97 / −0.51 | −0.33 / −0.15 |
+| medium | −0.51 / −0.30 | −0.56 / −0.34 |
+| large | −0.97 / −0.58 | −0.86 / −0.51 |
+
+(`large`'s numbers reproduce the earlier-reported cell 2 result within
+rounding, confirming this is the same checkpoint/calibration, not a
+re-training artifact.)
+
+**Every level, both seeds, passes the ≤1.5-point worst-case bar comfortably —
+most cells are well inside even the strict 1.0 lower bound.** `tiny` in
+particular is nearly a wash (mean ≈ 0, worst-case ≈ −0.3). This is a
+meaningfully stronger result than closing step 2 was framed to test for: the
+`ema_percentile` rescue is **not `large`-specific** — it holds across the
+entire elastic family on both tested seeds, with no clear degradation pattern
+as level shrinks (if anything, `tiny`/`medium` look slightly better than
+`large`/`small`, though 2 seeds isn't enough to call that a trend).
+
+One real operational note: the first eval attempt for this step ran on the
+same host (SERVER-03) that was simultaneously running closing step 1's cell 2
+× seed2 training job (23.2/24 GiB GPU memory in use), and hit a CUDA OOM —
+not a code issue, resolved by re-running the eval on a different, free server
+(`outputs/` being shared NFS made this trivial).

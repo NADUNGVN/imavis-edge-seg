@@ -144,17 +144,26 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    1. Run cell 2 (shared × ema_percentile) on `pace_seg_v1_seed2` — the
       dynamic-QAT seed that failed worst (−2.54). If worst-case ≤1.5, that's
       a paired 3/3-seed confirmation; if not, the claim stays at 2/3 seeds.
-   2. **No new training** — evaluate the *existing* `pace_seg_v1_qat_
-      calibrated_ema_percentile_seed{0,3}` checkpoints at `tiny`/`small`/
-      `medium` too (not just `large`) to see whether the rescue generalizes
-      across the elastic family or is `large`-specific. FP32 references for
-      all 4 levels already exist for all 3 seeds (`reports/server/SERVER-01_
-      eval_pace_seg_v1_aug_seed0_20260913T144238Z.md`, `..._aug_seed3_
-      20260914T100242Z.md`, `..._seed2_20260912T171724Z.md`) — no new FP32
-      eval needed either. The QAT checkpoints already contain all 4 levels'
-      weights (the sandwich-rule training loop samples multiple levels per
-      step, confirmed from training logs), so `evaluate_supernet.py --qat`
-      with no `--level` restriction reads out all 4 levels from one run.
+      **Launched, training in progress on SERVER-03, not yet evaluated.**
+   2. **Done — rescue generalizes across the whole elastic family, not just
+      `large`.** No new training: evaluated the existing seed0/seed3
+      checkpoints at all 4 levels (`evaluate_supernet.py --qat`, no `--level`
+      restriction), against the already-existing FP32 references.
+
+      | level | seed0 worst-case / mean | seed3 worst-case / mean |
+      |---|---|---|
+      | tiny | −0.32 / +0.06 | −0.36 / +0.00 |
+      | small | −0.97 / −0.51 | −0.33 / −0.15 |
+      | medium | −0.51 / −0.30 | −0.56 / −0.34 |
+      | large | −0.97 / −0.58 | −0.86 / −0.51 |
+
+      Every level, both seeds, passes the ≤1.5 bar comfortably — most cells
+      are well inside even the strict 1.0 lower bound; `tiny` is nearly a
+      wash (mean ≈ 0). `large`'s numbers reproduce the earlier cell 2 result
+      within rounding, confirming this is the same checkpoint/calibration.
+      One operational note: the first eval attempt ran on the same host
+      (SERVER-03) simultaneously training step 1's job, hit a CUDA OOM (not a
+      code issue), resolved by re-running on a free server via shared NFS.
 
    After these two steps: **freeze QAT regardless of outcome**, no further
    observer/hyperparameter search, shift effort to the router (open thread
