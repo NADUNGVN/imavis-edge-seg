@@ -367,3 +367,75 @@ improvement is consistent across both seeds, but the mean-accuracy effect is
 not, and 2 seeds isn't enough to say whether that's a real pattern or noise.
 This full result set is handed to Codex for the final read; not treated here
 as a settled "shared-supernet QAT is solved" conclusion.
+
+## Update, same day: Codex's final decision — go with limits, then freeze
+
+Claim boundary, as agreed with Codex: *"At the `large` elasticity level,
+EMA-percentile activation calibration rescues shared-supernet fake-quantized
+QAT on both tested seeds, keeping worst per-condition degradation below one
+mIoU point."* Explicitly **not** "shared-supernet QAT is solved" or "reliable
+INT8 deployment."
+
+**Two mechanistic conclusions (Codex):**
+1. `ema_percentile` alone is sufficient to pass the bar on the shared model on
+   both seed0 and seed3 — its consistent effect is reducing worst-case/tail
+   degradation, not uniformly improving mean accuracy.
+2. Export specialization still adds a consistent secondary benefit (+0.18 to
+   +0.30 mean, +0.27 to +0.35 worst-case across the 2 seeds, i.e. cell 4 minus
+   cell 2 on each seed) — extraction isn't meaningless, just not necessary to
+   pass the bar, and it carries its own separate fine-tuning cost.
+
+**Two closing steps before freezing QAT regardless of outcome (no further
+observer/hyperparameter changes after these):**
+
+1. **Cell 2 (shared × ema_percentile) on `pace_seg_v1_seed2`** — the seed
+   dynamic-QAT (cell 1) failed worst on (−2.54, `reports/qat_v1_20260913.md`).
+   If worst-case ≤1.5, this gives a paired 3/3-seed confirmation; if not, the
+   claim stays at 2/3 seeds.
+
+   ```bash
+   cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml \
+     --override experiment_id=pace_seg_v1_qat_calibrated_ema_percentile_seed2 \
+     --override seed=2 \
+     --override training.max_steps=10000 \
+     --override training.lr=3e-5 \
+     --qat --calibrate --calibration-observer ema_percentile \
+     --init-checkpoint outputs/pace_seg_v1_seed2/checkpoints/step_00100000.pt
+   ```
+
+   ```bash
+   python scripts/evaluate_supernet.py --qat \
+     --checkpoint outputs/pace_seg_v1_qat_calibrated_ema_percentile_seed2/checkpoints/step_00010000.pt \
+     --config configs/experiment/default.yaml --level large
+   ```
+
+2. **No new training** — evaluate the *existing* `pace_seg_v1_qat_calibrated_
+   ema_percentile_seed{0,3}` checkpoints at `tiny`/`small`/`medium` too (not
+   just `large`), to see whether the rescue generalizes across the elastic
+   family or is `large`-specific. The sandwich-rule training loop already
+   samples multiple levels per step, so these checkpoints already contain
+   trained weights for every level — no new training needed. FP32 references
+   for all 4 levels already exist for all 3 seeds, confirmed by direct read
+   (`reports/server/SERVER-01_eval_pace_seg_v1_aug_seed0_20260913T144238Z.md`,
+   `SERVER-02_eval_pace_seg_v1_aug_seed3_20260914T100242Z.md`,
+   `SERVER-02_eval_pace_seg_v1_seed2_20260912T171724Z.md`) — no new FP32 eval
+   needed either.
+
+   ```bash
+   python scripts/evaluate_supernet.py --qat \
+     --checkpoint outputs/pace_seg_v1_qat_calibrated_ema_percentile_seed0/checkpoints/step_00010000.pt \
+     --config configs/experiment/default.yaml
+
+   python scripts/evaluate_supernet.py --qat \
+     --checkpoint outputs/pace_seg_v1_qat_calibrated_ema_percentile_seed3/checkpoints/step_00010000.pt \
+     --config configs/experiment/default.yaml
+   ```
+
+**After these two steps: freeze QAT regardless of outcome.** No further
+observer/hyperparameter search; shift effort to the router (open threads
+#2/#3). QAT remains a **secondary contribution**; no INT8 headline claim
+before real compiled-engine (TensorRT/Hailo) accuracy+latency numbers exist —
+everything so far is PyTorch fake-quantization simulation. The
+outlier-sensitivity explanation remains consistent with the data, not
+directly demonstrated (would need activation max/percentile diagnostics) —
+noted as future work, not blocking the freeze.
