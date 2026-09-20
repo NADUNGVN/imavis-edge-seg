@@ -143,17 +143,31 @@ factors — shared supernet weights vs. independently fine-tuned, exported-per-
 level weights, crossed with the dynamic range vs. a new percentile/EMA-based
 observer. Worst-case mIoU loss vs. FP32 was −1.66 (shared × dynamic, the
 already-reported result), −0.97 (shared × percentile/EMA), −1.55 (exported ×
-dynamic), and −0.70 (exported × percentile/EMA). Holding one factor fixed at a
-time, the observer accounts for a +0.69 to +0.85 point improvement while
-independent weights account for only +0.11 to +0.27 — the activation-range
-observer, not weight sharing, is the dominant factor, which is evidence *for*
-the outlier-sensitivity explanation above and *against* the sandwich-rule
-weight-interference hypothesis as the primary cause. A second-seed
-confirmation of the best cell is pending before we treat this as resolved; if
-it does not hold up, or if the gap does not close further, we report this as a
-disclosed failure mode of the shared/elastic representation under INT8
-quantization rather than continue indefinitely. The supernet QAT gap is
-narrowed but not yet closed.
+dynamic), and −0.70 (exported × percentile/EMA); mean loss across the same 5
+splits was −0.54, −0.58, −0.49, and −0.28 respectively. The mean view shows a
+more precise picture than worst-case alone: on the *shared* model, the new
+observer does not improve mean accuracy (−0.58 vs. −0.54) even though it
+substantially reduces worst-case loss (−0.97 vs. −1.66) — it primarily
+**stabilizes degradation across conditions rather than improving average
+accuracy**, a claim we make no stronger than the data supports. The
+observer-vs-weight-sharing comparison (holding one factor fixed at a time)
+still shows the observer dominating on the worst-case metric, but we do not
+treat the resulting point differences as clean, additive factorial main
+effects, since a worst-case (max-over-splits) metric can reflect which
+condition is hardest shifting between cells rather than a stable per-factor
+effect. A second-seed confirmation of the best cell (exported ×
+percentile/EMA) is pending, with a pre-registered decision rule (≤1.5 points
+worst-case confirms the exported-subnet QAT path; 1.5–2.0 is
+supporting/borderline evidence only; >2.0 stops the rescue and the result is
+reported as a disclosed failure mode of the shared/elastic representation
+under INT8 quantization). Even a full pass supports only the narrower claim
+that a subnet extracted from the trained supernet can be specialized via QAT
+fine-tuning — not that shared-supernet QAT itself is solved — and we do not
+present INT8 as a headline result until real compiled-engine (TensorRT/Hailo)
+accuracy and latency numbers exist, since all results above are PyTorch
+fake-quantization simulation. The outlier-sensitivity explanation remains
+consistent with, but not directly demonstrated by, the data collected so far.
+The supernet QAT gap is narrowed but not yet closed.
 
 ### 3.4 Compiled static engines and calibrated routing
 

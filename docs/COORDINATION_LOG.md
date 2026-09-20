@@ -85,19 +85,31 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    (shared×ema_percentile) −0.97**; **cell 3 (exported×dynamic) −1.55**; **cell 4
    (exported×ema_percentile) −0.70**. Cells 2 and 4 pass the §11 go bar
    comfortably; cell 3 sits right at the edge; cell 1 fails it (matches the
-   already-known 3-seed result). Attribution (holding one factor fixed at a
-   time): switching the observer (dynamic → ema_percentile) improves worst-case
-   by +0.69 to +0.85 points; switching to independent exported weights improves
-   it by only +0.11 to +0.27 points — **the observer is the dominant factor,
-   not shared-vs-independent weights**. This is stronger evidence for the
-   2026-09-17 report's outlier-sensitivity hypothesis about the `max` observer,
-   and weakens (without ruling out entirely) the shared-weight-interference
-   hypothesis as the primary explanation. Per Codex's pre-agreed decision rule,
-   the best cell (4) now needs a second-seed confirmation
-   (`qat_exported_large_ema_percentile_seed3`, claimed above, not yet launched)
-   before any go/stop conclusion. No further observer/hyperparameter changes
-   until that confirmation is in, per the same agreement. Codex owns the fuller
-   observer-vs-weight-sharing analysis and the go/stop recommendation.
+   already-known 3-seed result). **Mean-across-5-splits view (added after
+   Codex's review, more precise than worst-case alone)**: cell1 −0.54, cell2
+   −0.58, cell3 −0.49, cell4 −0.28 — on the **shared** model, ema_percentile's
+   *mean* is not better than dynamic's (−0.58 vs. −0.54) even though its
+   worst-case is much better; it **stabilizes worst-case degradation across
+   conditions, not average accuracy**. Codex's review also flagged that reading
+   the worst-case deltas (+0.69/+0.85 observer, +0.11/+0.27 weight-sharing) as
+   clean additive factorial main effects overstates what a `max`-based metric
+   supports (the "worst" split can differ between cells) — the
+   observer-dominates reading still holds as a predefined-metric result, just
+   not as decomposable per-factor point contributions. **Codex's assessment:
+   conditional go, not solved.** Decision rule for the pending seed3
+   confirmation of cell 4 (`qat_exported_large_ema_percentile_seed3`, claimed,
+   command ready, unchanged config): worst-case ≤1.5 confirms the
+   exported-subnet QAT path; 1.5–2.0 is supporting/borderline only; >2.0 stops
+   the rescue (QAT becomes failure analysis only). If cell 4 passes, also run
+   **cell 2 on seed3** (mechanistic replication — does per-level ema_percentile
+   rescue the *shared* supernet too, or is the fix specific to exported/
+   independent weights?). **Claim boundary**: cell 4 passing supports only "an
+   extracted subnet can be specialized via QAT," not "shared-supernet QAT is
+   solved" — no INT8 headline claim before real compiled-engine (TensorRT/
+   Hailo) accuracy+latency numbers exist (everything so far is PyTorch
+   fake-quantization simulation). The outlier-sensitivity explanation is
+   consistent with the data, not yet directly demonstrated (would need
+   activation max/percentile diagnostics) — future work, not blocking.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half

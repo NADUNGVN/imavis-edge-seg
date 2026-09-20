@@ -193,30 +193,64 @@ comfortably; cell 3 is right at the edge (−1.55, essentially tied with the bar
 cell 1 (the only previously-known cell) fails it, consistent with
 `reports/qat_v1_20260913.md`'s 3-seed result.
 
-**Attribution — holding one factor fixed at a time:**
+**Attribution — holding one factor fixed at a time (worst-case, as originally
+computed):**
 
 - **Observer effect** (dynamic → ema_percentile), weights held fixed:
   shared: −1.66 → −0.97 (**+0.69** points); exported: −1.55 → −0.70 (**+0.85**
-  points). Large, consistent improvement in both weight-sharing conditions.
+  points).
 - **Weight-sharing effect** (shared → exported), observer held fixed:
   dynamic: −1.66 → −1.55 (+0.11 points); ema_percentile: −0.97 → −0.70 (+0.27
-  points). A real but much smaller improvement in both observer conditions.
+  points).
 
-**Preliminary reading (Codex owns the fuller observer-vs-weight-sharing analysis
-and the go/stop recommendation per the agreed division of labor)**: the activation-
-range observer is the dominant factor here, not shared-vs-independent weights. This
-is consistent with — and stronger evidence for — the 2026-09-17 report's outlier-
-sensitivity hypothesis about the `max` observer, and weakens the untested
-"supernet's `large`-level weights are a harder quantization target because every
-other elasticity level also exercises them" hypothesis as the primary explanation
-(it may still contribute the smaller ~0.1–0.3 point weight-sharing effect observed
-above, just not the dominant one).
+**Correction from Codex's review, adopted here**: reading `+0.69`/`+0.85` and
+`+0.11`/`+0.27` as clean, additive factorial main effects overstates what
+worst-case (a `max` over 5 splits) actually supports — the "worst" split can
+differ between cells, so these deltas can reflect an interaction with which
+condition is hardest, not a stable per-factor effect. The **mean-across-splits**
+view tells a different, more precise story:
 
-**Best cell: 4 (exported subnet × ema_percentile), worst-case −0.70.** Per Codex's
-pre-agreed decision rule (at least one cell reached the bar → confirm the best
-config on a second seed), the next step is a seed1 confirmation run of cell 4 —
-command below. No further observer/hyperparameter changes before that confirmation,
-per the same agreement.
+| cell | mean Δ (5 splits) | worst-case Δ |
+|---|---|---|
+| 1: shared × dynamic | **−0.54** | −1.66 |
+| 2: shared × ema_percentile | **−0.58** | −0.97 |
+| 3: exported × dynamic | **−0.49** | −1.55 |
+| 4: exported × ema_percentile | **−0.28** | −0.70 |
+
+On the **shared** model, ema_percentile's mean is *not* better than dynamic's
+(−0.58 vs. −0.54, marginally worse) even though its worst-case is much better
+(−0.97 vs. −1.66) — i.e. it **reduces tail degradation / dispersion across
+conditions, not average accuracy**. On the **exported** model, ema_percentile
+improves both mean and worst-case. **Correct claim: "ema_percentile stabilizes
+worst-case degradation across conditions," not "improves accuracy uniformly."**
+The observer-dominates-weight-sharing reading from the worst-case table is still
+valid as a predefined-metric result, just not decomposable into additive
+per-factor point contributions.
+
+Also per Codex: the outlier-sensitivity explanation for why `ema_percentile`
+helps is currently only **consistent with** the outcome data, not directly
+demonstrated — that would need activation max/percentile or scale-distribution
+diagnostics during calibration, not yet collected. Flagged as future work, not
+blocking the decision below.
+
+**Best cell: 4 (exported subnet × ema_percentile), worst-case −0.70, mean −0.28.**
+Per the agreed decision rule, the next step is confirming cell 4 on a second seed,
+**unchanged configuration** (no observer/hyperparameter changes) — command below.
+Decision thresholds for that confirmation run (Codex, agreed):
+- worst-case ≤1.5 → confirms the exported-subnet QAT path.
+- worst-case 1.5–2.0 → supporting/borderline only, not confirmed.
+- worst-case >2.0 → stop the rescue, treat QAT as failure analysis.
+- If cell 4 passes, run **cell 2 on seed3 too** (mechanistic replication, not a
+  new hyperparameter search) — to determine whether per-level ema_percentile can
+  also rescue the shared supernet, or whether the fix is specific to exported/
+  independent weights.
+
+**Claim boundary, explicit**: cell 4 passing supports only "a subnet extracted
+from the trained supernet can be specialized to recover most of the QAT loss via
+fine-tuning" — it does **not** support "shared-supernet QAT is solved." INT8
+should not go in the paper's headline before real compiled-engine (TensorRT/
+Hailo) accuracy+latency numbers exist — everything above is still PyTorch
+fake-quantization simulation, not a deployed INT8 engine.
 
 ```bash
 cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/start_train_exported_subnet.sh large \
