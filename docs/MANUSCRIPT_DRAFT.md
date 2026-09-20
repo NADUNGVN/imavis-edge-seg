@@ -161,14 +161,19 @@ the exported-subnet QAT path; 1.5–2.0 is supporting/borderline evidence only;
 percentile/EMA) **confirmed reproducibility**: worst-case −0.51, mean −0.32,
 versus −0.70/−0.28 on the first seed — both seeds comfortably inside budget.
 This supports only the narrower claim that a subnet extracted from the trained
-supernet can be specialized via QAT fine-tuning — not that shared-supernet QAT
-itself is solved — and we do not present INT8 as a headline result until real
-compiled-engine (TensorRT/Hailo) accuracy and latency numbers exist, since all
-results above are PyTorch fake-quantization simulation. A follow-up
-mechanistic-replication run (the same percentile/EMA observer applied to the
-*shared* supernet, seed-matched) will determine whether this fix generalizes
-back to the shared-weight setting or is specific to independently fine-tuned,
-exported weights. The outlier-sensitivity explanation remains consistent with,
+supernet can be specialized via QAT fine-tuning — not, on its own, that
+shared-supernet QAT itself is solved — and we do not present INT8 as a
+headline result until real compiled-engine (TensorRT/Hailo) accuracy and
+latency numbers exist, since all results above are PyTorch fake-quantization
+simulation. A seed-matched mechanistic-replication run applying the same
+observer directly to the *shared* supernet (not an exported/specialized
+subnet) also passed the go bar on both tested seeds (worst-case −0.97 and
+−0.86), a result stronger than we initially expected: it suggests the
+observer change, not weight independence, may be sufficient on its own,
+though the observer's effect on *mean* accuracy (as opposed to worst-case) was
+inconsistent between the two seeds tested. We treat this as an open question
+pending further analysis rather than a settled result. The outlier-sensitivity
+explanation remains consistent with,
 but not directly demonstrated by, the data collected so far. The supernet QAT
 gap is narrowed but not yet closed.
 

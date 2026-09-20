@@ -324,3 +324,46 @@ python scripts/evaluate_supernet.py --qat \
   --checkpoint outputs/pace_seg_v1_qat_calibrated_ema_percentile_seed3/checkpoints/step_00010000.pt \
   --config configs/experiment/default.yaml --level large
 ```
+
+## Update, same day: mechanistic replication (cell 2, seed3) — shared supernet
+also passes reliably
+
+Evaluated against the same seed3 FP32 reference as cell 4's seed3 run:
+
+| cell 2, seed | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow | mean | worst-case |
+|---|---|---|---|---|---|---|---|
+| seed0 | −0.65 | −0.97 | −0.59 | −0.59 | −0.09 | −0.58 | −0.97 |
+| seed3 | −0.26 | −0.86 | −0.30 | −0.75 | −0.34 | −0.50 | **−0.86** |
+
+Both seeds of the **shared** model with `ema_percentile` also pass the ≤1.5
+worst-case bar comfortably, and are reproducible in the same direction. For
+comparison, cell 1 (shared × dynamic) on the identical seed3 checkpoint was
+worst-case −1.39, mean −0.69 (`reports/qat_v1_20260913.md`) — so on seed3, the
+observer switch improves the *shared* model's worst-case by +0.53 points and
+its mean by +0.19 points (unlike seed0, where the mean was flat/slightly worse
+under `ema_percentile`; see the note on this below).
+
+**Updated full picture, both tested seeds, worst-case / mean:**
+
+| cell | seed0 | seed3 |
+|---|---|---|
+| 1: shared × dynamic | −1.66 / −0.54 | −1.39 / −0.69 |
+| 2: shared × ema_percentile | −0.97 / −0.58 | −0.86 / −0.50 |
+| 3: exported × dynamic | −1.55 / −0.49 | not run |
+| 4: exported × ema_percentile | −0.70 / −0.28 | −0.51 / −0.32 |
+
+**This is a stronger result than the original claim boundary allowed for**: the
+*shared* supernet, with no change other than the calibration observer, now
+passes the go bar on both tested seeds (worst-case −0.97 and −0.86, both well
+inside even the bar's strict 1.0 lower bound) — reliably, not just in one seed.
+Combined with cell 4's confirmed result, this is evidence that `ema_percentile`
+rescues QAT accuracy **regardless of whether weights are shared or exported**,
+which weakens the case that weight-independence (extraction) is doing
+meaningful work here at all — the observer axis looks sufficient on its own.
+One inconsistency to flag, not resolved here: on seed0, `ema_percentile` did
+not improve the shared model's *mean* (−0.58 vs. −0.54, flat/slightly worse)
+while on seed3 it did (−0.50 vs. −0.69, clearly better) — the worst-case
+improvement is consistent across both seeds, but the mean-accuracy effect is
+not, and 2 seeds isn't enough to say whether that's a real pattern or noise.
+This full result set is handed to Codex for the final read; not treated here
+as a settled "shared-supernet QAT is solved" conclusion.

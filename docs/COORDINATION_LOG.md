@@ -47,7 +47,7 @@
 | `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | **done** (first attempt failed with CUDA OOM on SERVER-03, no checkpoint written; retried successfully) — worst-case −1.55, see below |
 | `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.70 (best cell), see below |
 | `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | **done — CONFIRMED**, worst-case −0.51, mean −0.32, see below |
-| `pace_seg_v1_qat_calibrated_ema_percentile_seed3` | Claude | Mechanistic replication: shared supernet x ema_percentile, seed3 — does the fix rescue the shared model too? | claimed, not yet launched |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed3` | Claude | Mechanistic replication: shared supernet x ema_percentile, seed3 — does the fix rescue the shared model too? | **done — yes, also passes**, worst-case −0.86, mean −0.50, see below |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -103,16 +103,32 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    **Cell 4 seed3 confirmation: done, CONFIRMED** — worst-case −0.51, mean
    −0.32 (seed0 was −0.70/−0.28) — both seeds pass the ≤1.5 bar comfortably,
    reproducible across seeds. **The exported-subnet × ema_percentile QAT path
-   is confirmed**, subject to the claim boundary below. Per Codex's decision
-   rule #5, next: **cell 2 (shared × ema_percentile) on seed3**
-   (`pace_seg_v1_qat_calibrated_ema_percentile_seed3`, claimed above, not yet
-   launched) — mechanistic replication, not a new hyperparameter search, to
-   determine whether per-level ema_percentile can also rescue the *shared*
-   supernet or whether the fix is specific to exported/independent weights.
+   is confirmed**, subject to the claim boundary below.
 
-   **Claim boundary**: confirms only "an extracted subnet can be specialized
-   via QAT," not "shared-supernet QAT is solved" — no INT8 headline claim
-   before real compiled-engine (TensorRT/Hailo) accuracy+latency numbers exist
+   **Mechanistic replication (cell 2, shared × ema_percentile, seed3): done —
+   also passes.** Worst-case −0.86, mean −0.50 (seed0 was −0.97/−0.58) — both
+   seeds of the **shared** model pass the ≤1.5 bar comfortably too (both well
+   inside even the strict 1.0 lower bound). On the identical seed3 checkpoint,
+   cell 1 (shared×dynamic) was −1.39/−0.69, so the observer switch improves
+   the shared model's worst-case by +0.53 and mean by +0.19 on this seed
+   (seed0 showed a flat/slightly-worse mean effect — inconsistent across the
+   2 seeds so far, worst-case improvement is the consistent part). **This
+   result is stronger than the original claim boundary allowed for**: the
+   shared supernet, unchanged except for the observer, now reliably passes
+   the go bar on both tested seeds — evidence that `ema_percentile` fixes QAT
+   accuracy regardless of shared-vs-exported weights, which weakens the case
+   that weight-independence itself was doing meaningful work. Full numbers
+   and the seed0-vs-seed3 mean inconsistency: `reports/qat_rescue_2x2_screen_
+   infra_20260920.md`. **This full result set (not just cell 4) is handed to
+   Codex for the final analysis and go/stop call** — not treated here as a
+   settled "shared-supernet QAT is solved" conclusion, per the same caution
+   already applied throughout this thread.
+
+   **Claim boundary (as originally agreed, still holding pending Codex's
+   read of the new shared-model result)**: confirms only "an extracted
+   subnet can be specialized via QAT," not "shared-supernet QAT is solved" —
+   no INT8 headline claim before real compiled-engine (TensorRT/Hailo)
+   accuracy+latency numbers exist
    (everything so far is PyTorch fake-quantization simulation). The
    outlier-sensitivity explanation is consistent with the data, not yet
    directly demonstrated (would need activation max/percentile diagnostics) —
