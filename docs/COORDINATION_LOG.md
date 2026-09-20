@@ -44,7 +44,7 @@
 | experiment_id | owner | purpose | status |
 |---|---|---|---|
 | `pace_seg_v1_qat_calibrated_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 2: shared supernet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
-| `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | claimed, not yet launched |
+| `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | **failed 2026-09-20** (CUDA OOM on SERVER-03, another process held ~17GB on the same GPU; no checkpoint written) — retry pending, check `nvitop` first |
 | `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | claimed, not yet launched |
 
 ## Agreed thesis framing (2026-09-20)
