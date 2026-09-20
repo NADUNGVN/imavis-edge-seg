@@ -46,7 +46,8 @@
 | `pace_seg_v1_qat_calibrated_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 2: shared supernet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.97, see below |
 | `qat_exported_large_dynamic_seed0` | Claude | QAT 2x2 screen cell 3: exported-subnet x dynamic range, `large`, seed0 | **done** (first attempt failed with CUDA OOM on SERVER-03, no checkpoint written; retried successfully) — worst-case −1.55, see below |
 | `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.70 (best cell), see below |
-| `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | claimed, not yet launched |
+| `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | **done — CONFIRMED**, worst-case −0.51, mean −0.32, see below |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed3` | Claude | Mechanistic replication: shared supernet x ema_percentile, seed3 — does the fix rescue the shared model too? | claimed, not yet launched |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -96,20 +97,26 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    supports (the "worst" split can differ between cells) — the
    observer-dominates reading still holds as a predefined-metric result, just
    not as decomposable per-factor point contributions. **Codex's assessment:
-   conditional go, not solved.** Decision rule for the pending seed3
-   confirmation of cell 4 (`qat_exported_large_ema_percentile_seed3`, claimed,
-   command ready, unchanged config): worst-case ≤1.5 confirms the
-   exported-subnet QAT path; 1.5–2.0 is supporting/borderline only; >2.0 stops
-   the rescue (QAT becomes failure analysis only). If cell 4 passes, also run
-   **cell 2 on seed3** (mechanistic replication — does per-level ema_percentile
-   rescue the *shared* supernet too, or is the fix specific to exported/
-   independent weights?). **Claim boundary**: cell 4 passing supports only "an
-   extracted subnet can be specialized via QAT," not "shared-supernet QAT is
-   solved" — no INT8 headline claim before real compiled-engine (TensorRT/
-   Hailo) accuracy+latency numbers exist (everything so far is PyTorch
-   fake-quantization simulation). The outlier-sensitivity explanation is
-   consistent with the data, not yet directly demonstrated (would need
-   activation max/percentile diagnostics) — future work, not blocking.
+   conditional go, not solved.** Decision rule (worst-case ≤1.5 confirms;
+   1.5–2.0 supporting/borderline only; >2.0 stops the rescue).
+
+   **Cell 4 seed3 confirmation: done, CONFIRMED** — worst-case −0.51, mean
+   −0.32 (seed0 was −0.70/−0.28) — both seeds pass the ≤1.5 bar comfortably,
+   reproducible across seeds. **The exported-subnet × ema_percentile QAT path
+   is confirmed**, subject to the claim boundary below. Per Codex's decision
+   rule #5, next: **cell 2 (shared × ema_percentile) on seed3**
+   (`pace_seg_v1_qat_calibrated_ema_percentile_seed3`, claimed above, not yet
+   launched) — mechanistic replication, not a new hyperparameter search, to
+   determine whether per-level ema_percentile can also rescue the *shared*
+   supernet or whether the fix is specific to exported/independent weights.
+
+   **Claim boundary**: confirms only "an extracted subnet can be specialized
+   via QAT," not "shared-supernet QAT is solved" — no INT8 headline claim
+   before real compiled-engine (TensorRT/Hailo) accuracy+latency numbers exist
+   (everything so far is PyTorch fake-quantization simulation). The
+   outlier-sensitivity explanation is consistent with the data, not yet
+   directly demonstrated (would need activation max/percentile diagnostics) —
+   future work, not blocking.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half

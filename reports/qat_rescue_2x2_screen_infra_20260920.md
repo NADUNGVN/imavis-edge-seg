@@ -271,3 +271,56 @@ seeds are `pace_seg_v1_aug_seed0`, `pace_seg_v1_aug_seed3`, `pace_seg_v1_seed2`
 apples-to-apples comparison against cell 1 on the same seed. A second-seed
 confirmation must start from that seed's own FP32 weights, not reuse seed0's, or
 it wouldn't really test seed-to-seed reproducibility.
+
+## Update, same day: cell 4 seed3 confirmation — **PASSES**
+
+One real incident on this run too: `start_train_exported_subnet.sh` was
+re-launched a second time on the same host while the first launch was still
+running; its own `pgrep`-based collision guard for `--level large` correctly
+refused the duplicate (no second job actually started). The multiple
+`train_exported_subnet.py` process lines seen in a `status` check during the run
+were PyTorch DataLoader worker subprocesses (`num_workers > 0` forks inherit the
+parent's command line), not concurrent jobs — confirmed via `nvitop` showing
+only one process using GPU memory.
+
+Evaluated against seed3's own FP32 reference (`outputs/pace_seg_v1_aug_seed3/
+checkpoints/step_00100000.pt`, `large`: cityscapes 0.5393, acdc/fog 0.5685,
+acdc/night 0.3673, acdc/rain 0.5215, acdc/snow 0.5150 —
+`reports/qat_v1_20260913.md`):
+
+| cell 4, seed | cityscapes | acdc/fog | acdc/night | acdc/rain | acdc/snow | mean | worst-case |
+|---|---|---|---|---|---|---|---|
+| seed0 | −0.70 | −0.59 | −0.57 | +0.17 | +0.30 | −0.28 | −0.70 |
+| seed3 | +0.10 | −0.46 | −0.35 | −0.51 | −0.38 | −0.32 | **−0.51** |
+
+Both seeds pass the ≤1.5-point worst-case bar comfortably (seed3's worst-case,
+−0.51, is even smaller in magnitude than seed0's −0.70), and both means stay in
+the same −0.28 to −0.32 range. **Per the pre-registered decision rule (worst-case
+≤1.5 confirms), the exported-subnet × ema_percentile QAT path is confirmed
+reproducible across 2 seeds** — subject to the claim boundary above: this
+confirms a subnet extracted from the supernet can be specialized via QAT, not
+that shared-supernet QAT is solved.
+
+**Next step per Codex's decision rule #5** (mechanistic replication, not a new
+hyperparameter search): run **cell 2 (shared × ema_percentile) on seed3** to
+determine whether per-level ema_percentile calibration can also rescue the
+*shared* supernet, or whether the fix is specific to independent/exported
+weights.
+
+```bash
+cd ~/Dung_TDTU/imavis-edge-seg && git pull --ff-only && bash scripts/server/start_train_supernet.sh configs/experiment/default.yaml \
+  --override experiment_id=pace_seg_v1_qat_calibrated_ema_percentile_seed3 \
+  --override seed=3 \
+  --override training.max_steps=10000 \
+  --override training.lr=3e-5 \
+  --qat --calibrate --calibration-observer ema_percentile \
+  --init-checkpoint outputs/pace_seg_v1_aug_seed3/checkpoints/step_00100000.pt
+```
+
+Evaluate with:
+
+```bash
+python scripts/evaluate_supernet.py --qat \
+  --checkpoint outputs/pace_seg_v1_qat_calibrated_ema_percentile_seed3/checkpoints/step_00010000.pt \
+  --config configs/experiment/default.yaml --level large
+```
