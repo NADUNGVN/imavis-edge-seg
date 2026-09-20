@@ -48,6 +48,7 @@
 | `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.70 (best cell), see below |
 | `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | **done — CONFIRMED**, worst-case −0.51, mean −0.32, see below |
 | `pace_seg_v1_qat_calibrated_ema_percentile_seed3` | Claude | Mechanistic replication: shared supernet x ema_percentile, seed3 — does the fix rescue the shared model too? | **done — yes, also passes**, worst-case −0.86, mean −0.50, see below |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed2` | Claude | Codex's closing step 1: shared x ema_percentile on `pace_seg_v1_seed2`, the seed dynamic-QAT failed worst on (−2.54) — paired 3/3-seed confirmation attempt | claimed, not yet launched |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -124,15 +125,45 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    settled "shared-supernet QAT is solved" conclusion, per the same caution
    already applied throughout this thread.
 
-   **Claim boundary (as originally agreed, still holding pending Codex's
-   read of the new shared-model result)**: confirms only "an extracted
-   subnet can be specialized via QAT," not "shared-supernet QAT is solved" —
-   no INT8 headline claim before real compiled-engine (TensorRT/Hailo)
-   accuracy+latency numbers exist
-   (everything so far is PyTorch fake-quantization simulation). The
-   outlier-sensitivity explanation is consistent with the data, not yet
-   directly demonstrated (would need activation max/percentile diagnostics) —
-   future work, not blocking.
+   **Codex's final decision (2026-09-20): QAT is "go with limits," then
+   freeze.** Claim boundary widened to: *"At the `large` elasticity level,
+   EMA-percentile activation calibration rescues shared-supernet
+   fake-quantized QAT on both tested seeds, keeping worst per-condition
+   degradation below one mIoU point."* Still not "shared-supernet QAT is
+   solved" or "reliable INT8 deployment." Two mechanistic conclusions: (1)
+   ema_percentile alone is sufficient to pass the bar on the shared model
+   (seed0/seed3) — its consistent effect is reducing worst-case/tail
+   degradation, not uniformly improving mean accuracy; (2) export
+   specialization still adds a consistent secondary benefit (+0.18 to +0.30
+   mean, +0.27 to +0.35 worst-case across the 2 seeds) — extraction isn't
+   meaningless, just not necessary to pass, and it carries its own separate
+   fine-tuning cost.
+
+   **Two closing steps before freezing QAT (do these, then stop regardless of
+   outcome — no further observer/hyperparameter changes after):**
+   1. Run cell 2 (shared × ema_percentile) on `pace_seg_v1_seed2` — the
+      dynamic-QAT seed that failed worst (−2.54). If worst-case ≤1.5, that's
+      a paired 3/3-seed confirmation; if not, the claim stays at 2/3 seeds.
+   2. **No new training** — evaluate the *existing* `pace_seg_v1_qat_
+      calibrated_ema_percentile_seed{0,3}` checkpoints at `tiny`/`small`/
+      `medium` too (not just `large`) to see whether the rescue generalizes
+      across the elastic family or is `large`-specific. FP32 references for
+      all 4 levels already exist for all 3 seeds (`reports/server/SERVER-01_
+      eval_pace_seg_v1_aug_seed0_20260913T144238Z.md`, `..._aug_seed3_
+      20260914T100242Z.md`, `..._seed2_20260912T171724Z.md`) — no new FP32
+      eval needed either. The QAT checkpoints already contain all 4 levels'
+      weights (the sandwich-rule training loop samples multiple levels per
+      step, confirmed from training logs), so `evaluate_supernet.py --qat`
+      with no `--level` restriction reads out all 4 levels from one run.
+
+   After these two steps: **freeze QAT regardless of outcome**, no further
+   observer/hyperparameter search, shift effort to the router (open thread
+   #2/#3). QAT remains a **secondary contribution**; no INT8 headline claim
+   before real compiled-engine (TensorRT/Hailo) accuracy+latency numbers
+   exist (everything so far is PyTorch fake-quantization simulation). The
+   outlier-sensitivity explanation remains consistent with the data, not
+   directly demonstrated (would need activation max/percentile diagnostics)
+   — noted as future work, not blocking the freeze.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half
