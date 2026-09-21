@@ -11,16 +11,24 @@ monotonic in expectation, and the cumulative-max only needs to correct small-sam
 noise, not fix a fundamentally broken signal. If bins are visibly non-monotonic before
 correction, the raw risk score isn't a good risk signal and the fix here is a better
 score, not a better calibrator.
+
+`fit_per_level_calibrators` reuses `fit_risk_calibrator` to fit one independent
+calibrator per elasticity level (docs/COORDINATION_LOG.md open thread #2, cell C) --
+"candidate-specific risk calibration from a *shared* probe", not per-candidate
+sensing.
 """
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from imavis_edge_seg.config import ElasticityLevel
 
 
 @dataclass
@@ -95,3 +103,50 @@ def fit_risk_calibrator(
 
     bin_expected_error = np.maximum.accumulate(bin_expected_error)
     return RiskCalibrator(bin_edges=bin_edges, bin_expected_error=bin_expected_error)
+
+
+def fit_per_level_calibrators(
+    raw_scores: np.ndarray | list[float],
+    per_level_errors: dict[ElasticityLevel, np.ndarray | list[float]],
+    num_bins: int = 10,
+) -> dict[ElasticityLevel, RiskCalibrator]:
+    """"Candidate-specific risk calibration from a shared probe" (docs/COORDINATION_LOG.md
+    open thread #2, cell C) -- explicitly not candidate-specific *sensing*: every level
+    is still predicted from the *same* single cheap-probe `raw_scores`, only the
+    calibration mapping differs. Fits one independent `RiskCalibrator` per level via
+    `fit_risk_calibrator` (same `raw_scores`, same `num_bins`, no per-level tuning),
+    with `per_level_errors[level]` as that calibrator's own fitting target -- each
+    level's *own* observed error on the same fit-half images, not the probe level's.
+    No monotonicity is enforced *across* levels (a bigger candidate isn't guaranteed
+    better on every image); `prediction_inversion_rate` reports how often that
+    assumption fails, as a diagnostic, not a constraint to fix here."""
+    return {
+        level: fit_risk_calibrator(raw_scores, errors, num_bins=num_bins)
+        for level, errors in per_level_errors.items()
+    }
+
+
+def prediction_inversion_rate(
+    ordered_levels: list[ElasticityLevel], predicted_errors: list[dict[ElasticityLevel, float]]
+) -> float:
+    """Diagnostic for `fit_per_level_calibrators`' predictions (cell C): the fraction
+    of adjacent-level pairs, in `ordered_levels` (smallest/cheapest first), where a
+    *larger* level's predicted error exceeds the next-smaller level's -- i.e. escalating
+    would be predicted to make quality worse, not better. `predicted_errors` is one
+    dict-of-per-level-predictions per image (typically the held-out half). Not
+    something this router forces to zero (see `fit_per_level_calibrators`'s
+    docstring); a high rate just means the per-level calibrators disagree with the
+    "bigger is better" assumption often, worth reporting alongside cell C/D's results."""
+    if len(ordered_levels) < 2:
+        raise ValueError("need at least 2 levels to have an adjacent pair")
+    if not predicted_errors:
+        raise ValueError("cannot compute an inversion rate over zero images")
+    pairs = list(pairwise(ordered_levels))
+    inversions = 0
+    total = 0
+    for errors in predicted_errors:
+        for smaller, larger in pairs:
+            if errors[larger] > errors[smaller]:
+                inversions += 1
+            total += 1
+    return inversions / total

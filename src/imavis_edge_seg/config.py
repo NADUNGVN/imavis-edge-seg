@@ -85,11 +85,22 @@ class RouterConfig(BaseModel):
     """Calibrated visual-risk router (RQ3). Thresholds must be fit on validation splits."""
 
     enabled: bool = True
-    strategy: Literal["static_small", "static_large", "oracle", "entropy", "calibrated_risk"] = (
-        "calibrated_risk"
-    )
+    strategy: Literal[
+        "static_small",
+        "static_large",
+        "oracle",
+        "entropy",
+        "calibrated_risk",
+        "latency_spacing_risk",
+        "candidate_specific_risk",
+        "risk_latency_constrained",
+    ] = "calibrated_risk"
     window_frames: int = 16  # amortize engine-switch overhead over this many frames
     risk_target: float = 0.05
+    # Only used by strategy="risk_latency_constrained" (cell D, docs/COORDINATION_LOG.md
+    # open thread #2): an explicit per-device hardware latency budget, evaluated
+    # alongside risk_target as a pre-registered (budget, risk_target) grid.
+    latency_budget_ms: float | None = None
 
 
 def _default_calibration_conditions() -> list[AdverseCondition]:
