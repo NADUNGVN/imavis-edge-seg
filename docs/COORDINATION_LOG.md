@@ -26,7 +26,7 @@
 - `outputs/` is a **shared NFS mount** across `SERVER-01..05` (`docs/INFRA_OVERRIDE.md`).
   Any new training/eval run must use an `experiment_id` not already present in
   `reports/server/*.md` or in the "Active/claimed experiment_ids" table below.
-  This is not a formality — three real bugs already happened this way this session
+  This is not a formality — four real bugs already happened this way this session
   (a baseline checkpoint silently overwritten by a same-named concurrent run; a
   status script reading the wrong server's job through a shared pointer file,
   since fixed in `scripts/server/status_train_supernet.sh`; the same shared-pointer
@@ -37,7 +37,19 @@
   command on either host unreliable once both used `--level large`; fixed the same
   way as `status_train_supernet.sh`, plus an explicit `<experiment_id>` search mode
   that doesn't depend on the pointer file at all. Whether cell 3's actual training
-  job ran or never started is still being diagnosed separately, see below).
+  job ran or never started is still being diagnosed separately, see below; **and
+  2026-09-21: `outputs/` itself is `.gitignore`d, so it does NOT actually sync
+  across every machine that touches it** — despite being called a "shared NFS
+  mount", `outputs/benchmark_lookup_table.csv`'s E2/E5 rows (generated on the dev
+  machine per README Phase 3, "directly via SSH from the dev machine") had never
+  reached the training servers' copy of that file; the first router-evaluation
+  runs against E2/E5 silently fell back to a synthetic placeholder latency table
+  (caught only because `evaluate_router.py` warns on a missing lookup-table row —
+  fixed by manually appending the missing rows to the server's file). **Lesson**:
+  any latency/benchmark data generated outside the normal server-job path needs an
+  explicit sync step, or ideally a committed `reports/edge/*.md` write-up as the
+  actual source of truth, since a `.gitignore`d `outputs/` file can silently
+  diverge between machines with no error until something reads a missing row).
 
 ## Active / claimed experiment_ids
 
@@ -297,8 +309,39 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    supernet, synthetic fake Cityscapes data, synthetic lookup table) —
    correct grid shapes, correct budget-boundary behavior (oracle at the
    tightest budget exactly matches `static_tiny`), valid JSON output.
-   211/211 tests pass, ruff clean, mypy clean. **Not yet**: a real run on
-   any of E1/E2/E3/E5.
+   211/211 tests pass, ruff clean, mypy clean.
+
+   **Real run: done 2026-09-21, all 4 devices, D is a confirmed win.**
+   `reports/router_progressive_ablation_v1_20260921.md`, raw data
+   `reports/router_{E1,E2,E3,E5}_20260921.json`. Headline: on the 52/80
+   cells where baseline A honestly respects its stated budget, **D wins
+   69%, ties 23%, loses 8%** (mean mIoU gap +0.0224); the raw 40/28/12
+   split understates this because 24 of A's 28 "wins" only happen when A
+   itself violates the budget (mean 25% of images over budget in those
+   cells). **D has zero budget violations across all 80 cells** — A
+   violates in 35%, C (candidate-specific, no budget term) in 55%, entropy
+   in 25%, B in 6%. C has the highest raw mIoU (0.3819) but is the least
+   reliable; D gets within 0.02 mIoU of C while providing a hard latency
+   guarantee none of A/B/C/entropy have. Diagnostics: mean prediction-
+   inversion rate 2.13% (low, real signal, contrasts with the untrained
+   smoke test's 100%); mean probe-signal AURC 0.1467, worst on
+   `acdc/night` (0.2616) — the risk signal is least informative exactly
+   where routing matters most, a real limitation to carry into the paper.
+   **Per Codex's locked go/stop criterion ("D wins if it improves Pareto
+   or reduces latency at equal quality/risk on a majority of devices"): D
+   wins, identically across all 4 devices** (the risk-target grid is
+   device-independent, only latency scales). One real operational
+   incident: `outputs/` is gitignored and never syncs across machines —
+   E2/E5's real latency rows (generated on the dev machine, per README
+   Phase 3) had never reached the servers' shared NFS copy, so the first
+   E2/E5 runs silently used a synthetic placeholder table until the
+   `evaluate_router.py` warning caught it; fixed by manually appending the
+   missing rows. **Not yet**: router-overhead measurement, temporal-window
+   routing, UIoU — deferral condition (a clear D win) is now met, these
+   are unblocked; whether the router result needs the same multi-seed
+   confirmation the QAT screen used (currently only seed0) — open
+   question for Codex; the one reproducible `acdc/rain`-specific loss
+   pattern (identical across all 4 devices) not investigated further.
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4

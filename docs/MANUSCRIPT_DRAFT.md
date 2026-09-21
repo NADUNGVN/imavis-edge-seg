@@ -235,9 +235,33 @@ targets — confirmed empirically (Hailo-8 and AGX Xavier produce numerically
 identical achieved mIoU on the same validation split, despite a >4× difference
 in absolute per-level latency). This is a useful robustness property — no
 per-device recalibration is required — but it also means the current policy
-cannot yet exploit a target-specific cost *ratio* between levels, which we flag
-as a direction for a latency-value-aware successor policy rather than treating
-as resolved.
+cannot yet exploit a target-specific cost *ratio* between levels.
+
+We address this with a progressive ablation across four routing designs
+(A: the single-probe, rank-step policy above; B: the same risk signal with
+escalation targeting a latency *magnitude* rather than a rank step; C: an
+independent calibrator per candidate level, all sharing the same cheap probe
+signal, with no explicit budget; D: the full method, combining C's
+per-candidate risk with an explicit per-device latency budget). We
+deliberately do not call this a factorial 2×2 — D requires an axis (a hard
+latency budget) the other three cells don't have. Evaluated across all four
+benchmarked devices and all five splits (80 device×split×budget cells total),
+with every risk-target and entropy-threshold operating point chosen from
+fit-half statistics only, before the held-out half is read. On the subset of
+cells where the baseline policy (A) genuinely respects its own stated budget,
+**D wins 69% of the time, ties 23%, and loses only 8%** (mean mIoU advantage
++0.0224); the raw win rate understates this, since most of A's apparent wins
+occur only because A itself exceeds its budget. **D has zero budget
+violations across all 80 cells**, versus 35% for A, 55% for the
+budget-unaware per-candidate policy (C), and 25% for entropy — while
+achieving within 0.02 mIoU of C's own (unreliable) best achievable quality.
+This advantage holds identically across all four devices. We also report two
+diagnostics: the rate at which a per-candidate calibrator predicts a larger
+level as *worse* than a smaller one (2.1% on average, consistent with a
+well-behaved signal), and the area under the risk-coverage curve for the raw
+probe signal itself, which is worst on the hardest condition (`acdc/night`) —
+the risk signal is least informative exactly where routing decisions matter
+most, a limitation we do not smooth over.
 
 ---
 
@@ -473,6 +497,8 @@ later editing pass can verify nothing drifted from its source during rewriting:
   §4): `README.md` Phase 2; `reports/edge/E3_compiler_smoke_test_20260908.md`.
 - §3.4 router calibration/evaluation protocol, 7/7 result, efficiency split,
   latency-rank-only structural finding: `reports/router_v1_20260914.md`.
+  Progressive ablation A→B→C→D, all 4 devices, D win-rate/budget-violation
+  results: `reports/router_progressive_ablation_v1_20260921.md`.
 - §4.1 compiler validation counts (8/8 TensorRT, 4/4 Hailo compile+hardware,
   DLA 16-subgraph limit, DLA demotion decision): `README.md` Phase 2;
   `reports/edge/E3_compiler_smoke_test_20260908.md`;
