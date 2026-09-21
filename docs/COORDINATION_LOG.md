@@ -276,6 +276,29 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    measurement, temporal-window routing, and UIoU (item 5 below) if D shows
    that Pareto/equal-risk-latency advantage** — otherwise those stay
    deferred.
+
+   **Implementation: done and verified 2026-09-21, not yet run on a real
+   device.** `router/policy.py` (B/C/D decision functions),
+   `router/calibrator.py::fit_per_level_calibrators`/
+   `prediction_inversion_rate`, `router/selective_metrics.py` (AURC,
+   risk-at-coverage, budget-violation rate), `router/grid.py`
+   (`macro_quantile_grid`, `select_budget_matched_operating_point`) — all
+   built exactly to Codex's locked spec, 33 new tests covering the exact
+   worked examples from that spec. `scripts/evaluate_router.py` fully
+   rewritten: both fit/held-out halves now cache every level's (pred, mask)
+   once (no re-inference for any grid point); the risk-target and
+   entropy-threshold grids are macro-averaged across every split's fit-half
+   before any held-out data is touched; A/B/C/entropy report a full
+   quality-latency frontier across the shared grid; D reports its full 4×5
+   grid; a budget-matched representative point is selected per strategy per
+   device budget from fit-half statistics only; oracle is redesigned to be
+   budget-matched and per-image (no more `--eval-json`); static reports all
+   4 levels. Verified end to end with a manual CPU smoke test (untrained
+   supernet, synthetic fake Cityscapes data, synthetic lookup table) —
+   correct grid shapes, correct budget-boundary behavior (oracle at the
+   tightest budget exactly matches `static_tiny`), valid JSON output.
+   211/211 tests pass, ruff clean, mypy clean. **Not yet**: a real run on
+   any of E1/E2/E3/E5.
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
