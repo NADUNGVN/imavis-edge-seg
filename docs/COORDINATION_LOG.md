@@ -183,37 +183,99 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    remains consistent with the data, not directly demonstrated (would need
    activation max/percentile diagnostics) — left as genuine future work, not
    blocking. Full numbers: `reports/qat_rescue_2x2_screen_infra_20260920.md`.
-2. **Router 2×2 design (agreed with Codex 2026-09-21, now that QAT thread #1
-   is closed — effort moves here).** Pre-registered 2×2, same discipline as
-   the QAT screen (implement/attribute cells separately before combining):
-   - **A: single-probe risk × rank-only cost** — existing baseline
-     (`reports/router_v1_20260914.md`).
-   - **B: single-probe risk × latency-value cost** — new. `_select_by_risk`
-     (`router/policy.py`) currently uses only each candidate's latency *rank*
-     after sorting, never the magnitude; data already exists
-     (`outputs/benchmark_lookup_table.csv`, 4 real devices), no new server run
-     needed for the policy change itself.
-   - **C: candidate-specific risk × rank-only cost** — new. A per-level (not
-     just per-probe-image) risk/error model, fit on the **fit-half only** (the
-     half `evaluate_router.py` already reserves for calibrator fitting) —
-     never the test-half, even though the test-half already computes every
-     level's prediction per image (that's for *scoring* policies, not for
-     *fitting* one; using it to fit would leak).
-   - **D: candidate-specific risk × latency-value cost** — full method,
-     combines B and C. **Implement B and C separately and confirm each before
-     D**, so attribution stays clean (the same lesson the QAT 2×2 screen
-     already taught this project).
+2. **Router progressive ablation A→B→C→D (design locked with Codex
+   2026-09-21, now that QAT thread #1 is closed — effort moves here).**
+   Renamed from "2×2" to **progressive ablation** on Codex's explicit
+   correction: D needs an extra axis (an explicit hardware latency budget)
+   that A/B/C don't have, so it isn't a clean 2×2 factorial — call it that
+   instead, don't force the 2×2 label.
 
-   Protocol: fit all risk models on fit-half only, held-out half is
-   evaluation-only; keep checkpoints, split, and device LUTs fixed across
-   cells (control variables, don't change between B/C/D); evaluate across all
-   4 real devices (E1/E2/E3/E5) and multiple budgets/risk targets. Compare
-   against static-small, static-large, entropy, cell A (current calibrated
-   router), and an oracle, using: quality–latency Pareto, AURC/risk-at-
-   coverage, budget-violation rate, and routing distributions. **Only proceed
-   to real router-overhead measurement, temporal-window routing, and UIoU
-   (item 5 below) if the full method (D) shows a clear Pareto or equal-risk
-   latency advantage** — otherwise those stay deferred.
+   - **A: single-probe risk × rank-only cost** — existing baseline
+     (`reports/router_v1_20260914.md`), unchanged.
+
+   - **B: single-probe risk, latency-spacing-aware escalation** (not
+     "latency-value cost" — Codex's exact naming, since this is still a
+     heuristic ablation on using latency *magnitude* instead of *rank*, not a
+     real latency optimizer). Locked rule: `r = max(1, risk / risk_target)`,
+     `t_target = clip(t_min * r, t_min, t_max)` (`t_min`/`t_max` = the
+     cheapest/most-expensive candidate's latency), then pick the candidate
+     whose latency is **closest** to `t_target` (not "cheapest ≥ target" —
+     closest-match is easier to defend and avoids jumping to an
+     unusually-expensive candidate). Tie-break: prefer the cheaper candidate.
+
+   - **C: candidate-specific risk calibration from a shared probe, rank-only
+     cost** (Codex's exact naming — NOT "candidate-specific *sensing*": all
+     candidates still share the one cheap probe signal, only the calibration
+     mapping differs per candidate). Fit **N independent `RiskCalibrator`s**,
+     one per elasticity level, on the fit-half only: same raw probe score as
+     input for all N, calibrator `i`'s *target* is candidate `i`'s own
+     observed error (fit-half has ground truth for every level, not just the
+     probe level, so this needs no new data — just running every level's
+     forward pass on the fit-half images too, which the test-half loop
+     already does). Same calibrator type/features/hyperparameters
+     (`num_bins`, etc.) across all four — no per-level tuning. No held-out
+     tuning. Do **not** force predicted risk to be monotonically increasing
+     with level size (a bigger candidate isn't guaranteed better on every
+     image) — instead **report the prediction-inversion rate** (how often a
+     larger candidate's predicted error exceeds a smaller candidate's) as a
+     diagnostic, not something to correct. Decision rule: sort candidates by
+     latency ascending, pick the first whose own calibrator predicts error ≤
+     `risk_target`; if none qualify, fall back to the most expensive (safest)
+     candidate — this fallback wasn't explicitly specified by Codex, chosen
+     to mirror cell A's existing escalate-to-largest-on-no-match behavior;
+     flagged for Codex to confirm or correct.
+
+   - **D: risk-and-latency-constrained policy** (the actual full method —
+     Codex rewrote this cell after flagging that the original "candidate-
+     specific risk filtered, then cheapest" design was **operationally
+     identical to C** whenever any candidate met the risk target, which isn't
+     a real second ablation axis). Needs an explicit per-device hardware
+     **latency budget `B`**, evaluated alongside a pre-registered grid of
+     `(B, risk_target τ)` pairs — the grid must be **locked using fit-half
+     only, before the held-out half is read**, same pre-registration
+     discipline as the QAT screen's decision thresholds. Let `S_B = {i :
+     latency_i ≤ B}` (candidates within budget) and `ê_i` = candidate `i`'s
+     predicted error from its own calibrator (from C):
+     1. If any candidate in `S_B` has `ê_i ≤ τ`: pick the lowest-latency one
+        among those.
+     2. Else (no in-budget candidate meets `τ`): pick the in-budget candidate
+        with the lowest `ê_i`.
+     3. Tie-break: lower latency.
+     4. If `S_B` is empty (nothing fits the budget at all): pick the cheapest
+        candidate overall.
+     **Explicitly rejected**: a quality-gain-per-ms fallback (score depends
+     on the starting point, can pick a Pareto-dominated candidate, hard to
+     justify to a reviewer) — do not implement this.
+     Formal read: *"Minimize measured device latency subject to calibrated
+     risk and latency constraints; when the requested risk is infeasible,
+     minimize predicted risk within the hardware budget."*
+
+   **Baselines**: entropy, cell A (current calibrated rank-only router),
+   oracle, and static. Report **all 4 static levels** (tiny/small/medium/
+   large), not just small/large — free (no new training), and they anchor
+   the Pareto frontier. **Oracle must be budget-matched and per-image**: for
+   each image *and* device budget, pick the candidate with the lowest
+   *ground-truth* observed error within that budget — not the old
+   fixed-per-split "whichever level has the best aggregate mIoU" pick
+   (unconstrained-latency oracle is explicitly disallowed now).
+
+   **Locked evaluation protocol**: same checkpoint, split, and device LUT for
+   A/B/C/D. Fit-half fits every calibrator and locks every threshold/grid
+   (including D's `(B, τ)` grid) before the held-out half is touched;
+   held-out half is evaluation-only. Report: quality–latency frontier,
+   risk-at-coverage/AURC, budget-violation rate, routing distribution, and
+   per-device results — **mIoU-per-ms is explicitly NOT the headline
+   metric** (the earlier router_v1 report's mixed 2/7 efficiency result is
+   exactly why). **D only counts as a win if it improves the Pareto frontier,
+   or reduces latency at equal quality/risk, on a majority of devices** — not
+   on aggregate/average alone.
+
+   **Decision, from Codex**: B go, C go, D go (with the corrected
+   risk-and-latency-constrained design above — no joint/hierarchical
+   calibrator this round). **Only proceed to real router-overhead
+   measurement, temporal-window routing, and UIoU (item 5 below) if D shows
+   that Pareto/equal-risk-latency advantage** — otherwise those stay
+   deferred.
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
