@@ -336,12 +336,78 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    Phase 3) had never reached the servers' shared NFS copy, so the first
    E2/E5 runs silently used a synthetic placeholder table until the
    `evaluate_router.py` warning caught it; fixed by manually appending the
-   missing rows. **Not yet**: router-overhead measurement, temporal-window
-   routing, UIoU — deferral condition (a clear D win) is now met, these
-   are unblocked; whether the router result needs the same multi-seed
-   confirmation the QAT screen used (currently only seed0) — open
-   question for Codex; the one reproducible `acdc/rain`-specific loss
-   pattern (identical across all 4 devices) not investigated further.
+   missing rows.
+
+   **Codex's decision (2026-09-21): D is GO, router becomes flagship
+   *conditional* on two closing requirements.** Explicit caution: the 80
+   cells are not 80 independent statistical observations (τ levels,
+   conditions, and devices are correlated; the 4 identical `acdc/rain`
+   losses across devices are likely the *same* underlying failure mode,
+   not 4 independent replications) — "consistent across 4 devices" is
+   evidence of LUT-portability, not 4 independent accuracy replications.
+
+   **Closing requirement 1 — 3-seed replication (mandatory, router is
+   flagship and carries a headline accuracy claim, so the project's
+   already-locked 3-seed rule applies)**: rerun A/B/C/D on the 2 remaining
+   supernet seeds (`pace_seg_v1_seed2`, `pace_seg_v1_aug_seed3`) if
+   evaluation-only cost allows; at minimum, replicate A and D (B/C can
+   stay seed0-only as a scoped mechanistic ablation, explicitly labeled as
+   such). Locked before running: same split/features/calibrator/quantile
+   grid/LUT/metric as seed0; each seed's calibrator fit only on that
+   seed's own fit-half; **no policy changes after seeing seed2/seed3
+   results**; report every seed individually AND the macro-average across
+   3 seeds (not just a pooled cell count); report a bootstrap CI over
+   images or a paired CI for (D−A), but do not treat correlated grid cells
+   as independent samples. **Confirmation criteria**: (1) D still zero
+   hard-budget violations; (2) D wins or is Pareto-non-inferior to A on
+   ≥2/3 seeds; (3) the 3-seed macro-average (D−A) is non-negative at the
+   locked comparison points; (4) no single seed shows a large, systematic
+   regression across most conditions/devices. If met, the admissible claim
+   is: *"Candidate-specific, device-conditioned routing consistently
+   improves the risk–latency trade-off over single-probe rank-based
+   routing across three independently trained supernets."* Do not use
+   "reliable" while risk coverage under `acdc/night` remains weak.
+
+   **Closing requirement 2 — real end-to-end router overhead on E1/E3
+   (mandatory, high priority — current latency numbers are candidate-only
+   from the LUT, not the router's own cost)**: measure separately probe
+   pass, policy/calibrator computation, candidate inference, and
+   engine-switch cost; report total latency both when tiny is selected
+   and when a larger level is selected; cover warm steady-state and
+   cold/switch-heavy cases; account for reusing the probe's own output
+   when the probe level IS the selected candidate. Report
+   `t_total = t_probe + t_decision + t_selected + t_switch` and the
+   quality-latency frontier *after* adding overhead — D's advantage only
+   "closes" the router contribution if it survives this addition.
+
+   **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
+   only** — do not tune the policy on the held-out rain split. Extract:
+   (D−A) mIoU *and* latency delta (a small accuracy loss for a large
+   latency saving would be a Pareto trade-off, not a failure); routing
+   distribution by level for A and D; per-level, per-quantile calibration
+   residuals; oracle regret and the rate at which the true best choice is
+   non-monotonic in model size. Since the pattern is identical across all
+   4 devices, the cause is likely in the risk signal/calibration or the
+   rain condition itself, not the hardware LUT. If the diagnostic suggests
+   a fix, pre-register it and test on a fresh validation split — never
+   fix-then-report on the same held-out split. If not, report as a
+   disclosed limitation. **`probe_signal_aurc`=0.2616 on `acdc/night` must
+   be stated plainly as a limitation** — more important than the average
+   inversion rate: the cheapest probe loses risk-ranking ability exactly
+   in the hardest domain.
+
+   **Temporal-window routing / UIoU**: not opened as full branches yet.
+   Temporal-window routing only starts once overhead shows engine-
+   switching/probe cost is non-trivial AND real frame-ordered data exists
+   (no synthetic frame-order streaming result). UIoU: feasibility-audit
+   ACDC's annotations first; stop if no genuine uncertainty-region label
+   exists — never synthesize pseudo-labels to use as headline evidence.
+   Neither is prioritized over the two closing requirements above.
+
+   **Not yet**: seed2/seed3 replication (can run in parallel with
+   overhead measurement); real E1/E3 router-overhead measurement;
+   bounded `acdc/rain` diagnostic; temporal-window routing and UIoU
+   (conditionally unblocked, not started).
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
