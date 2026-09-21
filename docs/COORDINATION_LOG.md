@@ -183,15 +183,37 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    remains consistent with the data, not directly demonstrated (would need
    activation max/percentile diagnostics) — left as genuine future work, not
    blocking. Full numbers: `reports/qat_rescue_2x2_screen_infra_20260920.md`.
-2. **Router candidate-specific per-level risk/error model.** Must be fit on the
-   **fit-half only** (the half `evaluate_router.py` already reserves for
-   calibrator fitting) — never on the test-half, even though the test-half
-   already computes every level's prediction per image (that's for *scoring*
-   policies, not for *fitting* one; using it to fit would leak).
-3. **Router latency-value-aware policy.** `_select_by_risk` (`router/policy.py`)
-   currently uses only each candidate's latency *rank* after sorting, never the
-   magnitude. Data to fix this already exists (`outputs/benchmark_lookup_table.csv`,
-   4 real devices). No new server run needed for the policy change itself.
+2. **Router 2×2 design (agreed with Codex 2026-09-21, now that QAT thread #1
+   is closed — effort moves here).** Pre-registered 2×2, same discipline as
+   the QAT screen (implement/attribute cells separately before combining):
+   - **A: single-probe risk × rank-only cost** — existing baseline
+     (`reports/router_v1_20260914.md`).
+   - **B: single-probe risk × latency-value cost** — new. `_select_by_risk`
+     (`router/policy.py`) currently uses only each candidate's latency *rank*
+     after sorting, never the magnitude; data already exists
+     (`outputs/benchmark_lookup_table.csv`, 4 real devices), no new server run
+     needed for the policy change itself.
+   - **C: candidate-specific risk × rank-only cost** — new. A per-level (not
+     just per-probe-image) risk/error model, fit on the **fit-half only** (the
+     half `evaluate_router.py` already reserves for calibrator fitting) —
+     never the test-half, even though the test-half already computes every
+     level's prediction per image (that's for *scoring* policies, not for
+     *fitting* one; using it to fit would leak).
+   - **D: candidate-specific risk × latency-value cost** — full method,
+     combines B and C. **Implement B and C separately and confirm each before
+     D**, so attribution stays clean (the same lesson the QAT 2×2 screen
+     already taught this project).
+
+   Protocol: fit all risk models on fit-half only, held-out half is
+   evaluation-only; keep checkpoints, split, and device LUTs fixed across
+   cells (control variables, don't change between B/C/D); evaluate across all
+   4 real devices (E1/E2/E3/E5) and multiple budgets/risk targets. Compare
+   against static-small, static-large, entropy, cell A (current calibrated
+   router), and an oracle, using: quality–latency Pareto, AURC/risk-at-
+   coverage, budget-violation rate, and routing distributions. **Only proceed
+   to real router-overhead measurement, temporal-window routing, and UIoU
+   (item 5 below) if the full method (D) shows a clear Pareto or equal-risk
+   latency advantage** — otherwise those stay deferred.
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
