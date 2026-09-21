@@ -21,6 +21,7 @@ sensing.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
@@ -107,7 +108,7 @@ def fit_risk_calibrator(
 
 def fit_per_level_calibrators(
     raw_scores: np.ndarray | list[float],
-    per_level_errors: dict[ElasticityLevel, np.ndarray | list[float]],
+    per_level_errors: Mapping[ElasticityLevel, np.ndarray | list[float]],
     num_bins: int = 10,
 ) -> dict[ElasticityLevel, RiskCalibrator]:
     """"Candidate-specific risk calibration from a shared probe" (docs/COORDINATION_LOG.md
@@ -127,7 +128,7 @@ def fit_per_level_calibrators(
 
 
 def prediction_inversion_rate(
-    ordered_levels: list[ElasticityLevel], predicted_errors: list[dict[ElasticityLevel, float]]
+    ordered_levels: Sequence[ElasticityLevel], predicted_errors: Sequence[Mapping[ElasticityLevel, float]]
 ) -> float:
     """Diagnostic for `fit_per_level_calibrators`' predictions (cell C): the fraction
     of adjacent-level pairs, in `ordered_levels` (smallest/cheapest first), where a

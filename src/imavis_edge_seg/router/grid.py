@@ -7,13 +7,15 @@ QAT screen's decision thresholds is void here too.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 
 RISK_TARGET_QUANTILES = (0.10, 0.25, 0.50, 0.75, 0.90)
 
 
 def macro_quantile_grid(
-    per_split_pooled_values: list[np.ndarray | list[float]],
+    per_split_pooled_values: Sequence[np.ndarray | Sequence[float]],
     quantiles: tuple[float, ...] = RISK_TARGET_QUANTILES,
 ) -> list[float]:
     """One grid value per `quantiles` entry, macro-averaged across splits: for each
@@ -35,7 +37,7 @@ def macro_quantile_grid(
 
 
 def select_budget_matched_operating_point(
-    operating_points: list[tuple[float, float, object]], budget_ms: float
+    operating_points: Sequence[tuple[float, float, object]], budget_ms: float
 ) -> tuple[object, bool]:
     """Pre-registered selection rule (Codex, 2026-09-21): `operating_points` is a
     list of `(fit_half_mean_latency_ms, fit_half_quality, label)` triples -- both
