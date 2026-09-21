@@ -168,14 +168,31 @@ latency numbers exist, since all results above are PyTorch fake-quantization
 simulation. A seed-matched mechanistic-replication run applying the same
 observer directly to the *shared* supernet (not an exported/specialized
 subnet) also passed the go bar on both tested seeds (worst-case −0.97 and
-−0.86), a result stronger than we initially expected: it suggests the
+−0.86), a result stronger than we initially expected: it suggested the
 observer change, not weight independence, may be sufficient on its own,
 though the observer's effect on *mean* accuracy (as opposed to worst-case) was
-inconsistent between the two seeds tested. We treat this as an open question
-pending further analysis rather than a settled result. The outlier-sensitivity
-explanation remains consistent with,
-but not directly demonstrated by, the data collected so far. The supernet QAT
-gap is narrowed but not yet closed.
+inconsistent between the two seeds tested.
+
+We closed this line of investigation with two final checks, run once and not
+followed by further hyperparameter search: (1) the same shared-supernet ×
+percentile/EMA configuration on the one previously-tested seed that failed
+*worst* under the dynamic range (worst-case −2.54) — it now passes at every
+elasticity level, including −1.38 at `large`, the largest single-seed
+improvement from the observer change we observed (+1.16 points on this
+seed); with this, **all three originally-tested supernet seeds pass under the
+new observer, where two of three failed under the dynamic range**; (2)
+evaluating the two already-trained shared × percentile/EMA checkpoints at
+every elasticity level, not just `large` — every level, both seeds, passed
+comfortably, showing the fix is not `large`-specific. Our final, bounded
+claim: *EMA-percentile activation calibration rescues shared-supernet
+fake-quantized QAT across all three tested seeds and all four elasticity
+levels, keeping worst per-condition degradation below 1.5 mIoU points (below
+1.0 in most cases)*. We do not claim shared-supernet QAT is "solved" or
+"reliably deployable," and we do not present INT8 as a headline result
+before real compiled-engine accuracy and latency numbers exist. We stop
+further QAT experimentation here and treat it as a secondary contribution;
+the outlier-sensitivity explanation remains consistent with, but not directly
+demonstrated by, the data collected so far.
 
 ### 3.4 Compiled static engines and calibrated routing
 

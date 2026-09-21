@@ -48,7 +48,7 @@
 | `qat_exported_large_ema_percentile_seed0` | Claude | QAT 2x2 screen cell 4: exported-subnet x EMA/percentile observer, `large`, seed0 | **done** — worst-case −0.70 (best cell), see below |
 | `qat_exported_large_ema_percentile_seed3` | Claude | QAT 2x2 screen: seed3 confirmation of the best cell (4) | **done — CONFIRMED**, worst-case −0.51, mean −0.32, see below |
 | `pace_seg_v1_qat_calibrated_ema_percentile_seed3` | Claude | Mechanistic replication: shared supernet x ema_percentile, seed3 — does the fix rescue the shared model too? | **done — yes, also passes**, worst-case −0.86, mean −0.50, see below |
-| `pace_seg_v1_qat_calibrated_ema_percentile_seed2` | Claude | Codex's closing step 1: shared x ema_percentile on `pace_seg_v1_seed2`, the seed dynamic-QAT failed worst on (−2.54) — paired 3/3-seed confirmation attempt | claimed, not yet launched |
+| `pace_seg_v1_qat_calibrated_ema_percentile_seed2` | Claude | Codex's closing step 1: shared x ema_percentile on `pace_seg_v1_seed2`, the seed dynamic-QAT failed worst on (−2.54) — paired 3/3-seed confirmation attempt | **done — CONFIRMED**, worst-case −1.38 (large), passes at every level, see below. **QAT is now FROZEN.** |
 
 ## Agreed thesis framing (2026-09-20)
 
@@ -141,10 +141,14 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
 
    **Two closing steps before freezing QAT (do these, then stop regardless of
    outcome — no further observer/hyperparameter changes after):**
-   1. Run cell 2 (shared × ema_percentile) on `pace_seg_v1_seed2` — the
-      dynamic-QAT seed that failed worst (−2.54). If worst-case ≤1.5, that's
-      a paired 3/3-seed confirmation; if not, the claim stays at 2/3 seeds.
-      **Launched, training in progress on SERVER-03, not yet evaluated.**
+   1. **Done — paired 3/3-seed confirmation at `large`.** Cell 2 on
+      `pace_seg_v1_seed2` (the dynamic-QAT seed that failed worst, −2.54):
+      worst-case −1.38 at `large` (also passes at every other level: tiny
+      −0.69, small −0.33, medium −0.49). All 3 originally-tested supernet
+      seeds now pass under `ema_percentile` (seed0 −0.97, seed3 −0.86, seed2
+      −1.38), where 2 of 3 failed under `dynamic`. Largest single-seed
+      observer improvement seen in the whole screen: +1.16 points on this
+      seed/level (−2.54 → −1.38).
    2. **Done — rescue generalizes across the whole elastic family, not just
       `large`.** No new training: evaluated the existing seed0/seed3
       checkpoints at all 4 levels (`evaluate_supernet.py --qat`, no `--level`
@@ -165,14 +169,20 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
       (SERVER-03) simultaneously training step 1's job, hit a CUDA OOM (not a
       code issue), resolved by re-running on a free server via shared NFS.
 
-   After these two steps: **freeze QAT regardless of outcome**, no further
-   observer/hyperparameter search, shift effort to the router (open thread
-   #2/#3). QAT remains a **secondary contribution**; no INT8 headline claim
-   before real compiled-engine (TensorRT/Hailo) accuracy+latency numbers
-   exist (everything so far is PyTorch fake-quantization simulation). The
-   outlier-sensitivity explanation remains consistent with the data, not
-   directly demonstrated (would need activation max/percentile diagnostics)
-   — noted as future work, not blocking the freeze.
+   **Both closing steps done, 2026-09-21 — QAT is now FROZEN**, per the
+   agreed plan: no further observer/hyperparameter search. Effort moves to
+   the router (open threads #2/#3 below). Final claim boundary (unchanged
+   in substance from Codex's decision, numbers now complete): *"EMA-percentile
+   activation calibration rescues shared-supernet fake-quantized QAT on all
+   3 tested seeds and all 4 elasticity levels, keeping worst per-condition
+   degradation below 1.5 mIoU points (below 1.0 in most cases)."* Still not
+   "shared-supernet QAT is solved" or "reliable INT8 deployment" — no INT8
+   headline claim before real compiled-engine (TensorRT/Hailo)
+   accuracy+latency numbers exist (everything so far is PyTorch
+   fake-quantization simulation). The outlier-sensitivity explanation
+   remains consistent with the data, not directly demonstrated (would need
+   activation max/percentile diagnostics) — left as genuine future work, not
+   blocking. Full numbers: `reports/qat_rescue_2x2_screen_infra_20260920.md`.
 2. **Router candidate-specific per-level risk/error model.** Must be fit on the
    **fit-half only** (the half `evaluate_router.py` already reserves for
    calibrator fitting) — never on the test-half, even though the test-half

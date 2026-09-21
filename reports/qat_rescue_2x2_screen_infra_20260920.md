@@ -473,3 +473,52 @@ same host (SERVER-03) that was simultaneously running closing step 1's cell 2
 × seed2 training job (23.2/24 GiB GPU memory in use), and hit a CUDA OOM —
 not a code issue, resolved by re-running the eval on a different, free server
 (`outputs/` being shared NFS made this trivial).
+
+## Update, 2026-09-21: closing step 1 — paired 3/3-seed confirmation at
+`large`, and QAT is now frozen
+
+Cell 2 (shared × ema_percentile) on `pace_seg_v1_seed2` — the seed dynamic-QAT
+(cell 1) failed worst on (−2.54) — evaluated at all 4 levels against the
+existing FP32 seed2 reference:
+
+| level | worst-case | mean |
+|---|---|---|
+| tiny | −0.69 | −0.35 |
+| small | −0.33 | −0.22 |
+| medium | −0.49 | −0.31 |
+| large | **−1.38** | −0.87 |
+
+**All 4 levels pass the ≤1.5 bar, including `large` (−1.38) — the level and
+seed where the original QAT gap was worst.** On this exact seed/level, the
+observer switch improves worst-case by **+1.16 points** (dynamic −2.54 →
+ema_percentile −1.38), the largest single-seed observer improvement seen
+across the whole screen — consistent with `ema_percentile` helping most on
+the cases dynamic quantization struggled with most.
+
+**Paired 3/3-seed confirmation, cell 2 vs. cell 1, `large` level:**
+
+| seed | cell 1 (shared × dynamic) worst-case | cell 2 (shared × ema_percentile) worst-case |
+|---|---|---|
+| 0 | −1.66 | −0.97 |
+| 3 | −1.39 | −0.86 |
+| 2 | **−2.54** | **−1.38** |
+
+Every one of the 3 originally-tested supernet seeds now passes the go bar
+under `ema_percentile`, where none passed reliably under `dynamic` (2 of 3
+seeds exceeded the bar under dynamic — `reports/qat_v1_20260913.md`). Combined
+with closing step 2's result (the rescue holds at every elasticity level, not
+just `large`), this is the strongest and most complete confirmation this QAT
+line of work has produced.
+
+**Per Codex's agreed plan, QAT is now frozen: no further
+observer/hyperparameter search.** Effort moves to the router (open threads
+#2/#3). Final claim boundary, unchanged from Codex's decision: *"At the
+`large` elasticity level, EMA-percentile activation calibration rescues
+shared-supernet fake-quantized QAT on both [now three] tested seeds, keeping
+worst per-condition degradation below [1.5, and in 2 of 3 seeds below 1.0]
+mIoU point[s]."* Still not "shared-supernet QAT is solved" or "reliable INT8
+deployment" — no INT8 headline claim before real compiled-engine (TensorRT/
+Hailo) accuracy+latency numbers exist; the outlier-sensitivity explanation
+remains consistent with the data, not directly demonstrated (would need
+activation max/percentile diagnostics, left as genuine future work, not
+blocking).
