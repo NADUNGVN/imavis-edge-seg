@@ -383,17 +383,79 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    *(Original pre-registration, for reference:)* Do not use
    "reliable" while risk coverage under `acdc/night` remains weak.
 
-   **Closing requirement 2 — real end-to-end router overhead on E1/E3
-   (mandatory, high priority — current latency numbers are candidate-only
-   from the LUT, not the router's own cost)**: measure separately probe
-   pass, policy/calibrator computation, candidate inference, and
-   engine-switch cost; report total latency both when tiny is selected
-   and when a larger level is selected; cover warm steady-state and
-   cold/switch-heavy cases; account for reusing the probe's own output
-   when the probe level IS the selected candidate. Report
-   `t_total = t_probe + t_decision + t_selected + t_switch` and the
-   quality-latency frontier *after* adding overhead — D's advantage only
-   "closes" the router contribution if it survives this addition.
+   **Closing requirement 2 — real end-to-end router overhead on E1/E3.
+   Protocol locked with Codex 2026-09-22 (revised after initial proposal):**
+
+   - **Formula**: `t_e2e = t_probe + t_decision + t_switch + t_selected_extra`
+     (`t_selected_extra = 0` when the chosen candidate is the probe level
+     itself, reusing its output). **Measure `t_e2e` directly, as one
+     end-to-end trace** — the 4-component decomposition is a sanity check
+     only, never 4 independent benchmarks summed (synchronization/runtime
+     overlap can make a naive sum wrong). CUDA calls must synchronize at
+     timer boundaries; use one host monotonic clock for end-to-end on both
+     backends; Hailo timing uses host wall-clock around request
+     completion, never mixed with the runtime's internal profiler numbers.
+   - **Frontier update — do NOT add the full measured total to the
+     existing LUT** (the LUT already contains the selected candidate's own
+     latency; adding total again double-counts it). Instead: **replay the
+     already-locked held-out routing decisions**, map each image to a
+     route class (`tiny→tiny`/`tiny→small`/`tiny→medium`/`tiny→large`),
+     and substitute the corresponding directly-measured end-to-end latency
+     for that route class. Recompute A and D's frontier, budget
+     violations, and routing distribution from that replay.
+   - **Measure both A and D**, not just D — A's decision path (entropy/
+     calibrator + rank policy) vs. D's (per-candidate calibrators +
+     constrained policy) may differ in cost; microbenchmark the decision
+     component separately if useful, but the conclusion must come from an
+     end-to-end replay of both policies, never an assumption they're equal.
+   - **Warm/resident** (the headline deployment scenario): every needed
+     engine/context already loaded and warm; `t_switch` is real dispatch/
+     context-selection cost only. Must record peak memory and *confirm*
+     concurrent residency is actually feasible on the device — if not
+     enough memory to keep every engine resident, use a realistic cache
+     policy instead (e.g. tiny always resident + one cached candidate),
+     never claim warm-all-resident if that configuration can't actually be
+     deployed.
+   - **Cold/reload** (a stress-test upper bound, not the default
+     deployment number unless a real app actually unloads engines every
+     frame): candidate engine/context not resident, must genuinely
+     release/reload on switch; report as its own distribution, never mixed
+     into the warm/steady-state mean.
+   - **Route classes, kept separate, never collapsed into one "larger"
+     case**: `tiny→tiny` (reuse, no re-inference — also a sanity check
+     that the implementation isn't accidentally running tiny twice),
+     `tiny→small`, `tiny→medium`, `tiny→large`. Aggregate afterward using
+     each policy's *real* routing distribution from the held-out replay.
+   - **E1 + E3 are sufficient** for this closing requirement (2
+     representative backends: Hailo/HEF vs. TensorRT/CUDA) — but the claim
+     scope must say *"validated on two representative hardware
+     backends,"* not extrapolate to E2/E5. Only extend to E2/E5 if:
+     runtime/memory mechanism differs significantly, E1/E3 give
+     conflicting conclusions, or overhead changes the GO conclusion and
+     the scope needs pinning down.
+   - **Repetition/thermal protocol, locked before running**: warm/resident
+     — idle stabilization + record starting temperature; ≥50 warm-up
+     iterations per route class; ≥500 measured iterations per route class;
+     short blocks with interleaved/randomized route order (reduce thermal/
+     order bias); if the median's bootstrap 95% CI is wider than 2%,
+     increase up to 2000 iterations. Cold/reload — ≥30 iterations minimum,
+     50 preferred, per transition, each a genuine release+reload; report
+     its own distribution (load time is typically skewed). Report at
+     minimum: median/mean/p95/p99; bootstrap 95% CI of median and mean;
+     start/end temperature, clock/power mode, runtime version; iteration
+     count, warm-up count, concurrent load, peak memory; throttling rate
+     or excluded runs. **Never use `nvitop` as the primary latency
+     source.** Lock the same power mode/clock policy across runs on Jetson
+     where the infra allows, and record that config. If temperature
+     crosses a throttling threshold or clock drops, stop, let it cool, and
+     rerun that block — never silently pool throttled data.
+   - **Final evaluation — report all 3 frontiers**: (1) the existing
+     LUT-only frontier; (2) the warm end-to-end frontier (replay using
+     warm/resident measurements); (3) the cold/reload stress-test
+     frontier. **This closing requirement is satisfied when D still meets
+     the GO criterion on the warm end-to-end frontier for both E1 and E3**
+     — cold is a robustness/stress result, not automatically a fail
+     condition unless it reflects the real deployment model.
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:
