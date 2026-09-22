@@ -76,7 +76,7 @@ from rich.table import Table
 from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig, RouterConfig, load_config
 from imavis_edge_seg.data.acdc import ALL_CONDITIONS
 from imavis_edge_seg.evaluation.data import build_acdc_eval_loader, build_cityscapes_eval_loader
-from imavis_edge_seg.evaluation.metrics import ConfusionMatrixAccumulator
+from imavis_edge_seg.evaluation.metrics import ConfusionMatrixAccumulator, compute_confusion_matrix
 from imavis_edge_seg.models.supernet import PaceSegSupernet
 from imavis_edge_seg.router.calibrator import fit_per_level_calibrators, prediction_inversion_rate
 from imavis_edge_seg.router.grid import macro_quantile_grid, select_budget_matched_operating_point
@@ -182,6 +182,17 @@ def _per_image_errors(pred_mask: list[_PredMask]) -> list[float]:
     return [float(compute_per_image_error(pred, mask)) for pred, mask in pred_mask]
 
 
+def _per_image_confusion_matrices(pred_mask: list[_PredMask], num_classes: int) -> list[list[list[int]]]:
+    """One (num_classes, num_classes) confusion matrix per image -- summing these
+    exactly reproduces `ConfusionMatrixAccumulator`'s mIoU for any *subset* or
+    *re-routing* of images, without re-inference. Used for the per-image dump
+    (`--dump-per-image`) that lets an offline replay (e.g. substituting real
+    end-to-end latency for LUT-only latency, per `docs/COORDINATION_LOG.md`'s
+    closing requirement 2) recompute exact achieved mIoU under a different routing
+    policy, not just an aggregated-distribution approximation."""
+    return [compute_confusion_matrix(pred, mask, num_classes).tolist() for pred, mask in pred_mask]
+
+
 def _accumulate_strategy(
     candidates: list[ParetoPoint],
     config: RouterConfig,
@@ -255,6 +266,8 @@ def _evaluate_split(
     risk_target_grid: list[float],
     entropy_threshold_grid: list[float],
     data: _SplitData,
+    num_classes: int,
+    dump_per_image: bool = False,
 ) -> dict[str, object]:
     fit_errors = {level: _per_image_errors(pm) for level, pm in data.fit_pred_mask.items()}
     test_errors = {level: _per_image_errors(pm) for level, pm in data.test_pred_mask.items()}
@@ -398,7 +411,7 @@ def _evaluate_split(
         f"device_budget_grid={[round(v, 3) for v in device_budget_grid]} "
         f"prediction_inversion_rate={inversion_rate:.4f} probe_signal_aurc={probe_signal_aurc:.4f}"
     )
-    return {
+    result: dict[str, object] = {
         "risk_target_grid": risk_target_grid,
         "entropy_threshold_grid": entropy_threshold_grid,
         "device_budget_grid": device_budget_grid,
@@ -410,6 +423,25 @@ def _evaluate_split(
         "at_budget": at_budget,
         "oracle": oracle_by_budget,
     }
+    if dump_per_image:
+        # Per-image held-out data for an OFFLINE replay against a different latency
+        # table (e.g. real end-to-end overhead instead of LUT-only candidate latency,
+        # docs/COORDINATION_LOG.md's closing requirement 2) -- confusion matrices
+        # (not scalar errors) so achieved mIoU under ANY re-routing of these same
+        # images can be reconstructed exactly by summing, without re-inference.
+        # Calibrator params are serialized too so a replay script can recompute
+        # per_level_risk for arbitrary risk targets without needing pydantic/torch.
+        result["per_image_dump"] = {
+            "probe_level": probe_level,
+            "test_raw_scores": data.test_raw_scores,
+            "test_confusion_matrices": {
+                level: _per_image_confusion_matrices(pm, num_classes) for level, pm in data.test_pred_mask.items()
+            },
+            "per_level_calibrators": {
+                level: cal.to_dict() for level, cal in per_level_calibrators.items()
+            },
+        }
+    return result
 
 
 def main() -> None:
@@ -424,6 +456,16 @@ def main() -> None:
     parser.add_argument("--dataset", action="append", default=[], choices=["cityscapes", "acdc"])
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--output-json", type=Path, default=None)
+    parser.add_argument(
+        "--dump-per-image",
+        type=Path,
+        default=None,
+        help="also write a per-held-out-image dump (raw probe score, per-level "
+        "ground-truth confusion matrices, serialized per-level calibrators) to this "
+        "path -- enables an offline replay against a different latency table (e.g. "
+        "real end-to-end overhead) without re-running inference. Device-independent "
+        "(no latency data in it), so one dump covers every device.",
+    )
     args = parser.parse_args()
 
     console = Console()
@@ -516,6 +558,7 @@ def main() -> None:
 
     # Pass 2: evaluate held-out per split, using the now-locked grids.
     results: dict[str, object] = {}
+    per_image_dumps: dict[str, object] = {}
     for split_name in split_names:
         split_result = _evaluate_split(
             console,
@@ -528,7 +571,11 @@ def main() -> None:
             risk_target_grid,
             entropy_threshold_grid,
             split_data[split_name],
+            config.supernet.num_classes,
+            dump_per_image=args.dump_per_image is not None,
         )
+        if args.dump_per_image is not None:
+            per_image_dumps[split_name] = split_result.pop("per_image_dump")
         results[split_name] = split_result
 
         table = Table(title=f"router at-budget summary -- {split_name} -- probe={probe_level} target={args.device_id}/{args.backend}")
@@ -568,6 +615,11 @@ def main() -> None:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(json.dumps(results, indent=2, default=str))
         console.print(f"wrote {args.output_json}")
+
+    if args.dump_per_image is not None:
+        args.dump_per_image.parent.mkdir(parents=True, exist_ok=True)
+        args.dump_per_image.write_text(json.dumps(per_image_dumps, indent=2, default=str))
+        console.print(f"wrote {args.dump_per_image}")
 
 
 if __name__ == "__main__":
