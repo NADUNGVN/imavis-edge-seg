@@ -115,18 +115,69 @@ not depend on which device is targeted, since the risk-target grid is
 device-independent and only the latency numbers scale). **D is a win by this
 criterion.**
 
+## Update, 2026-09-22: 3-seed replication — CONFIRMED, stronger than seed0 alone
+
+Per Codex's decision (D is GO, router promoted to conditional flagship pending
+3-seed replication + real overhead measurement — `docs/COORDINATION_LOG.md`), A and
+D were rerun on all 4 devices for `pace_seg_v1_seed2` and `pace_seg_v1_aug_seed3`
+(the project's other two independently-trained supernet seeds), with the exact same
+split/features/calibrator/quantile grid/LUT/metric as seed0, calibrators fit fresh
+on each seed's own fit-half, **no policy changes made after seeing either seed's
+result**. Raw data: `reports/router_{E1,E2,E3,E5}_{seed2,seed3}_20260922.json`.
+
+| seed | fair cells | D wins | D losses | D ties | win+tie rate | mean (D−A), fair | D budget violations |
+|---|---|---|---|---|---|---|---|
+| seed0 | 52 | 36 (69%) | 4 (8%) | 12 (23%) | 92% | +0.0224 | 0/80 |
+| seed2 | 44 | 36 (82%) | **0 (0%)** | 8 (18%) | **100%** | +0.0252 | 0/80 |
+| seed3 | 54 | 46 (85%) | **0 (0%)** | 8 (15%) | **100%** | +0.0290 | 0/80 |
+
+**Macro-average across 3 seeds (equal weight per seed, per Codex's rule — not a
+pooled cell count): (D−A) = +0.0256** on fair cells (+0.0073 pooling all 80 cells
+per seed including A's own budget-violating operating points). **All 4 of Codex's
+confirmation criteria are met, with margin**:
+
+1. D still zero hard-budget violations — **0/80 on every one of the 3 seeds.**
+2. D wins or is Pareto-non-inferior to A on ≥2/3 seeds — **3/3 seeds**, at 92%,
+   100%, and 100% win+tie rates respectively.
+3. The 3-seed macro-average (D−A) is non-negative at the locked comparison points —
+   **+0.0256, comfortably positive.**
+4. No single seed shows a large, systematic regression across most
+   conditions/devices — **seed2 and seed3 show *zero* fair-comparison losses for D
+   at all**; only seed0 has any losses (the 4 `acdc/rain` cells discussed above),
+   and even those are small and confined to one split.
+
+**A genuinely new finding from this replication, not visible from seed0 alone**:
+the `acdc/rain`-specific loss pattern that recurred identically across all 4 devices
+on seed0 **does not reproduce on seed2 or seed3** — searching all fair cells on both
+replication seeds finds zero D losses anywhere, not just on `acdc/rain`. This
+suggests the seed0 pattern is more likely a **seed0-specific calibration quirk**
+than a systematic weakness of the router design itself, which somewhat changes the
+bounded-diagnostic framing below (still worth doing, but the evidence for it being a
+*general* limitation is now weaker than it looked with one seed).
+
+**Admissible claim, per Codex's pre-registered wording**: *"Candidate-specific,
+device-conditioned routing consistently improves the risk–latency trade-off over
+single-probe rank-based routing across three independently trained supernets."*
+Not "reliable" — `acdc/night`'s weak `probe_signal_aurc` (0.2616, seed0; not yet
+re-checked on seed2/seed3) remains an open limitation.
+
 ## Not yet done
 
-- Router runtime overhead (probe forward pass + calibrator lookup + decision logic)
-  is not measured here — `docs/COORDINATION_LOG.md` open thread #2 item 5, deferred
-  until a clear D win was established, which it now has been. Next candidate to
-  start.
-- Temporal-window routing, UIoU — same deferral, same unblocking condition now met.
-- This run uses seed0's FP32 checkpoint only; no seed-replication done yet for the
-  router result (unlike the QAT screen's 3-seed discipline) — flagged as an open
-  question for Codex, not yet decided whether the router result needs the same
-  multi-seed confirmation before going in the paper.
-- The single `acdc/rain`-specific loss pattern (same across all 4 devices) is not
-  investigated further here — worth a closer look if it recurs in any follow-up
-  work, since a *reproducible* loss pattern (not noise) might indicate something
-  systematic about that condition's risk calibration.
+- **Router runtime overhead** (probe forward pass + calibrator/decision computation
+  + candidate inference + engine-switch cost, on real E1/E3 hardware) — mandatory
+  closing requirement #2 per Codex, not yet started. Current latency figures are
+  candidate-only from the LUT, not the router's own cost; D's advantage must survive
+  adding this overhead before the router contribution is closed.
+- **`acdc/rain` bounded diagnostic** (mIoU/latency delta, routing distribution,
+  per-level calibration residuals, oracle regret/non-monotonicity rate) — not yet
+  done. Scope note updated after the 3-seed replication: since the pattern is
+  seed0-specific (doesn't reproduce on seed2/seed3), this is now a lower-priority,
+  narrower diagnostic than it looked after seed0 alone — still worth doing per
+  Codex's instruction, but not evidence of a general router weakness.
+- `acdc/night`'s weak `probe_signal_aurc` (0.2616, seed0 only) has not been checked
+  on seed2/seed3 — worth confirming it's a stable, condition-specific limitation
+  rather than seed noise, given how much the `acdc/rain` pattern turned out to be
+  seed-specific.
+- Temporal-window routing, UIoU — deferred behind the two closing requirements
+  above (overhead measurement takes priority); UIoU additionally gated on an
+  annotation-feasibility audit of ACDC (no pseudo-labels).

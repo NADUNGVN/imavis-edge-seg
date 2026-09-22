@@ -263,6 +263,32 @@ probe signal itself, which is worst on the hardest condition (`acdc/night`) —
 the risk signal is least informative exactly where routing decisions matter
 most, a limitation we do not smooth over.
 
+Because this result carries a headline accuracy claim, we apply the same
+three-independently-trained-seed confirmation standard used throughout this
+paper: we replicate policies A and D on the two other supernet seeds, with
+every calibrator refit on that seed's own fit-half and no policy change made
+after observing either replication's result. The win/tie rate over A on the
+budget-honest cells is 92%, 100%, and 100% for the three seeds respectively,
+with a macro-averaged (equal weight per seed) quality advantage of +0.0256
+mIoU; D has zero budget violations on every seed. Every pre-registered
+confirmation criterion is met with margin, and the two replication seeds show
+*zero* cases where D underperforms A, stronger than the first seed alone.
+Notably, the one reproducible loss pattern observed on the first seed (a
+specific mid-range budget on the `acdc/rain` split, identical across all four
+devices) does not reproduce on either replication seed, suggesting it is a
+property of that particular seed's calibration rather than a general
+weakness of the method. We therefore state the confirmed claim precisely:
+*candidate-specific, device-conditioned routing consistently improves the
+risk–latency trade-off over single-probe rank-based routing across three
+independently trained supernets* — deliberately not "reliable," since the
+weak risk signal under `acdc/night` remains an open limitation independent
+of the seed used. The remaining requirement before we consider this
+contribution closed is measuring the router's own runtime cost (probe
+forward pass, calibrator lookup, decision logic, and any engine-switch
+penalty) end to end on real hardware and confirming the advantage survives
+that addition — the latency figures above are the *candidates'* measured
+cost only, not the router's.
+
 ---
 
 ## 4. Deployment protocol

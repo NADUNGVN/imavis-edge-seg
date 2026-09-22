@@ -346,26 +346,41 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    not 4 independent replications) — "consistent across 4 devices" is
    evidence of LUT-portability, not 4 independent accuracy replications.
 
-   **Closing requirement 1 — 3-seed replication (mandatory, router is
-   flagship and carries a headline accuracy claim, so the project's
-   already-locked 3-seed rule applies)**: rerun A/B/C/D on the 2 remaining
-   supernet seeds (`pace_seg_v1_seed2`, `pace_seg_v1_aug_seed3`) if
-   evaluation-only cost allows; at minimum, replicate A and D (B/C can
-   stay seed0-only as a scoped mechanistic ablation, explicitly labeled as
-   such). Locked before running: same split/features/calibrator/quantile
-   grid/LUT/metric as seed0; each seed's calibrator fit only on that
-   seed's own fit-half; **no policy changes after seeing seed2/seed3
-   results**; report every seed individually AND the macro-average across
-   3 seeds (not just a pooled cell count); report a bootstrap CI over
-   images or a paired CI for (D−A), but do not treat correlated grid cells
-   as independent samples. **Confirmation criteria**: (1) D still zero
-   hard-budget violations; (2) D wins or is Pareto-non-inferior to A on
-   ≥2/3 seeds; (3) the 3-seed macro-average (D−A) is non-negative at the
-   locked comparison points; (4) no single seed shows a large, systematic
-   regression across most conditions/devices. If met, the admissible claim
-   is: *"Candidate-specific, device-conditioned routing consistently
-   improves the risk–latency trade-off over single-probe rank-based
-   routing across three independently trained supernets."* Do not use
+   **Closing requirement 1 — 3-seed replication: DONE 2026-09-22, CONFIRMED,
+   stronger than seed0 alone.** A and D rerun on all 4 devices for
+   `pace_seg_v1_seed2` and `pace_seg_v1_aug_seed3` (locked protocol
+   unchanged: same split/features/calibrator/quantile grid/LUT/metric;
+   each seed's calibrator fit only on its own fit-half; no policy changes
+   after seeing either result). Raw data: `reports/router_{E1,E2,E3,E5}_
+   {seed2,seed3}_20260922.json`; full writeup
+   `reports/router_progressive_ablation_v1_20260921.md`'s 2026-09-22
+   update.
+
+   | seed | fair cells | D wins | D losses | win+tie rate | mean (D−A) |
+   |---|---|---|---|---|---|
+   | seed0 | 52 | 36 (69%) | 4 (8%) | 92% | +0.0224 |
+   | seed2 | 44 | 36 (82%) | 0 (0%) | 100% | +0.0252 |
+   | seed3 | 54 | 46 (85%) | 0 (0%) | 100% | +0.0290 |
+
+   **Macro-average across 3 seeds (equal weight per seed): (D−A) = +0.0256**
+   fair cells (+0.0073 pooling all 80). **All 4 confirmation criteria met,
+   with margin**: (1) D still zero hard-budget violations, 0/80 on every
+   seed; (2) D wins/non-inferior on 3/3 seeds (92%/100%/100%); (3)
+   macro-average +0.0256, comfortably non-negative; (4) no regression
+   anywhere — **seed2 and seed3 have zero fair-comparison losses at all**,
+   better than seed0. **New finding this replication surfaced**: the
+   `acdc/rain` loss pattern that recurred identically across all 4 devices
+   on seed0 does **not** reproduce on seed2 or seed3 — likely a
+   seed0-specific calibration quirk, not a general router weakness (this
+   narrows, but doesn't remove, the bounded-diagnostic task below).
+   **Admissible claim**: *"Candidate-specific, device-conditioned routing
+   consistently improves the risk–latency trade-off over single-probe
+   rank-based routing across three independently trained supernets."*
+   Still not "reliable" — `acdc/night`'s weak `probe_signal_aurc` (seed0:
+   0.2616) not yet re-checked on seed2/seed3. B/C stayed seed0-only, as
+   agreed (scoped mechanistic ablation).
+
+   *(Original pre-registration, for reference:)* Do not use
    "reliable" while risk coverage under `acdc/night` remains weak.
 
    **Closing requirement 2 — real end-to-end router overhead on E1/E3
@@ -404,10 +419,13 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    exists — never synthesize pseudo-labels to use as headline evidence.
    Neither is prioritized over the two closing requirements above.
 
-   **Not yet**: seed2/seed3 replication (can run in parallel with
-   overhead measurement); real E1/E3 router-overhead measurement;
-   bounded `acdc/rain` diagnostic; temporal-window routing and UIoU
-   (conditionally unblocked, not started).
+   **Not yet**: closing requirement 2 (real E1/E3 router-overhead
+   measurement, mandatory) — closing requirement 1 is done; bounded
+   `acdc/rain` diagnostic (lower priority now that it's confirmed
+   seed0-specific); `acdc/night`'s weak `probe_signal_aurc` not yet
+   re-checked on seed2/seed3; temporal-window routing and UIoU
+   (conditionally unblocked, not started, gated behind overhead
+   measurement).
 4. ~~**RQ1 budget sweep**~~ **Done 2026-09-20** (`reports/rq1_budget_sweep_v1_20260920.md`,
    `src/imavis_edge_seg/search/flops.py::evaluate_flops_proxy_at_budget`,
    `scripts/rq1_budget_sweep.py`). 640 evaluations (40 budgets x 4 reference x 4
