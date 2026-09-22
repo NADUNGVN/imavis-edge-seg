@@ -457,6 +457,60 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
      — cold is a robustness/stress result, not automatically a fail
      condition unless it reflects the real deployment model.
 
+   **E3 measured 2026-09-22 — PARTIAL, E1 still pending.**
+   `reports/router_overhead_v1_20260922.md`,
+   `scripts/measure_router_overhead.py`, raw data
+   `reports/router_overhead_E3_20260922.json`. Real infra work: E3 had no
+   repo/pycuda before this — set up from scratch over SSH (installed
+   `python3.8-dev`/`venv`, bootstrapped pip, built `pycuda==2022.2.2` from
+   source since the latest PyPI release needs Python 3.10+, worked around
+   TensorRT 8.5's removed `np.bool` alias, built ONNX exports + TensorRT
+   engines directly on-device). Two real bugs caught before trusting any
+   number (a flat-buffer reshape bug computing softmax over the entire
+   ~1.4M-element array instead of the class axis; a non-contiguous `.T`
+   transpose making subsequent numpy ops ~8x slower).
+
+   **Load-bearing finding**: naive host-side (numpy/CPU) risk-score
+   computation costs **~40-80ms per call** on E3's ARM/numpy build
+   (confirmed via isolated microbenchmark — a real platform
+   characteristic, not a bug) — large enough on its own to dominate and
+   erase the router's entire hardware-aware-selection benefit if deployed
+   this way (candidate-latency differences are only 0.94-9.41ms). A
+   custom GPU-resident entropy kernel (matching the project's actual
+   PyTorch `compute_risk_score`, which stays GPU-resident, never copying
+   the full tensor to host) closes most of this gap: 2.5-21x speedup
+   depending on route class. **All frontier analysis uses the GPU-kernel
+   numbers**, not the naive-numpy ones.
+
+   Real warm/resident e2e latency (GPU-kernel, median, n=500,
+   all CI widths <0.5%): tiny→tiny 2.07ms, tiny→small 5.23ms,
+   tiny→medium 11.97ms, tiny→large 26.70ms — all noticeably higher than
+   the pure LUT-only candidate latencies (0.94/1.80/4.61/9.41ms), a real
+   dispatch/copy overhead beyond pure inference. Cold/reload costs 2-3x
+   the warm number. Decision-path cost (A: 0.053ms, D: 0.201ms) is
+   negligible next to this. No throttling (32.0°C→38.5°C→37.5°C).
+
+   **Frontier replay (Cityscapes/E3/seed0)**: reweighting each strategy's
+   already-chosen operating point's routing distribution with real
+   e2e latencies (not yet the full per-image replay against a *new*
+   e2e-based budget grid — flagged as a limitation, see below) shows
+   **D still produces a wider, more useful quality-latency frontier than
+   A**: A's points collapse to 3 and saturate at 0.4251 mIoU; D reaches a
+   4th point (22.35ms, 0.5240 mIoU) unavailable to A at any latency A
+   uses. At the very cheapest point, A is marginally ahead of D (0.3055
+   vs. 0.3003) — consistent with the original LUT-only finding.
+
+   **Not yet done**: **E1 (Hailo-8) measurement** — device currently
+   offline (Tailscale confirms this is a connectivity/power issue, not a
+   credentials/account problem — the account already sees the device in
+   its peer list, just marked offline); Codex's "two representative
+   backends" scope means this closing requirement is not yet fully
+   satisfied with E3 alone. Full per-image replay against a fresh,
+   e2e-based device-budget grid (the persisted seed0 JSON only has
+   aggregated routing-distribution counts, not per-image assignments or
+   fit-half routing distributions, so the exact replay methodology
+   couldn't be redone without a rerun).
+
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:
    (D−A) mIoU *and* latency delta (a small accuracy loss for a large
