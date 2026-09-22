@@ -424,15 +424,24 @@ def _evaluate_split(
         "oracle": oracle_by_budget,
     }
     if dump_per_image:
-        # Per-image held-out data for an OFFLINE replay against a different latency
-        # table (e.g. real end-to-end overhead instead of LUT-only candidate latency,
-        # docs/COORDINATION_LOG.md's closing requirement 2) -- confusion matrices
-        # (not scalar errors) so achieved mIoU under ANY re-routing of these same
-        # images can be reconstructed exactly by summing, without re-inference.
-        # Calibrator params are serialized too so a replay script can recompute
-        # per_level_risk for arbitrary risk targets without needing pydantic/torch.
+        # Per-image fit-half AND held-out data for an OFFLINE replay against a
+        # different latency table (e.g. real end-to-end overhead instead of
+        # LUT-only candidate latency, docs/COORDINATION_LOG.md's closing
+        # requirement 2) -- confusion matrices (not scalar errors) so achieved
+        # mIoU under ANY re-routing of these same images can be reconstructed
+        # exactly by summing, without re-inference. Fit-half is included (not
+        # just held-out) so a replay can redo `select_budget_matched_operating_
+        # point`'s selection using fit-half stats under a NEW latency table,
+        # never peeking at held-out before that selection is locked -- the same
+        # discipline the original run used. Calibrator params are serialized too
+        # so a replay script can recompute per_level_risk for arbitrary risk
+        # targets without needing pydantic/torch.
         result["per_image_dump"] = {
             "probe_level": probe_level,
+            "fit_raw_scores": data.fit_raw_scores,
+            "fit_confusion_matrices": {
+                level: _per_image_confusion_matrices(pm, num_classes) for level, pm in data.fit_pred_mask.items()
+            },
             "test_raw_scores": data.test_raw_scores,
             "test_confusion_matrices": {
                 level: _per_image_confusion_matrices(pm, num_classes) for level, pm in data.test_pred_mask.items()
