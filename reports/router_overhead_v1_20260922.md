@@ -153,17 +153,69 @@ fresh selection of representative operating points against a **new,
 e2e-based** device-budget grid (e.g. `[2.07, 5.23, 11.97, 26.70]` instead of the
 old `[0.941, 1.796, 4.607, 9.414]`), which has not been done yet.
 
+## Update, 2026-09-22: full per-image, e2e-aware replay — CONFIRMED (E3
+provisional pass)
+
+Per Codex's review of the approximation above ("not sufficient to close the
+requirement" — needs the policy's own budget-feasibility decision re-run
+against the real latency table, not just relabeled after the fact), built
+`scripts/evaluate_router.py --dump-per-image` (persists, per held-out AND
+fit-half image: raw probe score, each level's own ground-truth confusion
+matrix, and the fitted per-level calibrators — enough to replay any re-routing
+exactly, without re-inference) and `scripts/replay_router_with_overhead.py`
+(recomputes the actual policy *decision*, not just its score, in two strictly
+separate modes).
+
+**Post-hoc replay** (decision recomputed exactly as the original LUT-only run,
+scored with real e2e latency): confirms the LUT-only latency model was badly
+wrong in absolute terms — nearly every operating point now "violates" its
+original LUT-based budget (real e2e latency, 2.07-26.70ms, exceeds every
+original LUT budget, 0.94-9.41ms). This number alone says nothing about D vs.
+A — it only shows the old latency assumption was wrong, exactly as expected.
+
+**E2E-aware replay** (decision recomputed using real e2e latency as both the
+ranking/budget-check input and the new device-budget grid `[2.07, 5.23, 11.97,
+26.70]` ms; representative operating point re-selected via `select_budget_
+matched_operating_point` on fit-half stats only, never touching held-out
+before that lock — the real deployment result): **confirms the earlier
+approximation**.
+
+| | value |
+|---|---|
+| Total cells (5 splits × 4 e2e budgets) | 20 |
+| Fair cells (A itself doesn't violate) | 12/20 |
+| D vs. A on fair cells | **8 wins, 3 ties, 1 loss** (67% win rate) |
+| Mean (D − A), fair cells | **+0.0207** |
+| Mean (D − oracle), fair cells | −0.0057 |
+| **D budget violations, all 20 cells** | **0/20** |
+| A budget violations, all 20 cells | 8/20 (mean violation rate 8.95%) |
+
+The single loss (`acdc/rain`, budget=5.23ms: A=0.3465 vs. D=0.3238) reproduces
+the same isolated pattern seen in the approximation. D again reaches a quality
+level (0.5240 mIoU, `cityscapes` at the largest budget) that A cannot reach at
+*any* budget A uses (A caps at 0.4251 on `cityscapes` regardless of budget).
+**This is now the rigorous, per-image confirmation Codex required, not an
+approximation** — E3 is a provisional pass (still pending E1 per the
+two-backend scope).
+
 ## Not yet done
 
-- **E1 (Hailo-8) measurement** — device currently offline, needed before this
-  closing requirement can be considered satisfied per Codex's explicit "two
-  representative backends" scope (E3/TensorRT alone is not sufficient on its own).
-- **Full per-image frontier replay** against a fresh e2e-based budget grid (see
-  limitation above) — the aggregated-distribution approximation above is
-  directionally consistent with the LUT-only result (D still wins/is more useful),
-  but is not the literal replay methodology Codex specified.
-- Cold/reload frontier replay (only warm/resident was used for the analysis above,
-  per Codex's rule that cold is a stress-test/robustness number, not automatically
-  gating the closing decision).
-- A `--dump-per-image` flag for `evaluate_router.py` (or similar) would be needed
-  to do the exact replay properly on any future re-run.
+- **E1 (Hailo-8) measurement** — device currently offline (Tailscale confirms
+  this is a connectivity/power issue, not a credentials/account problem — the
+  account already sees the device in its peer list, just marked offline).
+  Codex's "two representative backends" scope means this closing requirement
+  is not yet fully satisfied with E3 alone; E3 results cannot be extrapolated
+  to Hailo (the CUDA entropy kernel doesn't transfer; Hailo's own host-side
+  cost structure is unknown until measured).
+- Cold/reload frontier replay (only warm/resident was used for the analysis
+  above, per Codex's rule that cold is a stress-test/robustness number, not
+  automatically gating the closing decision).
+- Separating the naive-numpy path's ~40-80ms into (device-to-host transfer/
+  sync) vs. (numpy softmax/entropy) vs. (calibrator/policy) components, per
+  Codex's request — not yet done; currently reported only as "naive host-side
+  risk evaluation path" cost, not attributed solely to numpy's `exp`/`log`.
+- Validating the GPU-kernel risk score against the reference (PyTorch)
+  implementation within a locked tolerance, and confirming candidate decisions
+  (A/D) are unchanged between the numpy and GPU-kernel backends except
+  arithmetic ties — not yet done as an explicit check beyond the smoke-test
+  sanity check already in this report.

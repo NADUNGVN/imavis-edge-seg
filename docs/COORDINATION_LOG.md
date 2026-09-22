@@ -490,26 +490,54 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    the warm number. Decision-path cost (A: 0.053ms, D: 0.201ms) is
    negligible next to this. No throttling (32.0°C→38.5°C→37.5°C).
 
-   **Frontier replay (Cityscapes/E3/seed0)**: reweighting each strategy's
-   already-chosen operating point's routing distribution with real
-   e2e latencies (not yet the full per-image replay against a *new*
-   e2e-based budget grid — flagged as a limitation, see below) shows
-   **D still produces a wider, more useful quality-latency frontier than
-   A**: A's points collapse to 3 and saturate at 0.4251 mIoU; D reaches a
-   4th point (22.35ms, 0.5240 mIoU) unavailable to A at any latency A
-   uses. At the very cheapest point, A is marginally ahead of D (0.3055
-   vs. 0.3003) — consistent with the original LUT-only finding.
+   **Initial frontier estimate (aggregated routing-distribution
+   reweighting)**: showed D producing a wider, more useful quality-latency
+   frontier than A. Codex reviewed this as **not sufficient to close the
+   requirement** — the policy's own budget-feasibility decision must be
+   re-run against the real latency table, not just relabeled after the
+   fact.
+
+   **Full per-image, e2e-aware replay: DONE 2026-09-22, CONFIRMED.**
+   Built `scripts/evaluate_router.py --dump-per-image` (persists, per
+   fit-half AND held-out image: raw probe score, each level's own
+   ground-truth confusion matrix, fitted per-level calibrators — enough
+   to replay any re-routing exactly, no re-inference) and `scripts/
+   replay_router_with_overhead.py` (two strictly separate modes:
+   **post-hoc** — original LUT-based decision, scored with real e2e
+   latency, confirms the old latency model was badly wrong in absolute
+   terms; **e2e-aware** — decision *recomputed* using real e2e latency as
+   both the ranking/budget input and the new device-budget grid
+   `[2.07, 5.23, 11.97, 26.70]` ms, operating point re-selected via
+   `select_budget_matched_operating_point` on fit-half stats only, never
+   touching held-out first — the real deployment result).
+
+   | | value |
+   |---|---|
+   | Total cells (5 splits × 4 e2e budgets) | 20 |
+   | Fair cells (A itself doesn't violate) | 12/20 |
+   | D vs. A on fair cells | **8 wins, 3 ties, 1 loss** (67%) |
+   | Mean (D − A), fair | **+0.0207** |
+   | Mean (D − oracle), fair | −0.0057 |
+   | **D violations, all 20 cells** | **0/20** |
+   | A violations, all 20 cells | 8/20 (mean rate 8.95%) |
+
+   Confirms the earlier approximation almost exactly. `reports/
+   router_overhead_replay_E3_20260922.json` (raw), `reports/
+   router_overhead_v1_20260922.md`'s 2026-09-22 update (full writeup).
+   **E3 is now a provisional pass on the rigorous per-image methodology
+   Codex required** — still pending E1 per the two-backend scope (E3
+   cannot be extrapolated to Hailo: the CUDA entropy kernel doesn't
+   transfer, Hailo's host-side cost structure is unmeasured).
 
    **Not yet done**: **E1 (Hailo-8) measurement** — device currently
    offline (Tailscale confirms this is a connectivity/power issue, not a
    credentials/account problem — the account already sees the device in
-   its peer list, just marked offline); Codex's "two representative
-   backends" scope means this closing requirement is not yet fully
-   satisfied with E3 alone. Full per-image replay against a fresh,
-   e2e-based device-budget grid (the persisted seed0 JSON only has
-   aggregated routing-distribution counts, not per-image assignments or
-   fit-half routing distributions, so the exact replay methodology
-   couldn't be redone without a rerun).
+   its peer list, just marked offline); cold/reload frontier replay
+   (stress-test only, not gating); separating the naive-numpy path's
+   ~40-80ms into transfer/sync vs. numpy softmax/entropy vs. calibrator/
+   policy components; validating the GPU-kernel risk score against the
+   reference implementation within a locked tolerance and confirming A/D
+   decisions are unchanged between backends except arithmetic ties.
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:
