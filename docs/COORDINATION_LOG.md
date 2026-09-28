@@ -612,6 +612,51 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    case occurred to characterize. **This closes the last mandatory
    pre-manuscript-lock item from this review.**
 
+   **Cross-seed E2E replay: DONE 2026-09-29, CONFIRMED across all 3
+   seeds and both backends.** Codex's instruction: the 20-cell replay
+   above used seed0 only, while the router method itself was already
+   3-seed confirmed (closing requirement 1) — replay (no new hardware
+   measurement, since device timing depends only on destination level, not
+   checkpoint) the existing E1/E3 overhead JSONs against fresh per-image
+   dumps from `pace_seg_v1_seed2`/`pace_seg_v1_aug_seed3`
+   (`reports/router_per_image_dump_seed{2,3}.json`, generated on
+   SERVER-02).
+
+   | device | seed | fair | W/T/L | win+tie | mean(D−A) | D viol | A viol |
+   |---|---|---|---|---|---|---|---|
+   | E3 | 0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
+   | E3 | 2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
+   | E3 | 3 | 14/20 | 10/3/1 | 92.9% | +0.0265 | 0/20 | 6/20 |
+   | E1 | 0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
+   | E1 | 2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
+   | E1 | 3 | 13/20 | 9/3/1 | 92.3% | +0.0267 | 0/20 | 7/20 |
+
+   **Macro-average mean(D−A) across 3 seeds: +0.0232 on both backends.
+   D has zero budget violations across all 6 seed×device configurations
+   (120 cells total).** Only 2 losses total across all 6 runs (seed3 on
+   both devices, same recurring `acdc/rain` pattern). Real structural
+   note: seed2's stats are numerically identical between E3 and E1 despite
+   an order-of-magnitude difference in absolute latency — reproduces
+   Phase 7's original rank-portability finding (decisions depend on each
+   level's *rank* among the device's own latencies, not their absolute
+   values, when the budget grid is built from those same latencies).
+   Seed0's small violation-rate gap (8.95% vs. 22.36%) traces to each
+   device's original run independently fitting its own `risk_target_grid`
+   — a second-order effect, not a contradiction.
+
+   **Updated admissible claim (deployment scope no longer seed0-only)**:
+   *"Candidate-specific, device-conditioned routing (D) continues to win
+   under real, directly measured end-to-end overhead — including
+   router-specific costs invisible to a pure inference-latency lookup
+   table — on two structurally different accelerator backends and across
+   three independently trained supernet seeds, with zero budget violations
+   in every one of the 6 seed×backend configurations tested (120 cells
+   total) and a macro-averaged +0.0232 mIoU advantage on fair cells."*
+
+   Raw: `reports/router_overhead_replay_{E1,E3}_seed{2,3}_20260929.json`.
+   Full writeup: `reports/router_overhead_v1_20260922.md`'s 2026-09-29
+   update.
+
    **Not yet done (all confirmed non-gating)**: cold/reload frontier
    replay on either backend (stress-test only); separating E3's
    naive-numpy path's ~40-80ms into transfer/sync vs. numpy softmax/
@@ -620,6 +665,14 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    own named mechanism). E2/E5 (same TensorRT/CUDA family as E3) remain
    out of scope per Codex's locked two-backend rule. No external
    calibrated power meter on any device.
+
+   **Per Codex's 2026-09-28 guidance, the evidence package for this
+   thread is now believed complete: (1) hardware closing requirement 2 —
+   PASS on E1+E3; (2) GPU-kernel correctness audit — PASS; (3) cross-seed
+   E2E replay — DONE, CONFIRMED. Next step per Codex's locked order: lock
+   the final tables/figures/claim wording, then move to manuscript
+   (Related Work/Introduction/Discussion/Limitations) — not temporal-window
+   routing or UIoU.**
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:

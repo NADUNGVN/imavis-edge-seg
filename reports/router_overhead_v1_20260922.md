@@ -356,6 +356,67 @@ used throughout the E3 overhead analysis (and by extension the closing-
 requirement-2 confirmation) can now be reported as numerically validated
 against the reference implementation, not merely "smoke-tested."
 
+## Update, 2026-09-29: cross-seed E2E replay — CONFIRMED across all 3 seeds, both backends
+
+Codex's instruction (2026-09-28): the 20-cell E2E-aware replay above used only
+`pace_seg_v1_seed0`, while the router *method* was already confirmed on 3
+seeds (closing requirement 1). Rather than re-measure hardware overhead
+(device-level timing depends only on the destination level, not on which
+checkpoint produced the logits — already established methodology), replay
+the same E1/E3 overhead JSONs against fresh per-image dumps from
+`pace_seg_v1_seed2` and `pace_seg_v1_aug_seed3` (`scripts/evaluate_router.py
+--dump-per-image`, run on SERVER-02, same protocol as seed0's dump). No new
+hardware measurement.
+
+| device | seed | fair cells | W/T/L | win+tie | mean(D−A) | D violations | A violations |
+|---|---|---|---|---|---|---|---|
+| E3 | seed0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
+| E3 | seed2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
+| E3 | seed3 | 14/20 | 10/3/1 | 92.9% | +0.0265 | 0/20 | 6/20 |
+| E1 | seed0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
+| E1 | seed2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
+| E1 | seed3 | 13/20 | 9/3/1 | 92.3% | +0.0267 | 0/20 | 7/20 |
+
+**Macro-average mean(D−A) across 3 seeds (equal weight per seed): +0.0232 on
+both E3 and E1.** **D has zero budget violations in all 6 seed×device
+configurations (0/20 every time), across 120 total cells.** Only 2 losses
+total across all 6 runs (seed3 on both devices — see the recurring
+`acdc/rain` pattern, already flagged as a bounded, non-gating diagnostic).
+
+A striking structural observation: seed2's win/tie/loss counts, fair-cell
+count, and mean(D−A) are numerically identical between E3 and E1 to several
+decimal places, despite the two devices' real e2e latencies differing by an
+order of magnitude (E3: 2.07-26.70ms; E1: 34.95-92.68ms). This reproduces
+Phase 7's original finding (`reports/router_v1_20260914.md`: "a fitted
+calibrator's decisions port unchanged across deployment targets") — both A's
+rank-based escalation and D's budget check reduce to comparisons between a
+chosen level's *rank* among the 4 device-specific latencies, not their
+absolute values, whenever the budget grid is itself built from those same 4
+per-device latencies (exactly how `load_e2e_latency`/`e2e_budget_grid` are
+constructed here). Seed0's E1/E3 runs show a small violation-rate difference
+(8.95% vs. 22.36%) despite identical win/loss counts — traced to each
+device's *original* `router_{E1,E3}_20260921.json` independently fitting its
+own `risk_target_grid` (methodologically meant to be device-independent, but
+stored per-run); a second-order effect, not a contradiction of the
+rank-portability finding.
+
+**This satisfies Codex's cross-seed E2E requirement**: the deployment claim
+no longer needs to be scoped to seed0 alone. Updated admissible claim:
+
+*"Candidate-specific, device-conditioned routing (D) continues to win under
+real, directly measured end-to-end overhead — including router-specific
+costs invisible to a pure inference-latency lookup table — on two
+structurally different accelerator backends (TensorRT/CUDA GPU and Hailo-8
+dataflow NPU) and across three independently trained supernet seeds, with
+zero budget violations in every one of the 6 seed×backend configurations
+tested (120 cells total) and a macro-averaged +0.0232 mIoU advantage on fair
+comparison cells."*
+
+Raw data: `reports/router_overhead_replay_{E1,E3}_seed{2,3}_20260929.json`.
+Per-image dumps: `reports/router_per_image_dump_seed{2,3}.json` (generated on
+SERVER-02, `reports/router_E3_seed{2,3}_dump_meta.json` for the original
+fit/held-out metadata each dump was checked against).
+
 ## Not yet done (all non-gating per Codex's explicit ruling)
 
 - Cold/reload frontier replay (only warm/resident was used for the win/loss
