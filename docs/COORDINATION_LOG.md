@@ -590,16 +590,36 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    (TensorRT/CUDA GPU and Hailo-8 dataflow NPU), despite those two
    backends' overhead being dominated by different mechanisms."*
 
-   **Not yet done**: cold/reload frontier replay on either backend
-   (stress-test only, not gating); separating E3's naive-numpy path's
-   ~40-80ms into transfer/sync vs. numpy softmax/entropy vs. calibrator/
-   policy components (not applicable to E1 the same way — its dominant
-   cost, the activate/deactivate cycle, is already its own named
-   mechanism); validating E3's GPU-kernel risk score against the reference
-   implementation within a locked tolerance and confirming A/D decisions
-   are unchanged between backends except arithmetic ties. E2/E5 (same
-   TensorRT/CUDA family as E3) remain out of scope per Codex's locked
-   two-backend rule.
+   **GPU-kernel correctness audit vs. PyTorch reference: DONE 2026-09-28,
+   PASS — the mandatory pre-manuscript-lock requirement.** Codex's explicit
+   instruction: audit, not a new experiment — feed the CUDA kernel and the
+   numpy transcription of `router.risk_probe.compute_risk_score`'s exact
+   formula the SAME synthetic logits, at E3's real (on-disk `.engine`
+   file) output shapes for all 4 levels. `scripts/audit_gpu_risk_kernel.py`,
+   raw `reports/audit_gpu_risk_kernel_E3.json`.
+
+   | criterion | tolerance (locked before running) | observed (max) | pass? |
+   |---|---|---|---|
+   | per-pixel max abs error | ≤1e-3 nats | 9.54e-07 | **PASS** |
+   | scalar risk-score abs error | ≤1e-4 nats | 2.38e-07 | **PASS** |
+   | decision_a agreement (2000 trials) | ≥99.9% | **100.000%** | **PASS** |
+   | decision_d agreement (2000 trials) | ≥99.9% | **100.000%** | **PASS** |
+
+   Zero decision mismatches across 2000 trials at every level — the two
+   implementations run the identical formula, so the only possible source
+   of disagreement is FP32 summation-order non-associativity, which stays
+   ~1000x under tolerance at this array size. Tie-handling is moot: no tie
+   case occurred to characterize. **This closes the last mandatory
+   pre-manuscript-lock item from this review.**
+
+   **Not yet done (all confirmed non-gating)**: cold/reload frontier
+   replay on either backend (stress-test only); separating E3's
+   naive-numpy path's ~40-80ms into transfer/sync vs. numpy softmax/
+   entropy vs. calibrator/policy components (not applicable to E1 the same
+   way — its dominant cost, the activate/deactivate cycle, is already its
+   own named mechanism). E2/E5 (same TensorRT/CUDA family as E3) remain
+   out of scope per Codex's locked two-backend rule. No external
+   calibrated power meter on any device.
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:

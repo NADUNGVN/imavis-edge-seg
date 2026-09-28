@@ -308,24 +308,69 @@ inference-latency lookup table — on two structurally different accelerator
 backends (TensorRT/CUDA GPU and Hailo-8 dataflow NPU), despite those two
 backends' overhead being dominated by different mechanisms."*
 
-## Not yet done
+## Update, 2026-09-28: GPU-kernel correctness audit — PASS, mandatory pre-lock requirement closed
+
+Codex's explicit, mandatory (not optional) pre-manuscript-lock requirement:
+*"E3 CUDA entropy/risk kernel phai duoc doi chieu voi PyTorch reference truoc
+manuscript lock"*, with a locked tolerance covering (1) risk-score
+absolute/relative error, (2) route-decision agreement rate, (3) tie-handling.
+This is a **correctness audit, not a new experiment** — it isolates the CUDA
+kernel's own arithmetic from any model-execution or backend difference by
+feeding both implementations the *exact same* synthetic logits array, never
+re-running inference. `scripts/audit_gpu_risk_kernel.py` (self-contained,
+same discipline as the other harnesses): the "PyTorch reference" is the
+already-duplicated numpy transcription of `router.risk_probe.
+compute_risk_score`'s exact no-ground-truth formula (`F.softmax(dim=1)` →
+`-(p·log(clamp_min(p,1e-12))).sum(dim=1)` → `.mean()`) — confirmed
+line-for-line identical to the numpy version already shipping in
+`measure_router_overhead.py`, so no new torch install was needed on E3 (torch
+is never present on any edge device in this project). Output shapes read
+directly from E3's real, on-disk `.engine` files (not hardcoded).
+
+**Proposed tolerance, locked before running** (FP32 arithmetic over ~19
+accumulated multiply-adds per pixel plausibly accumulates ~1e-5 to 1e-4
+absolute error; entropy's own range is bounded by ln(19)≈2.94 nats, so these
+are generous but not vacuous relative to the signal's scale):
+
+| criterion | tolerance | observed (max over all 4 levels/200 trials) | pass? |
+|---|---|---|---|
+| per-pixel max abs error | ≤1e-3 nats | 9.54e-07 | **PASS** (~1000x margin) |
+| scalar risk-score abs error | ≤1e-4 nats | 2.38e-07 | **PASS** (~400x margin) |
+| decision_a agreement (2000 trials) | ≥99.9% | **100.000%** (0/2000 mismatches) | **PASS** |
+| decision_d agreement (2000 trials) | ≥99.9% | **100.000%** (0/2000 mismatches) | **PASS** |
+
+**Overall: PASS, with wide margin, at every real output shape (tiny/small/
+medium/large) and both policies (A/D). Zero decision mismatches across 2000
+trials means the tie-handling question is moot here** — the kernel and the
+reference never disagreed on a route decision in this sample, so there was no
+tie case to characterize separately. This is expected: the two
+implementations run the *identical* formula (softmax + entropy), so any
+disagreement can only come from floating-point non-associativity (different
+summation order between the CUDA kernel's serial per-pixel loop and numpy's
+vectorized reduction), which FP32 keeps well under 1e-6 at this array size.
+Full raw output: `reports/audit_gpu_risk_kernel_E3.json`.
+
+**This closes the last mandatory pre-manuscript-lock requirement from
+Codex's 2026-09-28 review of closing requirement 2.** The GPU-kernel numbers
+used throughout the E3 overhead analysis (and by extension the closing-
+requirement-2 confirmation) can now be reported as numerically validated
+against the reference implementation, not merely "smoke-tested."
+
+## Not yet done (all non-gating per Codex's explicit ruling)
 
 - Cold/reload frontier replay (only warm/resident was used for the win/loss
   analysis above on either backend, per Codex's rule that cold is a
   stress-test/robustness number, not automatically gating the closing
   decision).
 - Separating E3's naive-numpy path's ~40-80ms into (device-to-host transfer/
-  sync) vs. (numpy softmax/entropy) vs. (calibrator/policy) components, per
-  Codex's request — not yet done; currently reported only as "naive host-side
-  risk evaluation path" cost. (Not applicable to E1 in the same way — E1's
-  dominant cost is the activate/deactivate cycle, already isolated as its own
-  named mechanism above, not bundled into the entropy step.)
-- Validating E3's GPU-kernel risk score against the reference (PyTorch)
-  implementation within a locked tolerance, and confirming candidate decisions
-  (A/D) are unchanged between the numpy and GPU-kernel backends except
-  arithmetic ties — not yet done as an explicit check beyond the smoke-test
-  sanity check already in this report.
+  sync) vs. (numpy softmax/entropy) vs. (calibrator/policy) components. (Not
+  applicable to E1 the same way — E1's dominant cost, the activate/deactivate
+  cycle, is already isolated as its own named mechanism.) If not done, must
+  continue to call this only a "naive host-side risk-evaluation path" cost,
+  never attribute the full 40-80ms to numpy entropy specifically.
 - E2/E5 (also TensorRT/CUDA, same backend family as E3) were never in scope
   for this closing requirement per Codex's locked two-backend rule, and remain
   out of scope now that E1 confirms the same conclusion on a structurally
   different backend.
+- Power measurement — no external calibrated meter on any device (locked as
+  deferred future work).

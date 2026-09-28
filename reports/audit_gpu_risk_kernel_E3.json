@@ -1,0 +1,124 @@
+{
+  "elapsed_s": 217.65849447250366,
+  "level_shapes": {
+    "tiny": [
+      19,
+      384,
+      192
+    ],
+    "small": [
+      19,
+      512,
+      256
+    ],
+    "medium": [
+      19,
+      768,
+      384
+    ],
+    "large": [
+      19,
+      1024,
+      512
+    ]
+  },
+  "n_trials_per_level": 50,
+  "decision_trials": 2000,
+  "numeric_audit": {
+    "tiny": {
+      "n_trials": 50,
+      "per_pixel_max_abs_error": {
+        "mean_over_trials": 5.745887756347657e-07,
+        "max_over_trials": 9.5367431640625e-07
+      },
+      "per_pixel_mean_abs_error": {
+        "mean_over_trials": 4.0847466138416167e-08,
+        "max_over_trials": 4.1462183020257726e-08
+      },
+      "per_pixel_max_rel_error": {
+        "mean_over_trials": 2.201976990363619e-06,
+        "max_over_trials": 6.073974873288535e-06
+      },
+      "scalar_risk_score_abs_error": {
+        "mean_over_trials": 2.1457672119140624e-08,
+        "max_over_trials": 2.384185791015625e-07
+      }
+    },
+    "small": {
+      "n_trials": 50,
+      "per_pixel_max_abs_error": {
+        "mean_over_trials": 6.365776062011719e-07,
+        "max_over_trials": 9.5367431640625e-07
+      },
+      "per_pixel_mean_abs_error": {
+        "mean_over_trials": 4.0875621536429205e-08,
+        "max_over_trials": 4.1490768154517355e-08
+      },
+      "per_pixel_max_rel_error": {
+        "mean_over_trials": 2.563293086268459e-06,
+        "max_over_trials": 7.899975571490359e-06
+      },
+      "scalar_risk_score_abs_error": {
+        "mean_over_trials": 9.5367431640625e-09,
+        "max_over_trials": 1.1920928955078125e-07
+      }
+    },
+    "medium": {
+      "n_trials": 50,
+      "per_pixel_max_abs_error": {
+        "mean_over_trials": 7.033348083496094e-07,
+        "max_over_trials": 7.152557373046875e-07
+      },
+      "per_pixel_mean_abs_error": {
+        "mean_over_trials": 4.087193516966181e-08,
+        "max_over_trials": 4.1109640136482994e-08
+      },
+      "per_pixel_max_rel_error": {
+        "mean_over_trials": 3.090448979037319e-06,
+        "max_over_trials": 9.36565083975438e-06
+      },
+      "scalar_risk_score_abs_error": {
+        "mean_over_trials": 2.384185791015625e-09,
+        "max_over_trials": 1.1920928955078125e-07
+      }
+    },
+    "large": {
+      "n_trials": 50,
+      "per_pixel_max_abs_error": {
+        "mean_over_trials": 7.343292236328125e-07,
+        "max_over_trials": 9.5367431640625e-07
+      },
+      "per_pixel_mean_abs_error": {
+        "mean_over_trials": 4.0875319555766507e-08,
+        "max_over_trials": 4.107240059170181e-08
+      },
+      "per_pixel_max_rel_error": {
+        "mean_over_trials": 5.1169168659725986e-06,
+        "max_over_trials": 1.7138345356215723e-05
+      },
+      "scalar_risk_score_abs_error": {
+        "mean_over_trials": 1.1920928955078126e-08,
+        "max_over_trials": 1.1920928955078125e-07
+      }
+    }
+  },
+  "decision_agreement_audit": {
+    "n_trials": 2000,
+    "decision_a_agreement_rate": 1.0,
+    "decision_d_agreement_rate": 1.0,
+    "n_mismatches": 0,
+    "mismatches": []
+  },
+  "proposed_tolerance": {
+    "per_pixel_max_abs_error_nats": 0.001,
+    "scalar_risk_score_abs_error_nats": 0.0001,
+    "decision_agreement_rate_min": 0.999
+  },
+  "verdict": {
+    "per_pixel_max_abs_error_pass": true,
+    "scalar_risk_score_abs_error_pass": true,
+    "decision_a_pass": true,
+    "decision_d_pass": true
+  },
+  "overall_pass": true
+}
