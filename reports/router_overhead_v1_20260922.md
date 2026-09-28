@@ -356,7 +356,7 @@ used throughout the E3 overhead analysis (and by extension the closing-
 requirement-2 confirmation) can now be reported as numerically validated
 against the reference implementation, not merely "smoke-tested."
 
-## Update, 2026-09-29: cross-seed E2E replay — CONFIRMED across all 3 seeds, both backends
+## Update, 2026-09-29: cross-seed E2E replay — CONFIRMED across all 3 seeds, both backends (canonical-grid corrected)
 
 Codex's instruction (2026-09-28): the 20-cell E2E-aware replay above used only
 `pace_seg_v1_seed0`, while the router *method* was already confirmed on 3
@@ -368,54 +368,141 @@ the same E1/E3 overhead JSONs against fresh per-image dumps from
 --dump-per-image`, run on SERVER-02, same protocol as seed0's dump). No new
 hardware measurement.
 
+**A real bug, caught by Codex's review, not by this project's own checking**:
+the first pass of this replay passed `--original-results-json
+reports/router_{E1,E3}_20260921.json` (seed0-era files) for *every* seed,
+including seed2/seed3 — so those two seeds' replays used **seed0's
+`risk_target_grid`**, not their own. The fix, per Codex's explicit protocol:
+lock ONE fit/held split and ONE `risk_target_grid` per seed, and use that
+same canonical grid for **both** E1 and E3's replay (only the E2E latency
+table changes per backend) — never let each backend independently re-fit a
+grid that is methodologically meant to be device-independent. Concretely:
+seed2/seed3 replays now use `reports/router_E3_seed{2,3}_dump_meta.json`
+(the grid computed in the SAME `evaluate_router.py --dump-per-image`
+invocation that produced that seed's per-image dump — self-consistent by
+construction) for **both** devices. Seed0 turned out to already be canonical
+by coincidence: `router_E1_20260921.json` and `router_E3_20260921.json`'s
+`risk_target_grid` values are byte-identical (verified), so seed0's numbers
+are unchanged by this fix.
+
+**Canonical per-seed table:**
+
 | device | seed | fair cells | W/T/L | win+tie | mean(D−A) | D violations | A violations |
 |---|---|---|---|---|---|---|---|
 | E3 | seed0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
-| E3 | seed2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
-| E3 | seed3 | 14/20 | 10/3/1 | 92.9% | +0.0265 | 0/20 | 6/20 |
+| E3 | seed2 | 10/20 | 7/3/0 | 100.0% | +0.0241 | 0/20 | 10/20 |
+| E3 | seed3 | 13/20 | 11/2/0 | 100.0% | +0.0273 | 0/20 | 7/20 |
 | E1 | seed0 | 12/20 | 8/3/1 | 91.7% | +0.0207 | 0/20 | 8/20 |
-| E1 | seed2 | 11/20 | 8/3/0 | 100.0% | +0.0222 | 0/20 | 9/20 |
-| E1 | seed3 | 13/20 | 9/3/1 | 92.3% | +0.0267 | 0/20 | 7/20 |
+| E1 | seed2 | 10/20 | 7/3/0 | 100.0% | +0.0241 | 0/20 | 10/20 |
+| E1 | seed3 | 12/20 | 10/2/0 | 100.0% | +0.0276 | 0/20 | 8/20 |
 
-**Macro-average mean(D−A) across 3 seeds (equal weight per seed): +0.0232 on
-both E3 and E1.** **D has zero budget violations in all 6 seed×device
-configurations (0/20 every time), across 120 total cells.** Only 2 losses
-total across all 6 runs (seed3 on both devices — see the recurring
-`acdc/rain` pattern, already flagged as a bounded, non-gating diagnostic).
+**Aggregated (Codex's requested summary format):**
 
-A striking structural observation: seed2's win/tie/loss counts, fair-cell
-count, and mean(D−A) are numerically identical between E3 and E1 to several
-decimal places, despite the two devices' real e2e latencies differing by an
-order of magnitude (E3: 2.07-26.70ms; E1: 34.95-92.68ms). This reproduces
-Phase 7's original finding (`reports/router_v1_20260914.md`: "a fitted
-calibrator's decisions port unchanged across deployment targets") — both A's
-rank-based escalation and D's budget check reduce to comparisons between a
-chosen level's *rank* among the 4 device-specific latencies, not their
-absolute values, whenever the budget grid is itself built from those same 4
-per-device latencies (exactly how `load_e2e_latency`/`e2e_budget_grid` are
-constructed here). Seed0's E1/E3 runs show a small violation-rate difference
-(8.95% vs. 22.36%) despite identical win/loss counts — traced to each
-device's *original* `router_{E1,E3}_20260921.json` independently fitting its
-own `risk_target_grid` (methodologically meant to be device-independent, but
-stored per-run); a second-order effect, not a contradiction of the
-rank-portability finding.
+| Backend | Fair cells | W/T/L | Win-or-tie | Macro ΔmIoU | D violating cells | A violating cells |
+|---|---|---|---|---|---|---|
+| E3 | 35/60 | 26/8/1 | 97.1% | +0.0241 | 0/60 | 25/60 |
+| E1 | 34/60 | 25/8/1 | 97.1% | +0.0241 | 0/60 | 26/60 |
+| **Overall** | **69/120** | **51/16/2** | **97.1%** | **+0.0241** | **0/120** | **51/120** |
 
-**This satisfies Codex's cross-seed E2E requirement**: the deployment claim
-no longer needs to be scoped to seed0 alone. Updated admissible claim:
+(+0.0241 mIoU = **+2.41 mIoU points** on the conventional 0–100 scale — stated
+both ways to avoid ambiguity.)
 
-*"Candidate-specific, device-conditioned routing (D) continues to win under
-real, directly measured end-to-end overhead — including router-specific
-costs invisible to a pure inference-latency lookup table — on two
-structurally different accelerator backends (TensorRT/CUDA GPU and Hailo-8
-dataflow NPU) and across three independently trained supernet seeds, with
-zero budget violations in every one of the 6 seed×backend configurations
-tested (120 cells total) and a macro-averaged +0.0232 mIoU advantage on fair
-comparison cells."*
+**Important scope note (Codex's explicit correction)**: 69/120 is the count
+of *operating cells* eligible for a fair A-vs-D comparison, and 0/120 is the
+count of D's operating cells with a budget violation — **these are not 120
+independent statistical samples**. E1 and E3 replay the *same* per-image
+model predictions (from the *same* 3 checkpoints) against two different real
+latency tables; this is **cross-backend deployment validation**, not two
+independent accuracy replications. seed2's identical stats between E3/E1 are
+the clearest illustration: both A's rank-based escalation and D's budget
+check reduce to comparisons between a chosen level's *rank* among the 4
+device-specific latencies, not their absolute values, whenever the budget
+grid is itself built from those same 4 per-device latencies — so identical
+per-image decisions across backends are the *expected* outcome when latency
+rankings agree, not evidence that D independently "discovers" different
+per-device behavior. Concretely: **backend-specific costs determine the
+deployed latency and feasible budget scale, while the breakpoint-based
+evaluation can produce identical choices when candidate latency rankings
+agree.** Do not read this as "D always chooses a different architecture per
+device" — call the method **hardware-cost-conditioned** (or
+**device-cost-conditioned**) routing, not "device-conditioned decisions."
+Seed3 is the counterexample that shows this isn't purely mechanical: E3 (13
+fair cells) and E1 (12 fair cells) diverge slightly there, traced to
+`select_budget_matched_operating_point`'s fit-half *mean latency* (a
+continuous quantity, in each device's own absolute ms) landing on different
+sides of a budget threshold for one operating point — a legitimate,
+expected, backend-value-dependent effect, not a bug.
 
-Raw data: `reports/router_overhead_replay_{E1,E3}_seed{2,3}_20260929.json`.
-Per-image dumps: `reports/router_per_image_dump_seed{2,3}.json` (generated on
-SERVER-02, `reports/router_E3_seed{2,3}_dump_meta.json` for the original
-fit/held-out metadata each dump was checked against).
+**Updated admissible claim (Codex's template, adopted with the canonical
+numbers substituted in — Codex's own provisional table was explicitly marked
+"cập nhật lại nếu số thay đổi" pending this canonical-grid fix, and the
+actual corrected counts differ slightly from Codex's provisional draft)**:
+
+*"Using directly measured end-to-end route costs, candidate-specific,
+hardware-cost-conditioned routing outperformed or matched the rank-based
+policy in 67 of 69 fair operating cells (51 wins, 16 ties, 2 losses) across
+three independently trained supernets and two structurally different
+accelerator backends. It achieved a macro-averaged gain of 0.0241 mIoU (2.41
+points) and produced no budget-violating operating point across all 120
+evaluated cells."*
+
+Boundary, stated immediately after the claim, every time it is used:
+
+*"The two backend evaluations share model predictions and therefore
+demonstrate cross-backend deployment robustness rather than independent
+accuracy replication."*
+
+System-level insight (also part of the claim's context):
+
+*"The dominant routing overhead was backend-specific: host-side uncertainty
+evaluation required accelerator-resident optimization on TensorRT/CUDA,
+whereas mandatory network-group activation dominated Hailo-8."*
+
+Raw data: `reports/router_overhead_replay_{E1,E3}_20260928.json` (seed0,
+canonical already) and `reports/router_overhead_replay_{E1,E3}_seed{2,3}_
+20260929.json` (seed2/seed3, corrected 2026-09-29 to use the canonical
+per-seed grid). Per-image dumps: `reports/router_per_image_dump_seed{2,3}
+.json`, canonical grid source `reports/router_E3_seed{2,3}_dump_meta.json`.
+
+## Update, 2026-09-29: CUDA-kernel-vs-production-PyTorch audit on real engine outputs — PASS
+
+Codex's second correction to the 2026-09-28 audit: comparing the CUDA kernel
+against a **numpy transcription** of `compute_risk_score`'s formula, on
+**synthetic** logits, is good arithmetic evidence but "chưa hoàn toàn tương
+đương" a real PyTorch-reference audit. Two closes, both real:
+
+1. **Real production import**: `scripts/audit_gpu_risk_kernel_production.py`
+   calls `imavis_edge_seg.router.risk_probe.compute_risk_score` directly (the
+   actual function, no transcription) as the reference.
+2. **Real engine outputs, not synthetic logits**: `scripts/
+   capture_real_engine_outputs.py` (run on E3) performs real TensorRT
+   inference (10 samples per level, all 4 levels) and, per sample, (a) runs
+   the exact deployed GPU-kernel path (`infer_no_copy` + `risk_score_gpu`,
+   reading `device_out` directly — no intermediate host copy, so this also
+   validates the real integration, not just kernel arithmetic in isolation)
+   and (b) a *second, independent* `infer_sync` call to capture the full
+   host-side array for the reference computation (the two capture paths
+   can't leak into each other). 434MB of real captured output arrays
+   transferred to the dev machine (not committed to git — reproducible via
+   the capture script with a fixed seed) and fed through the real
+   `compute_risk_score`.
+
+| criterion | tolerance | observed (max, real data) | pass? |
+|---|---|---|---|
+| scalar risk-score abs error | ≤1e-4 nats | 7.15e-07 (large level) | **PASS** (~140x margin) |
+| decision_a agreement (10 real samples, real `RiskCalibrator`/`_select_by_risk`) | ≥99.9% | **100.000%** | **PASS** |
+| decision_d agreement (10 real samples, real `_select_by_risk_and_latency_budget`) | ≥99.9% | **100.000%** | **PASS** |
+
+Zero mismatches. Decision-agreement here also uses the real production
+`router.calibrator.fit_risk_calibrator`/`RiskCalibrator.predict` and
+`router.policy._select_by_risk`/`_select_by_risk_and_latency_budget`
+functions (not reimplementations) — closes the last piece of Codex's
+"CUDA-versus-NumPy formula audit, not a PyTorch-reference audit" distinction.
+Raw: `reports/audit_gpu_risk_kernel_production_E3.json`.
+
+**Both Codex-mandated correctness items from the 2026-09-29 review are now
+closed. The evidence package for router closing requirement 2 is complete and
+canonical.**
 
 ## Not yet done (all non-gating per Codex's explicit ruling)
 
