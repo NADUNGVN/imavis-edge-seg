@@ -91,15 +91,18 @@ def load_lut_latency(lookup_table: Path, device_id: str, backend: str, latency_f
     return lut
 
 
-def load_e2e_latency(overhead_json: dict[str, Any]) -> dict[str, float]:
-    """Real warm end-to-end latency per level (GPU-kernel backend, the
-    representative/optimized path -- see `reports/router_overhead_v1_20260922.md`),
-    keyed by destination level (probe is always "tiny" in the overhead harness)."""
-    warm_gpu = overhead_json["warm"]["gpu"]
+def load_e2e_latency(overhead_json: dict[str, Any], entropy_backend: str = "gpu") -> dict[str, float]:
+    """Real warm end-to-end latency per level, keyed by destination level (probe is
+    always "tiny" in the overhead harness). `entropy_backend`: "gpu" (E3's GPU-kernel
+    backend, the representative/optimized path -- see
+    `reports/router_overhead_v1_20260922.md`) or "numpy" (the only backend that exists
+    on E1/Hailo -- no GPU-resident entropy kernel is possible on that architecture, see
+    `scripts/measure_router_overhead_hailo.py`'s module docstring)."""
+    warm = overhead_json["warm"][entropy_backend]
     e2e: dict[str, float] = {}
     for level in LEVELS:
         route_key = f"tiny->{level}"
-        e2e[level] = warm_gpu[route_key]["median_ms"]
+        e2e[level] = warm[route_key]["median_ms"]
     return e2e
 
 
@@ -266,6 +269,7 @@ def main() -> None:
     parser.add_argument("--device-id", required=True)
     parser.add_argument("--backend", required=True)
     parser.add_argument("--latency-field", default="end_to_end_p95_ms")
+    parser.add_argument("--entropy-backend", default="gpu", help='"gpu" (E3) or "numpy" (only option on E1/Hailo)')
     parser.add_argument("--output-json", type=Path, required=True)
     args = parser.parse_args()
 
@@ -273,11 +277,11 @@ def main() -> None:
     overhead = json.loads(args.overhead_json.read_text())
     original = json.loads(args.original_results_json.read_text())
     lut_latency = load_lut_latency(args.lookup_table, args.device_id, args.backend, args.latency_field)
-    e2e_latency = load_e2e_latency(overhead)
+    e2e_latency = load_e2e_latency(overhead, args.entropy_backend)
     e2e_budget_grid = sorted(set(e2e_latency.values()))
 
     print(f"LUT-only latency: {lut_latency}")
-    print(f"real e2e latency (GPU-kernel, warm): {e2e_latency}")
+    print(f"real e2e latency ({args.entropy_backend} backend, warm): {e2e_latency}")
     print(f"new e2e-based budget grid: {e2e_budget_grid}")
 
     results: dict[str, Any] = {}

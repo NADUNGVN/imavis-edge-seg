@@ -457,7 +457,8 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
      — cold is a robustness/stress result, not automatically a fail
      condition unless it reflects the real deployment model.
 
-   **E3 measured 2026-09-22 — PARTIAL, E1 still pending.**
+   **E3 measured 2026-09-22, E1 measured 2026-09-28 — BOTH DONE, closing
+   requirement 2 CONFIRMED on both backends.**
    `reports/router_overhead_v1_20260922.md`,
    `scripts/measure_router_overhead.py`, raw data
    `reports/router_overhead_E3_20260922.json`. Real infra work: E3 had no
@@ -524,20 +525,81 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    Confirms the earlier approximation almost exactly. `reports/
    router_overhead_replay_E3_20260922.json` (raw), `reports/
    router_overhead_v1_20260922.md`'s 2026-09-22 update (full writeup).
-   **E3 is now a provisional pass on the rigorous per-image methodology
-   Codex required** — still pending E1 per the two-backend scope (E3
-   cannot be extrapolated to Hailo: the CUDA entropy kernel doesn't
-   transfer, Hailo's host-side cost structure is unmeasured).
 
-   **Not yet done**: **E1 (Hailo-8) measurement** — device currently
-   offline (Tailscale confirms this is a connectivity/power issue, not a
-   credentials/account problem — the account already sees the device in
-   its peer list, just marked offline); cold/reload frontier replay
-   (stress-test only, not gating); separating the naive-numpy path's
+   **E1 (Hailo-8) measured for real 2026-09-28** once the device came back
+   online (confirmed a real connectivity/power issue, not an account
+   problem, as suspected). Direct-SSH setup, same discipline as E3:
+   recompiled all 4 HEFs fresh from the current post-rescale ONNX exports
+   (the week-1-2 smoke-test HEFs were the old ~5K-param placeholder
+   architecture and no longer resident on-device after reboot) via the
+   cached Hailo DFC 3.34.0 toolchain; new harness `scripts/
+   measure_router_overhead_hailo.py` against the real `hailo_platform`
+   (pyhailort) API. **A second, different load-bearing platform finding**:
+   unlike E3 (naive numpy entropy dominates), this Hailo-8 module allows
+   only ONE network group hardware-activated at a time, so even the
+   warm/resident scenario pays a real activate/deactivate cycle on every
+   inference — that cycle, not entropy computation, dominates E1's
+   overhead. No GPU-resident-kernel fix is possible here by hardware
+   necessity (Hailo's dataflow architecture has no CUDA-like
+   compute-shader model) — only a numpy/host entropy backend exists on
+   this device. Two further real infra findings while building the
+   cold/reload scenario: `ConfiguredNetwork` has no release/deconfigure
+   method at all (a `VDevice` accumulates configured groups for its whole
+   lifetime, capped at 32 "core-ops" — the first cold-scenario design hit
+   this cap after ~28 reloads); and this chip allows exactly one `VDevice`
+   at a time (a concurrent second one raises
+   `HAILO_OUT_OF_PHYSICAL_DEVICES`) — so E1's cold scenario necessarily
+   reconfigures the *entire* VDevice (probe included) every iteration,
+   stricter than E3's candidate-only reload; disclosed explicitly as a
+   hardware-forced design difference, not a shortcut.
+
+   Real warm/resident e2e latency (numpy, only backend, median, n=500, all
+   CI widths ≤1.2%): tiny→tiny 34.95ms, tiny→small 46.13ms, tiny→medium
+   63.36ms, tiny→large 92.68ms — all far above the LUT-only streaming
+   numbers (3.72/6.63/20.47/41.18ms), consistent with the
+   activate/deactivate-dominated mechanism above. Cold (full reconfigure)
+   120.0/156.0/176.0/214.6ms. Decision-path cost (A: 0.012ms, D: 0.045ms)
+   matches E3's order of magnitude, as expected (hardware-agnostic).
+   No throttling (SoC 49.6→55.1→54.6°C; Hailo-8 chip telemetry
+   46.1→48.5→47.7°C).
+
+   **Full per-image, e2e-aware replay on E1, same locked methodology**:
+   `reports/router_overhead_replay_E1_20260928.json`.
+
+   | | value |
+   |---|---|
+   | Total cells | 20 |
+   | Fair cells | 12/20 |
+   | D vs. A on fair cells | **8 wins, 3 ties, 1 loss** (67%) |
+   | Mean (D − A), fair | **+0.0207** |
+   | Mean (D − oracle), all | −0.0036 |
+   | **D violations, all 20 cells** | **0/20** |
+   | A violations, all 20 cells | 8/20 (mean rate among violators 22.36%) |
+
+   **Essentially an exact qualitative and near-exact quantitative
+   replication of E3's result**, despite the two backends' overhead being
+   dominated by completely different mechanisms and E1's absolute
+   latencies running 2-4x higher than E3's. Full writeup: `reports/
+   router_overhead_v1_20260922.md`'s 2026-09-28 update.
+
+   **Closing requirement 2 is now CONFIRMED on both backends.** Admissible
+   claim, extended: *"Candidate-specific, device-conditioned routing (D)
+   continues to win under real, directly measured end-to-end overhead —
+   including router-specific costs invisible to a pure inference-latency
+   lookup table — on two structurally different accelerator backends
+   (TensorRT/CUDA GPU and Hailo-8 dataflow NPU), despite those two
+   backends' overhead being dominated by different mechanisms."*
+
+   **Not yet done**: cold/reload frontier replay on either backend
+   (stress-test only, not gating); separating E3's naive-numpy path's
    ~40-80ms into transfer/sync vs. numpy softmax/entropy vs. calibrator/
-   policy components; validating the GPU-kernel risk score against the
-   reference implementation within a locked tolerance and confirming A/D
-   decisions are unchanged between backends except arithmetic ties.
+   policy components (not applicable to E1 the same way — its dominant
+   cost, the activate/deactivate cycle, is already its own named
+   mechanism); validating E3's GPU-kernel risk score against the reference
+   implementation within a locked tolerance and confirming A/D decisions
+   are unchanged between backends except arithmetic ties. E2/E5 (same
+   TensorRT/CUDA family as E3) remain out of scope per Codex's locked
+   two-backend rule.
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:

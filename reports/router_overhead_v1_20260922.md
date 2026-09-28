@@ -198,24 +198,134 @@ level (0.5240 mIoU, `cityscapes` at the largest budget) that A cannot reach at
 approximation** — E3 is a provisional pass (still pending E1 per the
 two-backend scope).
 
+## Update, 2026-09-28: E1 (Hailo-8) measured for real — CONFIRMED, closing requirement 2 now satisfied on both backends
+
+E1 (Pi5 + Hailo-8, alias `pi5`) came back online 2026-09-28 (a real
+connectivity/power issue, not an account problem, as already suspected).
+Direct-SSH setup and measurement, same pattern as E3: `hailo_platform`
+(pyhailort) is already installed system-wide on E1 (HailoRT 4.23.0), so no new
+package install was needed there. The HEFs used for the compiler smoke test
+back in week 1-2 were the old ~5K-parameter placeholder architecture (pre the
+2026-09-10 model rescale) and are no longer resident on the device (`/tmp` is
+wiped on reboot) — **recompiled all 4 levels fresh from the current,
+post-rescale ONNX exports** (`outputs/onnx_e2e5/pace_seg_{level}.onnx`, the
+same exports E2/E5's TensorRT engines use) via the cached Hailo Dataflow
+Compiler 3.34.0 toolchain in WSL2 (`hailo parser` → `hailo optimize
+--use-random-calib-set` → `hailo compiler`, all 4/4 parse→optimize→compile
+PASS), so E1's engines are the same architecture size as E3's — a fair
+comparison. New harness: `scripts/measure_router_overhead_hailo.py`, built
+from scratch against the real `hailo_platform` Python API (VDevice/HEF/
+ConfigureParams/InferVStreams — explored live via disposable smoke scripts
+before writing the real harness, same discipline as E3).
+
+**A second real, load-bearing platform finding — different from E3's:**
+unlike E3 (where naive host-side numpy entropy computation dominated
+overhead), **this Hailo-8 M.2 module only allows one network group
+hardware-activated at a time** — every single inference call, even in the
+warm/resident scenario, pays a real `activate()`/`infer`/`deactivate()` cycle
+(confirmed live: calling `infer()` on a non-activated network group raises
+`HailoRTNetworkGroupNotActivatedException`). This activate/deactivate cost,
+not entropy computation, is what dominates E1's real overhead. There is no
+GPU-resident-kernel equivalent fix here — Hailo's dataflow architecture has no
+general-purpose compute-shader model like CUDA, so **only a numpy/host entropy
+backend exists on this device, by hardware necessity, not because the
+GPU-kernel optimization step was skipped**. Report `report["warm"]["numpy"]`
+only; do not compare against E3's `report["warm"]["gpu"]` numbers directly —
+`scripts/replay_router_with_overhead.py --entropy-backend` was extended to
+select which backend's e2e latency to replay against precisely for this
+reason.
+
+Two further real infra findings while building the cold/reload scenario
+(caught the same way as E3's bugs — by the numbers looking wrong, not by
+inspection): (1) `ConfiguredNetwork` (a HEF configured onto a `VDevice`) has
+**no public release/deconfigure method at all** — `del` plus `gc.collect()`
+does not free its slot either; a `VDevice` accumulates configured network
+groups for its entire lifetime, capped at 32 "core-ops" on this chip, so the
+first cold-scenario design (candidate reloaded repeatedly onto the same
+long-lived `VDevice` that also held the resident probe) hit
+`HAILO_INVALID_OPERATION` partway through after ~28 accumulated reloads. (2)
+this Hailo-8 module allows **exactly one `VDevice` at a time** — a second,
+concurrent `VDevice` (tried as a workaround, to keep the probe on one handle
+and reload candidates on another) raises `HAILO_OUT_OF_PHYSICAL_DEVICES`
+immediately. Both are genuine hardware/driver constraints of this
+single-context, no-scheduler configuration, not script bugs. Fix: E1's cold
+scenario reconfigures the **entire** `VDevice` fresh every iteration — probe
+included, even for `tiny->tiny` — which is a stricter (more pessimistic) cold
+number than E3's candidate-only reload; the report and script docstrings
+disclose this design difference explicitly rather than presenting it as the
+same measurement.
+
+**Full protocol run, real numbers (`reports/router_overhead_E1_20260928.json`):**
+
+| Route class | LUT-only (hailortcli streaming) | Real e2e, warm (numpy) | Real e2e, cold (full reconfigure) |
+|---|---:|---:|---:|
+| tiny→tiny | 3.72 ms | 34.95 ms | 120.0 ms |
+| tiny→small | 6.63 ms | 46.13 ms | 156.0 ms |
+| tiny→medium | 20.47 ms | 63.36 ms | 176.0 ms |
+| tiny→large | 41.18 ms | 92.68 ms | 214.6 ms |
+
+All warm route classes converged at the base 500 measured iterations (CI
+width ≤1.2% of the median, well under the 2% adaptive-extension threshold —
+no route class needed the adaptive extension to 2000). No throttling: SoC
+temperature 49.6→55.1→54.6°C, Hailo-8 chip telemetry (a real on-chip read via
+`hailortcli`-equivalent `get_chip_temperature()`, same "not an external
+calibrated meter" caveat as the existing E1 benchmark-protocol note)
+46.1→48.5→47.7°C across the whole run. Decision-path microbenchmark
+(hardware-agnostic, CPU-only, expected to match E3): A=0.012 ms, D=0.045 ms —
+matches E3's order of magnitude, as expected.
+
+**Full per-image, e2e-aware replay
+(`reports/router_overhead_replay_E1_20260928.json`), same locked methodology
+as E3's:**
+
+| | value |
+|---|---|
+| Total cells (5 splits × 4 e2e budgets) | 20 |
+| Fair cells (A itself doesn't violate) | 12/20 |
+| D vs. A on fair cells | **8 wins, 3 ties, 1 loss** (67% win rate) |
+| Mean (D − A), fair cells | **+0.0207** |
+| Mean (D − oracle), all cells | −0.0036 |
+| **D budget violations, all 20 cells** | **0/20** |
+| A budget violations, all 20 cells | 8/20 (mean violation rate among violators 22.36%) |
+
+**This is essentially an exact qualitative and near-exact quantitative
+replication of E3's result** (E3: 8/3/1, mean(D−A)=+0.0207, D 0/20
+violations, A 8/20 violations) despite E1's overhead being dominated by a
+completely different mechanism (hardware activate/deactivate cycling vs.
+host-side entropy computation) and E1's absolute latencies being 2-4× higher
+than E3's at every level. The single loss and the specific fair/unfair cell
+split are the same pattern as E3's, driven by the same underlying per-image
+data (one shared dump) — the new information here is that the *real, measured
+overhead* on a structurally different accelerator still doesn't erase D's
+advantage, which is exactly what "validated on two representative hardware
+backends" needs to mean.
+
+**Closing requirement 2 (real end-to-end router overhead, E1 + E3) is now
+CONFIRMED on both backends.** Admissible claim, extended: *"Candidate-specific,
+device-conditioned routing (D) continues to win under real, directly measured
+end-to-end overhead — including router-specific costs invisible to a pure
+inference-latency lookup table — on two structurally different accelerator
+backends (TensorRT/CUDA GPU and Hailo-8 dataflow NPU), despite those two
+backends' overhead being dominated by different mechanisms."*
+
 ## Not yet done
 
-- **E1 (Hailo-8) measurement** — device currently offline (Tailscale confirms
-  this is a connectivity/power issue, not a credentials/account problem — the
-  account already sees the device in its peer list, just marked offline).
-  Codex's "two representative backends" scope means this closing requirement
-  is not yet fully satisfied with E3 alone; E3 results cannot be extrapolated
-  to Hailo (the CUDA entropy kernel doesn't transfer; Hailo's own host-side
-  cost structure is unknown until measured).
-- Cold/reload frontier replay (only warm/resident was used for the analysis
-  above, per Codex's rule that cold is a stress-test/robustness number, not
-  automatically gating the closing decision).
-- Separating the naive-numpy path's ~40-80ms into (device-to-host transfer/
+- Cold/reload frontier replay (only warm/resident was used for the win/loss
+  analysis above on either backend, per Codex's rule that cold is a
+  stress-test/robustness number, not automatically gating the closing
+  decision).
+- Separating E3's naive-numpy path's ~40-80ms into (device-to-host transfer/
   sync) vs. (numpy softmax/entropy) vs. (calibrator/policy) components, per
   Codex's request — not yet done; currently reported only as "naive host-side
-  risk evaluation path" cost, not attributed solely to numpy's `exp`/`log`.
-- Validating the GPU-kernel risk score against the reference (PyTorch)
+  risk evaluation path" cost. (Not applicable to E1 in the same way — E1's
+  dominant cost is the activate/deactivate cycle, already isolated as its own
+  named mechanism above, not bundled into the entropy step.)
+- Validating E3's GPU-kernel risk score against the reference (PyTorch)
   implementation within a locked tolerance, and confirming candidate decisions
   (A/D) are unchanged between the numpy and GPU-kernel backends except
   arithmetic ties — not yet done as an explicit check beyond the smoke-test
   sanity check already in this report.
+- E2/E5 (also TensorRT/CUDA, same backend family as E3) were never in scope
+  for this closing requirement per Codex's locked two-backend rule, and remain
+  out of scope now that E1 confirms the same conclusion on a structurally
+  different backend.

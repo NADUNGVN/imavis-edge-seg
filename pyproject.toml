@@ -127,9 +127,10 @@ module = "torchvision.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-# scripts/measure_router_overhead.py runs on a real edge device (Jetson/Hailo), not
-# in this dev environment -- pycuda/tensorrt are never installed here, only there.
-module = ["pycuda.*", "tensorrt"]
+# scripts/measure_router_overhead*.py run on real edge devices (Jetson/Hailo), not in
+# this dev environment -- pycuda/tensorrt/hailo_platform are never installed here, only
+# there.
+module = ["pycuda.*", "tensorrt", "hailo_platform"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
