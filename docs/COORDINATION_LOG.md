@@ -690,28 +690,54 @@ title until UIoU/AURC/temporal-window/external-shift evidence exists; use
    compared against a numpy transcription on synthetic logits — good
    arithmetic evidence but not a true "PyTorch-reference" audit.
    `scripts/audit_gpu_risk_kernel_production.py` calls the real
-   `router.risk_probe.compute_risk_score` directly, against real
-   TensorRT engine outputs (`scripts/capture_real_engine_outputs.py`, 10
-   real samples/level on E3, via the actual deployed `infer_no_copy` +
-   `risk_score_gpu` path). Scalar risk-score abs error: 7.15e-07 max
-   (tolerance 1e-4, ~140x margin). Decision agreement (real
-   `RiskCalibrator`/`_select_by_risk`/`_select_by_risk_and_latency_
-   budget`): **100.000%**, zero mismatches. Raw:
+   `router.risk_probe.compute_risk_score` directly, against **40 real
+   TensorRT outputs (10 samples × 4 levels)** on E3, via the actual
+   deployed `infer_no_copy` + `risk_score_gpu` path. Per Codex's framing:
+   the earlier 2,000-*synthetic*-trial audit is an arithmetic stress test
+   (broad numerical coverage); these 40 *real* outputs are a narrower
+   integration audit (real buffer layout/dtype/sync/indexing). Scalar
+   risk-score abs error: 7.15e-07 max over the 40 (tolerance 1e-4, ~140x
+   margin). Decision agreement (real `RiskCalibrator`/`_select_by_risk`/
+   `_select_by_risk_and_latency_budget`, checked on the 10 real
+   tiny-level/probe samples): **100.000% (0/10 mismatches)**. 99.9% is
+   the pre-registered acceptance threshold, not a statistical estimate
+   from N=10/40 — too small to resolve a rate that precisely; 0/10 and
+   0/40 are the exact evidentiary counts. Raw:
    `reports/audit_gpu_risk_kernel_production_E3.json`.
 
    **Both Codex-mandated correctness items from the 2026-09-29 review
    are closed. The evidence package for closing requirement 2 is now
-   complete and canonical.** Not yet done (all confirmed non-gating):
-   cold/reload frontier replay on either backend; separating E3's
-   naive-numpy path's ~40-80ms into components (not applicable to E1 the
-   same way). E2/E5 remain out of scope per Codex's locked two-backend
-   rule. No external calibrated power meter on any device.
+   complete and canonical.**
 
-   **Next step per Codex's locked order: lock the final tables/figures/
-   claim wording (this update), then move to manuscript (Related
-   Work/Introduction/Discussion/Limitations) — not temporal-window
-   routing or UIoU, which stay deferred until the manuscript is
-   otherwise complete.**
+   **FINAL LOCK (Codex, 2026-09-29): closing requirement 2 is PASS,
+   permanently locked.** No correctness or bookkeeping item remains
+   open; temporal-window routing, UIoU, cold-reload replay, and the
+   numpy-overhead decomposition are confirmed **not required** to
+   complete this paper. **Three annotations that must accompany the
+   claim in the manuscript, every time it is stated** (full text and
+   rationale in `reports/router_overhead_v1_20260922.md`'s FINAL LOCK
+   section): (1) the 120 (or 69) operating cells are not independent
+   statistical samples — never use them as n for a significance test or
+   CI; (2) W/T/L and win-or-tie use the 69-fair-cell denominator, budget
+   violations use the full 120-cell denominator — never blend the two;
+   (3) zero violations follows partly from D's own hard-budget-by-design
+   policy — the finding is that D keeps its quality advantage *while*
+   satisfying that constraint, not "zero violations" alone.
+
+   **Artifact freeze**: after this point, do not modify the policy code,
+   risk grid, data split, or metric definitions this evidence package
+   depends on — a manuscript-wording-only change never requires
+   reopening it; a change to any of those does. Full freeze manifest
+   (commit reference, canonical result/audit files, seed/checkpoint IDs,
+   per-seed risk-grid source, E1/E3 latency-table IDs, exact replay/audit
+   commands, final locked table) recorded in `reports/
+   router_overhead_v1_20260922.md`'s "FINAL LOCK, 2026-09-29" section —
+   not duplicated here to avoid two sources of truth drifting apart.
+
+   **Next step per Codex's locked order: move to manuscript (Related
+   Work/Introduction/Discussion/Limitations), then lock Abstract/Results
+   tables/Conclusion. Temporal-window routing and UIoU move to Future
+   Work — not opened in this paper's scope.**
 
    **`acdc/rain` loss pattern**: investigate as a **bounded diagnostic
    only** — do not tune the policy on the held-out rain split. Extract:

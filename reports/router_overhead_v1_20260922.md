@@ -458,6 +458,27 @@ System-level insight (also part of the claim's context):
 evaluation required accelerator-resident optimization on TensorRT/CUDA,
 whereas mandatory network-group activation dominated Hailo-8."*
 
+**Three annotations that must accompany this claim in the manuscript
+(Codex's final-lock instruction, 2026-09-29 — never state the claim without
+these)**:
+
+1. **Operating cells are not statistically independent samples.** Never use
+   n=120 (or n=69) as the sample size for a significance test or confidence
+   interval — E1/E3 share the same per-image model predictions, and the
+   5 splits/4 budgets within one device are correlated (same images,
+   overlapping budget-feasible sets), not 120 (or 69) independent draws.
+2. **Different denominators for different numbers**: W/T/L and the win-or-tie
+   rate are computed over the **69 fair cells only** (cells where A itself
+   respects its own stated budget); the budget-violation counts (D: 0/120,
+   A: 51/120) are computed over **all 120 evaluated cells**, fair or not.
+   Never blend these two denominators in prose.
+3. **Zero violations is a constraint-satisfaction result, not the headline
+   finding by itself** — it follows partly from D's own hard-budget-by-design
+   policy (D only ever selects a candidate within its stated budget, by
+   construction). The scientific claim is that **D keeps its quality
+   advantage over A while satisfying that constraint**, not that "zero
+   violations" alone is remarkable.
+
 Raw data: `reports/router_overhead_replay_{E1,E3}_20260928.json` (seed0,
 canonical already) and `reports/router_overhead_replay_{E1,E3}_seed{2,3}_
 20260929.json` (seed2/seed3, corrected 2026-09-29 to use the canonical
@@ -476,24 +497,40 @@ against a **numpy transcription** of `compute_risk_score`'s formula, on
    actual function, no transcription) as the reference.
 2. **Real engine outputs, not synthetic logits**: `scripts/
    capture_real_engine_outputs.py` (run on E3) performs real TensorRT
-   inference (10 samples per level, all 4 levels) and, per sample, (a) runs
-   the exact deployed GPU-kernel path (`infer_no_copy` + `risk_score_gpu`,
-   reading `device_out` directly — no intermediate host copy, so this also
-   validates the real integration, not just kernel arithmetic in isolation)
-   and (b) a *second, independent* `infer_sync` call to capture the full
-   host-side array for the reference computation (the two capture paths
-   can't leak into each other). 434MB of real captured output arrays
-   transferred to the dev machine (not committed to git — reproducible via
-   the capture script with a fixed seed) and fed through the real
-   `compute_risk_score`.
+   inference for **40 real outputs (10 samples × 4 levels)** and, per
+   sample, (a) runs the exact deployed GPU-kernel path (`infer_no_copy` +
+   `risk_score_gpu`, reading `device_out` directly — no intermediate host
+   copy, so this also validates the real integration, not just kernel
+   arithmetic in isolation) and (b) a *second, independent* `infer_sync`
+   call to capture the full host-side array for the reference computation
+   (the two capture paths can't leak into each other). 434MB of real
+   captured output arrays transferred to the dev machine (not committed to
+   git — reproducible via the capture script with a fixed seed) and fed
+   through the real `compute_risk_score`.
 
-| criterion | tolerance | observed (max, real data) | pass? |
-|---|---|---|---|
-| scalar risk-score abs error | ≤1e-4 nats | 7.15e-07 (large level) | **PASS** (~140x margin) |
-| decision_a agreement (10 real samples, real `RiskCalibrator`/`_select_by_risk`) | ≥99.9% | **100.000%** | **PASS** |
-| decision_d agreement (10 real samples, real `_select_by_risk_and_latency_budget`) | ≥99.9% | **100.000%** | **PASS** |
+Per Codex's explicit framing (2026-09-29): the earlier **2,000 synthetic
+trials** (`audit_gpu_risk_kernel.py`) are an **arithmetic stress test** —
+broad coverage of the entropy formula's numerical behavior, not tied to any
+one real model. These **40 real TensorRT outputs** are a separate, narrower
+**integration audit** — they exercise the real on-device buffer layout,
+dtype, synchronization, and indexing path end-to-end, which only a real
+engine run can expose. The two are complementary, not redundant, and neither
+substitutes for the other.
 
-Zero mismatches. Decision-agreement here also uses the real production
+| criterion | N | tolerance (locked before running) | observed (max) | pass? |
+|---|---|---|---|---|
+| scalar risk-score abs error | 40 (10 samples × 4 levels) | ≤1e-4 nats | 7.15e-07 (large level) | **PASS** (~140x margin) |
+| decision_a agreement | 10 (tiny level, the probe) | ≥99.9%* | **100.000% (0/10 mismatches)** | **PASS** |
+| decision_d agreement | 10 (tiny level, the probe) | ≥99.9%* | **100.000% (0/10 mismatches)** | **PASS** |
+
+\* 99.9% is the **pre-registered acceptance threshold**, not a statistical
+estimate of the true agreement rate derived from N=10 or N=40 — these sample
+sizes are far too small to resolve a rate that precisely; 0/10 and 0/40
+mismatches is the entire evidentiary claim, reported as exact counts, not as
+an inferred percentage with a confidence interval.
+
+Zero mismatches on all 10 real decision trials. Decision-agreement here also
+uses the real production
 `router.calibrator.fit_risk_calibrator`/`RiskCalibrator.predict` and
 `router.policy._select_by_risk`/`_select_by_risk_and_latency_budget`
 functions (not reimplementations) — closes the last piece of Codex's
@@ -504,7 +541,73 @@ Raw: `reports/audit_gpu_risk_kernel_production_E3.json`.
 closed. The evidence package for router closing requirement 2 is complete and
 canonical.**
 
-## Not yet done (all non-gating per Codex's explicit ruling)
+## FINAL LOCK, 2026-09-29 — Codex
+
+Closing requirement 2 is **PASS and permanently locked**: canonical
+per-seed risk grid (shared identically between E1/E3, only the hardware
+cost table differs), 3 supernet seeds, 2 structurally different accelerator
+backends, directly measured end-to-end route costs, full per-image
+e2e-aware replay, CUDA kernel validated against the production PyTorch
+implementation on real TensorRT outputs. No correctness or bookkeeping item
+remains open. Temporal-window routing, UIoU, cold-reload replay, and the
+numpy-overhead decomposition are **not required** to complete this paper.
+
+**Artifact freeze — after this point, do not modify the policy code, risk
+grid, data split, or metric definitions used below. A manuscript-wording-only
+change never requires reopening this evidence package; a change to any of
+the items below does.**
+
+- **Commit**: this update ships in the same commit as this section (`git log
+  -1` at the time this file was written; see the repo's commit history for
+  the exact SHA — deliberately not hardcoded here per this project's
+  existing convention of pointing to `git log` rather than a SHA that would
+  go stale if this file is ever amended).
+- **Canonical result files**: `reports/router_overhead_replay_E3_20260928
+  .json` (seed0/E3), `reports/router_overhead_replay_E1_20260928.json`
+  (seed0/E1), `reports/router_overhead_replay_E3_seed2_20260929.json`,
+  `reports/router_overhead_replay_E1_seed2_20260929.json`,
+  `reports/router_overhead_replay_E3_seed3_20260929.json`,
+  `reports/router_overhead_replay_E1_seed3_20260929.json`.
+- **Kernel audits**: `reports/audit_gpu_risk_kernel_E3.json` (2,000-trial
+  synthetic arithmetic stress test), `reports/audit_gpu_risk_kernel_
+  production_E3.json` (40-real-output integration audit).
+- **Seed/checkpoint IDs**: `pace_seg_v1_seed0`, `pace_seg_v1_seed2`,
+  `pace_seg_v1_aug_seed3` (all `step_00100000.pt`, 100k-step full runs).
+- **Per-image dumps**: `reports/router_per_image_dump_seed0.json`,
+  `_seed2.json`, `_seed3.json`.
+- **Canonical risk-grid source per seed**: seed0 —
+  `reports/router_E3_20260921.json` (verified byte-identical to
+  `router_E1_20260921.json` for this seed); seed2 —
+  `reports/router_E3_seed2_dump_meta.json`; seed3 —
+  `reports/router_E3_seed3_dump_meta.json`. The same file is used for
+  *both* E1 and E3's replay of that seed.
+- **E1/E3 latency-table IDs**: `reports/router_overhead_E3_20260922.json`
+  (TensorRT/CUDA, `gpu`-kernel entropy backend, warm/resident);
+  `reports/router_overhead_E1_20260928.json` (Hailo-8, `numpy` entropy
+  backend — the only one that exists on this architecture, warm/resident).
+- **Replay command** (per seed/device, `--entropy-backend` selects which
+  warm-latency table to read): `scripts/replay_router_with_overhead.py
+  --per-image-dump reports/router_per_image_dump_seed{N}.json
+  --overhead-json reports/router_overhead_{E1,E3}_2026....json
+  --original-results-json <canonical grid file for that seed>
+  --lookup-table outputs/benchmark_lookup_table.csv --device-id {E1,E3}
+  --backend {hailo_hef,tensorrt_gpu} --entropy-backend {numpy,gpu}
+  --output-json reports/router_overhead_replay_{device}_seed{N}_
+  20260929.json`.
+- **Kernel audit commands**: `scripts/audit_gpu_risk_kernel.py
+  --engine-dir . --output-json reports/audit_gpu_risk_kernel_E3.json` (on
+  E3); `scripts/capture_real_engine_outputs.py --engine-dir . --n-samples 10
+  --output-dir real_outputs` (on E3) then `scripts/
+  audit_gpu_risk_kernel_production.py --real-outputs-dir
+  reports/real_outputs --output-json reports/audit_gpu_risk_kernel_
+  production_E3.json` (on the dev machine, needs torch).
+- **Final locked table**: the "Aggregated (Codex's requested summary
+  format)" table above (E3 35/60, E1 34/60, Overall 69/120 fair — 51/16/2
+  W/T/L, 97.1% win-or-tie, macro +0.0241 mIoU, D 0/120 violations, A 51/120
+  violations) and the adopted claim/boundary/three-annotations block above
+  this section are the frozen, final numbers for this closing requirement.
+
+## Not yet done (all non-gating per Codex's explicit ruling — confirmed unnecessary to complete this paper)
 
 - Cold/reload frontier replay (only warm/resident was used for the win/loss
   analysis above on either backend, per Codex's rule that cold is a
