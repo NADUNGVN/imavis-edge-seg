@@ -18,7 +18,7 @@ The locked selection protocol is:
    `selection_manifest.json`.
 
 This median-error rule prevents selecting only visually successful examples. A routed
-column remains gated by the fit/deployment risk-feature correction and router rerun.
+column remains gated by the deployment-matched Run A--C router rerun.
 
 Required inputs for the assembly script are intentionally not replaced by synthetic
 or manually edited imagery.

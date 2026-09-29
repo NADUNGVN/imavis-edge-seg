@@ -8,6 +8,16 @@
 > starting a body of work that touches files another agent might also touch.
 > Append-only in spirit — add new entries, don't rewrite history.
 
+## 2026-09-29 user-directed Codex workstream
+
+The user explicitly assigned Codex the scientific-writing and visualization work,
+including the router feature correction. Codex changed the evaluator so fit and
+deployment both use all-pixel entropy, added regression coverage and a non-overwriting
+Run A--C -> E1/E3 replay -> summary pipeline, and marked the historical router
+numbers as diagnostic. No server, GPU, or experiment ID is claimed here. The real
+rerun remains pending because this local workspace has neither the three checkpoints
+nor licensed Cityscapes/ACDC images.
+
 ## Standing rules (agreed 2026-09-20)
 
 - **Claude**: coordination log, code, server jobs (launched by the user pasting

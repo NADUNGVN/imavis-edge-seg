@@ -50,9 +50,33 @@ and A 51/120 violating cells. These values are retained only as a conditional di
 because fitting and deployment use different entropy pixel sets. They are not visualized
 as a final quality--latency figure in v3.
 
+The evaluator now defines the fit-time and deployment-time feature identically as
+mean softmax entropy over all output pixels. The previous dumps do not store logits,
+so they cannot be repaired post hoc. A full Run A/B/C inference rerun is required.
+Until the new artifacts exist, the values above remain historical diagnostics and
+must not be promoted to a final RQ3 claim.
+
+### Manuscript-facing run mapping
+
+- Run A: `pace_seg_v1_aug_seed0`, step 100,000.
+- Run B: `pace_seg_v1_seed2`, step 100,000.
+- Run C: `pace_seg_v1_aug_seed3`, step 100,000.
+
+### Deployment-matched rerun chain
+
+- Evaluator: `scripts/evaluate_router.py`.
+- E1/E3 replay: `scripts/replay_router_with_overhead.py`.
+- Descriptive aggregation: `scripts/summarize_router_replays.py`.
+- End-to-end driver: `scripts/run_router_deployment_matched_pipeline.py`.
+- Low-cost routing control: pooled-across-splits candidate calibrators, evaluated
+  under the same hard-budget policy and complete route costs.
+- Required external inputs: the three checkpoints and licensed Cityscapes/ACDC data.
+- Output rule: use a new directory; never overwrite the historical replay artifacts.
+
 ## Claim status
 
 - RQ1 measured-cost claim: supported within the four-candidate, four-device setting.
 - RQ2 near-parity claim: supported as a descriptive three-run comparison.
-- RQ3 routing mechanism: retained; quantitative advantage remains conditional.
+- RQ3 routing mechanism: retained; quantitative advantage remains conditional until
+  the deployment-matched pipeline completes.
 - QAT: secondary fake-quant evidence only.

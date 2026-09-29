@@ -11,6 +11,12 @@ This packet is for an adversarial scientific review of PACE-Seg before manuscrip
 
 Treat README statements as claims, not evidence. Trace every headline number to the report, raw JSON, and implementation. Operating cells and backend replays are correlated; do not treat them as independent statistical samples.
 
+**Scientific correction after the frozen review snapshot.** The historical router
+fit-half feature used a ground-truth-valid entropy mask unavailable at deployment.
+The evaluator now uses all-pixel entropy in both phases, but the three checkpoints
+and licensed datasets must be rerun. Therefore the router arithmetic below is an
+audit invariant for the historical artifacts, not a submission headline.
+
 ## Required reading order
 
 1. [README](../README.md) — project map and living status only.
@@ -33,9 +39,9 @@ Treat README statements as claims, not evidence. Trace every headline number to 
    - [quantization](../src/imavis_edge_seg/training/quantization.py)
 10. [Claims–evidence matrix](CLAIMS_EVIDENCE_MATRIX.md), then use [strict review prompt](GPT_STRICT_REVIEW_PROMPT.md).
 
-## Locked headline router result
+## Historical router result to audit
 
-Using directly measured end-to-end route costs, candidate-specific, hardware-cost-conditioned routing outperformed or matched the rank-based policy in 67 of 69 fair operating cells (51 wins, 16 ties, 2 losses) across three independently trained supernets and two structurally different accelerator backends. It achieved a macro-averaged gain of 0.0241 mIoU (2.41 points) and produced no budget-violating operating point across all 120 evaluated cells.
+The old artifacts report 67 of 69 fair operating cells (51 wins, 16 ties, 2 losses), a macro-averaged gain of 0.0241 mIoU, D 0/120 violating cells, and A 51/120. These values must remain reproducible for audit, but they cannot support the final RQ3 claim until the deployment-matched Run A--C rerun is complete.
 
 Required boundary: the two backend evaluations share model predictions and demonstrate cross-backend deployment robustness, not independent accuracy replication.
 
@@ -51,6 +57,6 @@ Required boundary: the two backend evaluations share model predictions and demon
 
 ## Reviewer focus
 
-The strict review must challenge: the fair-cell filter; fit-half/held-out separation; canonical per-seed risk grids; budget-matched operating-point selection; oracle use; seed independence; latency double counting; tiny-output reuse; CUDA synchronization; Hailo activation semantics; stale HEFs; QAT scope; statistical dependence; missing closest work; and stale/conflicting numbers across README, reports and manuscript.
+The strict review must first verify that final router artifacts use identical all-pixel entropy at fit and deployment. It must then challenge: the fair-cell filter; fit-half/held-out separation; canonical per-run risk grids; budget-matched operating-point selection; oracle use; run provenance; latency double counting; tiny-output reuse; CUDA synchronization; Hailo activation semantics; stale HEFs; QAT scope; statistical dependence; missing closest work; and stale/conflicting numbers across README, reports and manuscript.
 
 The reviewer should recommend new experiments only when a central claim cannot stand without them. Otherwise separate mandatory manuscript corrections from optional extensions.

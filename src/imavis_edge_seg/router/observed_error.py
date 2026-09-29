@@ -15,8 +15,9 @@ from imavis_edge_seg.data.labels import IGNORE_INDEX
 def compute_per_image_error(pred: Tensor, target: Tensor) -> Tensor:
     """`pred`/`target`: `(B, H, W)` integer class ids (`pred` from `logits.argmax(1)`).
     Returns `(B,)`: fraction of non-`IGNORE_INDEX` pixels where `pred != target`, one
-    scalar per image -- masking matches `risk_probe.compute_risk_score`'s `target`-given
-    branch, so a risk score and its observed error are computed over the same pixels."""
+    scalar per image.  This is a supervised calibration target, so invalid label
+    pixels remain excluded even though the deployment-available entropy feature is
+    computed over all output pixels."""
     valid = target != IGNORE_INDEX
     wrong = (pred != target) & valid
     denom = valid.sum(dim=(1, 2)).clamp_min(1)

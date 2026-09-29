@@ -13,7 +13,10 @@ from imavis_edge_seg.router.calibrator import (  # noqa: E402
 )
 from imavis_edge_seg.router.observed_error import compute_per_image_error  # noqa: E402
 from imavis_edge_seg.router.policy import select_level  # noqa: E402
-from imavis_edge_seg.router.risk_probe import compute_risk_score  # noqa: E402
+from imavis_edge_seg.router.risk_probe import (  # noqa: E402
+    compute_deployment_risk_score,
+    compute_risk_score,
+)
 from imavis_edge_seg.search.pareto import ParetoPoint  # noqa: E402
 
 # ---- risk_probe ---------------------------------------------------------------------
@@ -51,6 +54,24 @@ def test_compute_risk_score_batch_dimension_independent() -> None:
     logits = torch.randn(3, 5, 4, 4)
     scores = compute_risk_score(logits)
     assert scores.shape == (3,)
+
+
+def test_deployment_risk_score_is_identical_for_fit_and_inference() -> None:
+    logits = torch.zeros(1, 3, 2, 2)
+    logits[:, 0] = 12.0
+    # Make one pixel maximally uncertain. A ground-truth mask could exclude it,
+    # but the deployed feature must include it at both fit and inference time.
+    logits[:, :, 1, 1] = 0.0
+    target = torch.zeros(1, 2, 2, dtype=torch.long)
+    target[:, 1, 1] = IGNORE_INDEX
+
+    deployment_feature_at_fit = compute_deployment_risk_score(logits)
+    deployment_feature_at_inference = compute_deployment_risk_score(logits)
+    legacy_masked_feature = compute_risk_score(logits, target)
+
+    assert torch.equal(deployment_feature_at_fit, deployment_feature_at_inference)
+    assert torch.equal(deployment_feature_at_fit, compute_risk_score(logits))
+    assert not torch.allclose(deployment_feature_at_fit, legacy_masked_feature)
 
 
 # ---- calibrator -----------------------------------------------------------------------
@@ -368,15 +389,14 @@ def test_compute_per_image_error_ignore_index_excluded() -> None:
     assert float(error) == pytest.approx(1 / 3)
 
 
-def test_compute_per_image_error_masking_matches_risk_score_masking() -> None:
-    # Same target/ignore pattern used by compute_risk_score(logits, target) -- both
-    # should agree on which pixels count, since a calibrator is fit on a
-    # (risk_score, error) pair computed over the *same* pixels.
+def test_calibration_target_can_mask_labels_without_masking_deployment_feature() -> None:
+    # The feature remains deployable (no target input), while the supervised error
+    # label excludes invalid ground-truth pixels.
     logits = torch.zeros(1, 3, 2, 2)
     logits[:, 0] = 10.0
     target = torch.zeros(1, 2, 2, dtype=torch.long)
     target[0, 1, 1] = IGNORE_INDEX
-    risk = compute_risk_score(logits, target)
+    risk = compute_deployment_risk_score(logits)
     pred = logits.argmax(dim=1)
     error = compute_per_image_error(pred, target)
     assert risk.shape == error.shape == (1,)

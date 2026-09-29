@@ -34,6 +34,9 @@ exact decision rules):
 - **oracle**: budget-matched and per-image -- for each of the 4 device-latency
   budgets, per image, the candidate with the lowest *ground-truth* observed error
   among those within budget. No risk-target sweep (oracle doesn't use a risk score).
+- **pooled_risk_latency_constrained**: the same hard-budget policy as D, but its
+  candidate calibrators are fitted after pooling all five fit halves. This is a
+  low-cost condition-agnostic calibration baseline; it uses no extra inference.
 
 For every strategy that takes a risk-target grid (A/B/C/entropy), a single
 budget-matched "operating point" is also picked per device-latency-budget, via
@@ -62,7 +65,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,20 +79,41 @@ from rich.console import Console
 from rich.table import Table
 
 from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig, RouterConfig, load_config
-from imavis_edge_seg.data.acdc import ALL_CONDITIONS
+from imavis_edge_seg.data.acdc import ALL_CONDITIONS, ACDCCondition
 from imavis_edge_seg.evaluation.data import build_acdc_eval_loader, build_cityscapes_eval_loader
 from imavis_edge_seg.evaluation.metrics import ConfusionMatrixAccumulator, compute_confusion_matrix
 from imavis_edge_seg.models.supernet import PaceSegSupernet
-from imavis_edge_seg.router.calibrator import fit_per_level_calibrators, prediction_inversion_rate
+from imavis_edge_seg.router.calibrator import (
+    RiskCalibrator,
+    fit_per_level_calibrators,
+    prediction_inversion_rate,
+)
 from imavis_edge_seg.router.grid import macro_quantile_grid, select_budget_matched_operating_point
 from imavis_edge_seg.router.observed_error import compute_per_image_error
 from imavis_edge_seg.router.policy import select_level
-from imavis_edge_seg.router.risk_probe import compute_risk_score
+from imavis_edge_seg.router.risk_probe import compute_deployment_risk_score
 from imavis_edge_seg.router.selective_metrics import area_under_risk_coverage, budget_violation_rate
 from imavis_edge_seg.search.pareto import ParetoPoint
 from imavis_edge_seg.training.checkpoint import load_checkpoint
 
 _PredMask = tuple[torch.Tensor, torch.Tensor]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _git_commit() -> str | None:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
 
 @dataclass
@@ -112,11 +138,15 @@ def _build_loaders(
     for level in config.supernet.levels:
         if split_name == "cityscapes":
             assert cityscapes_root is not None
-            loaders[level] = build_cityscapes_eval_loader(config, level, cityscapes_root, split="val", batch_size=1)
+            loaders[level] = build_cityscapes_eval_loader(
+                config, level, cityscapes_root, split="val", batch_size=1
+            )
         else:
             assert acdc_root is not None
-            condition = split_name.split("/", 1)[1]
-            loaders[level] = build_acdc_eval_loader(config, level, acdc_root, condition, split="val", batch_size=1)  # type: ignore[arg-type]
+            condition = cast(ACDCCondition, split_name.split("/", 1)[1])
+            loaders[level] = build_acdc_eval_loader(
+                config, level, acdc_root, condition, split="val", batch_size=1
+            )
     return loaders
 
 
@@ -160,10 +190,10 @@ def _collect_split_data(
         probe_image, probe_mask = probe_image.to(device), probe_mask.to(device)
         probe_logits = supernet(probe_image, probe_level)
 
-        # Fit-half: risk score computed WITH ground truth (matches the error it's
-        # being calibrated against -- same pixels excluded on both sides).
-        # Held-out: risk score computed WITHOUT ground truth, matching real inference.
-        raw_score = float(compute_risk_score(probe_logits, probe_mask if is_fit else None))
+        # The calibrator input must be identical at fitting and deployment: mean
+        # entropy over every output pixel, with no ground-truth-derived mask.  The
+        # supervised error target below still excludes IGNORE_INDEX pixels.
+        raw_score = float(compute_deployment_risk_score(probe_logits))
         (fit_raw_scores if is_fit else test_raw_scores).append(raw_score)
 
         target = fit_pred_mask if is_fit else test_pred_mask
@@ -174,7 +204,9 @@ def _collect_split_data(
             target[level].append((pred.cpu(), mask.cpu()))
 
     if not fit_raw_scores or not test_raw_scores:
-        raise ValueError(f"{split_name}: need at least 2 val images (got {num_images}) to split fit/test")
+        raise ValueError(
+            f"{split_name}: need at least 2 val images (got {num_images}) to split fit/test"
+        )
     return _SplitData(fit_raw_scores, fit_pred_mask, test_raw_scores, test_pred_mask)
 
 
@@ -182,7 +214,9 @@ def _per_image_errors(pred_mask: list[_PredMask]) -> list[float]:
     return [float(compute_per_image_error(pred, mask)) for pred, mask in pred_mask]
 
 
-def _per_image_confusion_matrices(pred_mask: list[_PredMask], num_classes: int) -> list[list[list[int]]]:
+def _per_image_confusion_matrices(
+    pred_mask: list[_PredMask], num_classes: int
+) -> list[list[list[int]]]:
     """One (num_classes, num_classes) confusion matrix per image -- summing these
     exactly reproduces `ConfusionMatrixAccumulator`'s mIoU for any *subset* or
     *re-routing* of images, without re-inference. Used for the per-image dump
@@ -266,6 +300,7 @@ def _evaluate_split(
     risk_target_grid: list[float],
     entropy_threshold_grid: list[float],
     data: _SplitData,
+    pooled_per_level_calibrators: dict[ElasticityLevel, RiskCalibrator],
     num_classes: int,
     dump_per_image: bool = False,
 ) -> dict[str, object]:
@@ -278,13 +313,25 @@ def _evaluate_split(
     fit_calibrated = [probe_calibrator.predict(s) for s in data.fit_raw_scores]
     test_calibrated = [probe_calibrator.predict(s) for s in data.test_raw_scores]
     fit_per_level_risk = [
-        {level: cal.predict(s) for level, cal in per_level_calibrators.items()} for s in data.fit_raw_scores
+        {level: cal.predict(s) for level, cal in per_level_calibrators.items()}
+        for s in data.fit_raw_scores
     ]
     test_per_level_risk = [
-        {level: cal.predict(s) for level, cal in per_level_calibrators.items()} for s in data.test_raw_scores
+        {level: cal.predict(s) for level, cal in per_level_calibrators.items()}
+        for s in data.test_raw_scores
+    ]
+    fit_pooled_per_level_risk = [
+        {level: cal.predict(s) for level, cal in pooled_per_level_calibrators.items()}
+        for s in data.fit_raw_scores
+    ]
+    test_pooled_per_level_risk = [
+        {level: cal.predict(s) for level, cal in pooled_per_level_calibrators.items()}
+        for s in data.test_raw_scores
     ]
 
-    def _frontier(strategy: str, grid: list[float], use_raw: bool, use_per_level: bool) -> list[dict[str, object]]:
+    def _frontier(
+        strategy: str, grid: list[float], use_raw: bool, use_per_level: bool
+    ) -> list[dict[str, object]]:
         points = []
         for target in grid:
             config = RouterConfig(strategy=strategy, risk_target=target)  # type: ignore[arg-type]
@@ -321,7 +368,9 @@ def _evaluate_split(
         return points
 
     frontiers = {
-        "calibrated_risk": _frontier("calibrated_risk", risk_target_grid, use_raw=False, use_per_level=False),
+        "calibrated_risk": _frontier(
+            "calibrated_risk", risk_target_grid, use_raw=False, use_per_level=False
+        ),
         "latency_spacing_risk": _frontier(
             "latency_spacing_risk", risk_target_grid, use_raw=False, use_per_level=False
         ),
@@ -331,35 +380,77 @@ def _evaluate_split(
         "entropy": _frontier("entropy", entropy_threshold_grid, use_raw=True, use_per_level=False),
     }
 
-    # Cell D: 4 device budgets x 5 risk targets = 20 operating points, evaluated
-    # directly on held-out (D's own policy already enforces the budget internally).
-    d_grid: list[dict[str, object]] = []
-    for budget in device_budget_grid:
-        for target in risk_target_grid:
-            config = RouterConfig(strategy="risk_latency_constrained", risk_target=target, latency_budget_ms=budget)
-            miou, avg_latency, lat_list, distribution = _accumulate_strategy(
-                candidates, config, None, None, test_per_level_risk, data.test_pred_mask, latency_by_level
-            )
-            d_grid.append(
-                {
-                    "latency_budget_ms": budget,
-                    "risk_target": target,
-                    "achieved_miou": miou,
-                    "avg_latency_ms": avg_latency,
-                    "violation_rate": budget_violation_rate(lat_list, budget),
-                    "routing_distribution": dict(distribution),
-                }
-            )
+    def _constrained_grid(
+        fit_risks: list[dict[ElasticityLevel, float]],
+        test_risks: list[dict[ElasticityLevel, float]],
+    ) -> list[dict[str, object]]:
+        points: list[dict[str, object]] = []
+        for budget in device_budget_grid:
+            for target in risk_target_grid:
+                config = RouterConfig(
+                    strategy="risk_latency_constrained",
+                    risk_target=target,
+                    latency_budget_ms=budget,
+                )
+                fit_miou, fit_latency, _, _ = _accumulate_strategy(
+                    candidates,
+                    config,
+                    None,
+                    None,
+                    fit_risks,
+                    data.fit_pred_mask,
+                    latency_by_level,
+                )
+                test_miou, test_latency, test_latencies, distribution = _accumulate_strategy(
+                    candidates,
+                    config,
+                    None,
+                    None,
+                    test_risks,
+                    data.test_pred_mask,
+                    latency_by_level,
+                )
+                points.append(
+                    {
+                        "latency_budget_ms": budget,
+                        "risk_target": target,
+                        "fit_half": {
+                            "achieved_miou": fit_miou,
+                            "avg_latency_ms": fit_latency,
+                        },
+                        "held_out": {
+                            "achieved_miou": test_miou,
+                            "avg_latency_ms": test_latency,
+                            "violation_rate": budget_violation_rate(test_latencies, budget),
+                            "routing_distribution": dict(distribution),
+                        },
+                    }
+                )
+        return points
+
+    d_grid = _constrained_grid(fit_per_level_risk, test_per_level_risk)
+    pooled_d_grid = _constrained_grid(fit_pooled_per_level_risk, test_pooled_per_level_risk)
 
     # Per-budget table: A/B/C/entropy each get ONE representative point per budget,
     # chosen on fit-half only (router.grid.select_budget_matched_operating_point);
     # D's 20-point grid is reduced to one per budget the same way, among its 5
     # risk-target sub-points at that budget; static/oracle need no selection.
-    at_budget: dict[str, dict[float, object]] = {name: {} for name in (*frontiers, "risk_latency_constrained")}
+    at_budget: dict[str, dict[float, object]] = {
+        name: {}
+        for name in (
+            *frontiers,
+            "risk_latency_constrained",
+            "pooled_risk_latency_constrained",
+        )
+    }
     for strategy_name, points in frontiers.items():
         for budget in device_budget_grid:
             operating_points = [
-                (cast(dict[str, float], p["fit_half"])["avg_latency_ms"], cast(dict[str, float], p["fit_half"])["achieved_miou"], p)
+                (
+                    cast(dict[str, float], p["fit_half"])["avg_latency_ms"],
+                    cast(dict[str, float], p["fit_half"])["achieved_miou"],
+                    p,
+                )
                 for p in points
             ]
             chosen, feasible = select_budget_matched_operating_point(operating_points, budget)
@@ -370,24 +461,40 @@ def _evaluate_split(
                 "feasible": feasible,
                 "achieved_miou": held_out["achieved_miou"],
                 "avg_latency_ms": held_out["avg_latency_ms"],
-                "violation_rate": budget_violation_rate(cast(list[float], held_out["chosen_latencies_ms"]), budget),
+                "violation_rate": budget_violation_rate(
+                    cast(list[float], held_out["chosen_latencies_ms"]), budget
+                ),
             }
-    for budget in device_budget_grid:
-        sub_points = [p for p in d_grid if p["latency_budget_ms"] == budget]
-        operating_points = [(cast(float, p["avg_latency_ms"]), cast(float, p["achieved_miou"]), p) for p in sub_points]
-        chosen, feasible = select_budget_matched_operating_point(operating_points, budget)
-        chosen_point = cast(dict[str, object], chosen)
-        at_budget["risk_latency_constrained"][budget] = {
-            "risk_target": chosen_point["risk_target"],
-            "feasible": feasible,
-            "achieved_miou": chosen_point["achieved_miou"],
-            "avg_latency_ms": chosen_point["avg_latency_ms"],
-            "violation_rate": chosen_point["violation_rate"],
-        }
+    for strategy_name, grid in (
+        ("risk_latency_constrained", d_grid),
+        ("pooled_risk_latency_constrained", pooled_d_grid),
+    ):
+        for budget in device_budget_grid:
+            sub_points = [p for p in grid if p["latency_budget_ms"] == budget]
+            operating_points = [
+                (
+                    cast(dict[str, float], p["fit_half"])["avg_latency_ms"],
+                    cast(dict[str, float], p["fit_half"])["achieved_miou"],
+                    p,
+                )
+                for p in sub_points
+            ]
+            chosen, feasible = select_budget_matched_operating_point(operating_points, budget)
+            chosen_point = cast(dict[str, object], chosen)
+            held_out = cast(dict[str, object], chosen_point["held_out"])
+            at_budget[strategy_name][budget] = {
+                "risk_target": chosen_point["risk_target"],
+                "feasible": feasible,
+                "achieved_miou": held_out["achieved_miou"],
+                "avg_latency_ms": held_out["avg_latency_ms"],
+                "violation_rate": held_out["violation_rate"],
+            }
 
     oracle_by_budget: dict[float, object] = {}
     for budget in device_budget_grid:
-        miou, avg_latency, lat_list = _oracle(budget, ordered_levels, latency_by_level, test_errors, data.test_pred_mask)
+        miou, avg_latency, lat_list = _oracle(
+            budget, ordered_levels, latency_by_level, test_errors, data.test_pred_mask
+        )
         oracle_by_budget[budget] = {
             "achieved_miou": miou,
             "avg_latency_ms": avg_latency,
@@ -399,7 +506,10 @@ def _evaluate_split(
         accumulator = ConfusionMatrixAccumulator()
         for pred, mask in data.test_pred_mask[level]:
             accumulator.update(pred, mask)
-        static_points[level] = {"latency_ms": latency_by_level[level], "achieved_miou": accumulator.compute().miou}
+        static_points[level] = {
+            "latency_ms": latency_by_level[level],
+            "achieved_miou": accumulator.compute().miou,
+        }
 
     inversion_rate = prediction_inversion_rate(ordered_levels, test_per_level_risk)
     probe_signal_aurc = area_under_risk_coverage(data.test_raw_scores, test_errors[probe_level])
@@ -420,6 +530,7 @@ def _evaluate_split(
         "static": static_points,
         "frontier": frontiers,
         "risk_latency_constrained_grid": d_grid,
+        "pooled_risk_latency_constrained_grid": pooled_d_grid,
         "at_budget": at_budget,
         "oracle": oracle_by_budget,
     }
@@ -440,14 +551,19 @@ def _evaluate_split(
             "probe_level": probe_level,
             "fit_raw_scores": data.fit_raw_scores,
             "fit_confusion_matrices": {
-                level: _per_image_confusion_matrices(pm, num_classes) for level, pm in data.fit_pred_mask.items()
+                level: _per_image_confusion_matrices(pm, num_classes)
+                for level, pm in data.fit_pred_mask.items()
             },
             "test_raw_scores": data.test_raw_scores,
             "test_confusion_matrices": {
-                level: _per_image_confusion_matrices(pm, num_classes) for level, pm in data.test_pred_mask.items()
+                level: _per_image_confusion_matrices(pm, num_classes)
+                for level, pm in data.test_pred_mask.items()
             },
             "per_level_calibrators": {
                 level: cal.to_dict() for level, cal in per_level_calibrators.items()
+            },
+            "pooled_per_level_calibrators": {
+                level: cal.to_dict() for level, cal in pooled_per_level_calibrators.items()
             },
         }
     return result
@@ -457,13 +573,28 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("configs/experiment/default.yaml"))
-    parser.add_argument("--lookup-table", type=Path, default=Path("outputs/benchmark_lookup_table.csv"))
-    parser.add_argument("--device-id", required=True, help='deployment target device, e.g. "E1" or "E3"')
-    parser.add_argument("--backend", required=True, help='deployment target backend, e.g. "hailo_hef" or "tensorrt_gpu"')
+    parser.add_argument(
+        "--lookup-table", type=Path, default=Path("outputs/benchmark_lookup_table.csv")
+    )
+    parser.add_argument(
+        "--device-id", required=True, help='deployment target device, e.g. "E1" or "E3"'
+    )
+    parser.add_argument(
+        "--backend",
+        required=True,
+        help='deployment target backend, e.g. "hailo_hef" or "tensorrt_gpu"',
+    )
     parser.add_argument("--latency-field", default="end_to_end_p95_ms")
-    parser.add_argument("--probe-level", default=None, help="default: the cheapest configured level")
+    parser.add_argument(
+        "--probe-level", default=None, help="default: the cheapest configured level"
+    )
     parser.add_argument("--dataset", action="append", default=[], choices=["cityscapes", "acdc"])
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--run-label",
+        default=None,
+        help='manuscript-facing training-run label, e.g. "Run A"; stored in artifact metadata',
+    )
     parser.add_argument("--output-json", type=Path, default=None)
     parser.add_argument(
         "--dump-per-image",
@@ -483,7 +614,9 @@ def main() -> None:
     checkpoint = load_checkpoint(args.checkpoint, map_location=args.device)
     supernet.load_state_dict(checkpoint["model_state_dict"])
     supernet.eval()
-    console.print(f"loaded checkpoint step={checkpoint['step']} config_hash={checkpoint['config_hash']}")
+    console.print(
+        f"loaded checkpoint step={checkpoint['step']} config_hash={checkpoint['config_hash']}"
+    )
 
     probe_level: ElasticityLevel = args.probe_level or config.supernet.levels[0]
     ordered_levels: list[ElasticityLevel] = list(config.supernet.levels)
@@ -498,7 +631,9 @@ def main() -> None:
         matches = [
             r
             for r in lookup_rows
-            if r["device_id"] == args.device_id and r["backend"] == args.backend and r["level"] == level
+            if r["device_id"] == args.device_id
+            and r["backend"] == args.backend
+            and r["level"] == level
         ]
         if matches and matches[0].get(args.latency_field):
             latency_by_level[level] = float(matches[0][args.latency_field])
@@ -536,6 +671,28 @@ def main() -> None:
     if "acdc" in datasets and acdc_root is not None:
         split_names.extend(f"acdc/{c}" for c in ALL_CONDITIONS)
 
+    artifact_metadata = {
+        "schema_version": 2,
+        "run_label": args.run_label,
+        "source_checkpoint": str(args.checkpoint),
+        "source_checkpoint_sha256": _sha256_file(args.checkpoint),
+        "checkpoint_step": checkpoint["step"],
+        "checkpoint_config_hash": checkpoint["config_hash"],
+        "config": str(args.config),
+        "lookup_table": str(args.lookup_table),
+        "lookup_table_sha256": _sha256_file(args.lookup_table),
+        "device_id": args.device_id,
+        "backend": args.backend,
+        "latency_field": args.latency_field,
+        "probe_level": probe_level,
+        "evaluated_splits": split_names,
+        "split_protocol": "alternating validation indices: even=fit, odd=held-out",
+        "risk_feature": "mean softmax entropy over all output pixels (deployment-matched v1)",
+        "calibration_target": "per-image pixel error over non-IGNORE_INDEX labels",
+        "calibration_scope": "condition-specific primary policy plus pooled-across-splits baseline",
+        "code_commit": _git_commit(),
+    }
+
     # Pass 1: collect every split's cached predictions first -- the risk-target and
     # entropy-threshold grids are macro-averaged ACROSS splits (Codex: "một bộ tau
     # chung cho E1/E2/E3/E5; không tính lại theo device" -- device-independent, and
@@ -559,6 +716,12 @@ def main() -> None:
         raw_pools.append(data.fit_raw_scores)
     risk_target_grid = macro_quantile_grid(error_pools)
     entropy_threshold_grid = macro_quantile_grid(raw_pools)
+    pooled_raw_scores = [score for data in split_data.values() for score in data.fit_raw_scores]
+    pooled_errors: dict[ElasticityLevel, list[float]] = {level: [] for level in ordered_levels}
+    for data in split_data.values():
+        for level in ordered_levels:
+            pooled_errors[level].extend(_per_image_errors(data.fit_pred_mask[level]))
+    pooled_per_level_calibrators = fit_per_level_calibrators(pooled_raw_scores, pooled_errors)
     console.print(
         f"locked grids (macro-averaged across {len(split_names)} splits' fit-halves): "
         f"risk_target_grid={[round(v, 4) for v in risk_target_grid]} "
@@ -580,6 +743,7 @@ def main() -> None:
             risk_target_grid,
             entropy_threshold_grid,
             split_data[split_name],
+            pooled_per_level_calibrators,
             config.supernet.num_classes,
             dump_per_image=args.dump_per_image is not None,
         )
@@ -587,7 +751,9 @@ def main() -> None:
             per_image_dumps[split_name] = split_result.pop("per_image_dump")
         results[split_name] = split_result
 
-        table = Table(title=f"router at-budget summary -- {split_name} -- probe={probe_level} target={args.device_id}/{args.backend}")
+        table = Table(
+            title=f"router at-budget summary -- {split_name} -- probe={probe_level} target={args.device_id}/{args.backend}"
+        )
         table.add_column("strategy")
         table.add_column("budget (ms)", justify="right")
         table.add_column("avg latency (ms)", justify="right")
@@ -617,15 +783,24 @@ def main() -> None:
             )
         static_points = cast(dict[ElasticityLevel, dict[str, object]], split_result["static"])
         for level, point in static_points.items():
-            table.add_row(f"static_{level}", "n/a", f"{cast(float, point['latency_ms']):.3f}", f"{cast(float, point['achieved_miou']):.4f}", "n/a", "n/a")
+            table.add_row(
+                f"static_{level}",
+                "n/a",
+                f"{cast(float, point['latency_ms']):.3f}",
+                f"{cast(float, point['achieved_miou']):.4f}",
+                "n/a",
+                "n/a",
+            )
         console.print(table)
 
     if args.output_json:
+        results["_metadata"] = artifact_metadata
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(json.dumps(results, indent=2, default=str))
         console.print(f"wrote {args.output_json}")
 
     if args.dump_per_image is not None:
+        per_image_dumps["_metadata"] = artifact_metadata
         args.dump_per_image.parent.mkdir(parents=True, exist_ok=True)
         args.dump_per_image.write_text(json.dumps(per_image_dumps, indent=2, default=str))
         console.print(f"wrote {args.dump_per_image}")

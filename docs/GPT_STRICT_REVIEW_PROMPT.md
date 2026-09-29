@@ -19,26 +19,27 @@ Your task is to audit scientific validity, novelty, experimental rigor, deployme
 
 ## Mandatory audit
 
-1. Recompute the headline arithmetic: 69/120 fair cells; 51 wins, 16 ties, 2 losses; 67/69 win-or-tie; macro ΔmIoU +0.0241 = +2.41 points; D violations 0/120; A violating cells 51/120.
-2. Determine whether “fair cells” favors D or removes important failures. State what all-cell results must accompany the fair-cell comparison.
-3. Verify that three seeds are independently trained and that no checkpoint, split, calibrator, threshold or risk grid was accidentally reused.
-4. Audit fit-half versus held-out-half separation for calibrators, quantiles, operating-point selection, diagnostics and oracle construction.
-5. Verify the corrected canonical grid: one risk-target grid per seed, shared between E1 and E3; only end-to-end route costs differ.
-6. Assess whether “hardware-cost-conditioned” is accurate. Determine when decisions depend only on latency rank and when absolute latency changes an operating point.
-7. Audit the zero-violation claim. Separate hard-constraint behavior by construction from empirical reliability, and distinguish per-image violations from violating operating cells.
-8. Verify that E1 and E3 reuse model predictions and are not presented as independent accuracy replications.
-9. Audit end-to-end latency accounting: probe, risk computation, calibrator/policy, candidate inference, tiny-output reuse, switching/activation, synchronization, and prevention of candidate-latency double counting.
-10. Inspect the production CUDA audit: real TensorRT outputs, all four shapes, actual PyTorch function, real A/D policy functions, sample count, locked tolerance and observed mismatches.
-11. Audit Hailo evidence: current post-rescale HEFs, mandatory activation/deactivation, one active network group, VDevice constraints, and non-equivalence of E1/E3 cold scenarios.
-12. Audit QAT: paired three-seed evidence, all four levels, observer versus weight-sharing attribution, worst-case versus mean behavior, and the boundary between fake quantization and compiled INT8 deployment.
-13. Audit statistical validity: operating cells, thresholds and devices are correlated; shared predictions cannot be counted as new accuracy samples; no invalid significance test may use cells as independent observations.
-14. Verify that the oracle is only an upper bound and does not leak held-out labels into a deployable policy.
-15. Search current primary literature for the closest work in elastic semantic segmentation, hardware-aware subnet selection, uncertainty/risk-aware adaptive inference, candidate-specific calibration, adverse-condition edge vision, and quantization of slimmable networks. Cite direct papers and explain exact overlap.
-16. Identify missing baselines or ablations that could invalidate a central claim. Do not request experiments merely because they would be interesting.
-17. Check consistency across README, research plan, manuscript, reports, raw JSON, captions and code. Flag every stale number, stale claim and terminology conflict.
-18. Inspect whether the manuscript fairly distinguishes hardware-in-the-loop selection from hardware-aware training or continuous architecture search.
-19. Check whether training/maintenance-cost claims are actually quantified.
-20. Check whether the absence of compiled INT8 accuracy, power-meter energy data, temporal routing or UIoU is correctly framed as a limitation rather than hidden.
+1. Verify from code and metadata that calibrator fitting and deployment compute the identical all-pixel entropy feature. If final artifacts still use target-masked fit entropy, classify the RQ3 headline as unsupported.
+2. Recompute the historical diagnostic arithmetic: 69/120 fair cells; 51 wins, 16 ties, 2 losses; 67/69 win-or-tie; macro ΔmIoU +0.0241 = +2.41 points; D violations 0/120; A violating cells 51/120. Do not promote these values unless the deployment-matched rerun reproduces them.
+3. Determine whether “fair cells” favors D or removes important failures. State what all-cell results must accompany the fair-cell comparison.
+4. Verify the provenance of Runs A--C and that no checkpoint, split, calibrator, threshold or risk grid was accidentally reused.
+5. Audit fit-half versus held-out-half separation for calibrators, quantiles, operating-point selection, diagnostics and oracle construction.
+6. Verify the corrected canonical grid: one risk-target grid per run, shared between E1 and E3; only end-to-end route costs differ.
+7. Assess whether “hardware-cost-conditioned” is accurate. Determine when decisions depend only on latency rank and when absolute latency changes an operating point.
+8. Audit the zero-violation claim. Separate hard-constraint behavior by construction from empirical reliability, and distinguish per-image violations from violating operating cells.
+9. Verify that E1 and E3 reuse model predictions and are not presented as independent accuracy replications.
+10. Audit end-to-end latency accounting: probe, risk computation, calibrator/policy, candidate inference, tiny-output reuse, switching/activation, synchronization, and prevention of candidate-latency double counting.
+11. Inspect the production CUDA audit: real TensorRT outputs, all four shapes, actual PyTorch function, real A/D policy functions, sample count, locked tolerance and observed mismatches.
+12. Audit Hailo evidence: current post-rescale HEFs, mandatory activation/deactivation, one active network group, VDevice constraints, and non-equivalence of E1/E3 cold scenarios.
+13. Audit QAT: paired three-seed evidence, all four levels, observer versus weight-sharing attribution, worst-case versus mean behavior, and the boundary between fake quantization and compiled INT8 deployment.
+14. Audit statistical validity: operating cells, thresholds and devices are correlated; shared predictions cannot be counted as new accuracy samples; no invalid significance test may use cells as independent observations.
+15. Verify that the oracle is only an upper bound and does not leak held-out labels into a deployable policy.
+16. Search current primary literature for the closest work in elastic semantic segmentation, hardware-aware subnet selection, uncertainty/risk-aware adaptive inference, candidate-specific calibration, adverse-condition edge vision, and quantization of slimmable networks. Cite direct papers and explain exact overlap.
+17. Identify missing baselines or ablations that could invalidate a central claim. Do not request experiments merely because they would be interesting.
+18. Check consistency across README, research plan, manuscript, reports, raw JSON, captions and code. Flag every stale number, stale claim and terminology conflict.
+19. Inspect whether the manuscript fairly distinguishes hardware-in-the-loop selection from hardware-aware training or continuous architecture search.
+20. Check whether training/maintenance-cost claims are actually quantified.
+21. Check whether the absence of compiled INT8 accuracy, power-meter energy data, temporal routing or UIoU is correctly framed as a limitation rather than hidden.
 
 ## Required output
 

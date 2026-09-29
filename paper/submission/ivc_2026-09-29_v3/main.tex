@@ -37,7 +37,7 @@
 \author{D\~{u}ng Nguy\~{\^{e}}n}
 
 \begin{abstract}
-Edge semantic segmentation faces two coupled deployment uncertainties: visual difficulty changes under adverse conditions, and model cost changes across accelerator architectures. We present \method, a compiler-safe elastic segmentation model that exposes four statically deployable capacities from one shared training process. A runtime policy uses measured route latency and candidate-specific mappings from a shared low-cost entropy probe to select capacity under a hardware budget. Experiments use Cityscapes, the fog, night, rain, and snow conditions of ACDC, and four edge devices. The four capacities span $110.2\times$ in FLOPs but only $10.3$--$19.5\times$ in measured candidate latency; a simple proportional FLOPs proxy therefore fails to reproduce measured budget choices. The largest elastic capacity remains within 1.1 \miou{} points of a similarly sized independently trained Fast-SCNN on every evaluated split, supporting shared-training near-parity rather than superiority. Candidate-specific routing is evaluated by held-out replay with complete warm-route costs measured on TensorRT/CUDA and Hailo-8. That analysis favors the budget-constrained policy, but its calibration feature is computed with a ground-truth-valid mask during fitting and without that mask at deployment. We therefore report the routing result as conditional diagnostic evidence rather than a frozen headline claim. A secondary fake-quant study finds that EMA-percentile activation calibration keeps worst-condition degradation within 1.5 \miou{} points for every tested run and elasticity level; it does not establish compiled INT8 accuracy. The study supports measured-cost elastic deployment while identifying deployment-matched calibration as the remaining requirement for a final routing claim.
+Edge semantic segmentation faces two coupled deployment uncertainties: visual difficulty changes under adverse conditions, and model cost changes across accelerator architectures. We present \method, a compiler-safe elastic segmentation model that exposes four statically deployable capacities from one shared training process. A runtime policy uses measured route latency and candidate-specific mappings from a shared low-cost entropy probe to select capacity under a hardware budget. Experiments use Cityscapes, the fog, night, rain, and snow conditions of ACDC, and four edge devices. The four capacities span $110.2\times$ in FLOPs but only $10.3$--$19.5\times$ in measured candidate latency; a simple proportional FLOPs proxy therefore fails to reproduce measured budget choices. The largest elastic capacity remains within 1.1 \miou{} points of a similarly sized independently trained Fast-SCNN on every evaluated split, supporting shared-training near-parity rather than superiority. Candidate-specific routing is evaluated by held-out replay with complete warm-route costs measured on TensorRT/CUDA and Hailo-8. The available replay favors the budget-constrained policy, but it was fitted with a ground-truth-valid entropy mask unavailable at deployment. We therefore report the routing result as conditional diagnostic evidence rather than a frozen headline claim. A secondary fake-quant study finds that EMA-percentile activation calibration keeps worst-condition degradation within 1.5 \miou{} points for every tested run and elasticity level; it does not establish compiled INT8 accuracy. The study supports measured-cost elastic deployment while identifying deployment-matched calibration as the remaining requirement for a final routing claim.
 \end{abstract}
 
 \begin{keyword}
@@ -68,7 +68,7 @@ The contributions are as follows:
     \item A candidate-specific calibrated-risk policy maps one inexpensive visual probe to candidate error estimates and selects capacity under an explicit hardware budget.
 \end{enumerate}
 
-The routing method is a primary methodological contribution, but its current quantitative comparison is not a frozen headline result. Calibration fitting and deployment use different pixel sets when computing entropy. Until that feature is made identical, the router experiment is interpreted as conditional evidence about the policy rather than a final estimate of deployment benefit.
+The routing method is a primary methodological contribution, but the available quantitative comparison is not a frozen headline result. Its calibration fit and deployment use different pixel sets when computing entropy. A deployment-matched rerun is required before the experiment can estimate deployment benefit.
 
 \section{Related work}
 \label{sec:related}
@@ -162,7 +162,7 @@ For each candidate $l$, we fit a monotonic calibrator $g_l$ that maps the same $
 \end{equation}
 is candidate-specific calibration from shared sensing, not candidate-specific probing. At deployment, this formulation requires the relevant domain or condition to be known or otherwise configured so that the corresponding calibrator set is selected.
 
-The implementation computes fit-half entropy only over ground-truth-valid pixels but computes inference and held-out entropy over all pixels because an ignore mask is unavailable at deployment. This does not expose held-out ground truth to the policy, but it is a fit--deployment feature mismatch. We retain the frozen evidence and disclose the mismatch rather than describing the calibrator as perfectly deployment-matched.
+The available routing evidence computes fit-half entropy only over ground-truth-valid pixels but computes inference and held-out entropy over all pixels because an ignore mask is unavailable at deployment. This does not expose held-out ground truth to the policy, but it is a fit--deployment feature mismatch. We disclose that mismatch rather than describing the reported calibrator as deployment-matched.
 
 \subsection{Hardware-cost-conditioned policy}
 \label{sec:policy}
@@ -194,25 +194,25 @@ Cityscapes supplies 2,975 training and 500 validation images~\cite{cordts2016cit
 
 \subsection{Training runs and baselines}
 
-The near-parity comparison uses three augmented supernet runs and three augmented Fast-SCNN runs. The router analysis uses the three separately trained seed-labelled checkpoints summarized in Table~\ref{tab:provenance}. Repository naming indicates that two runs are augmentation-labelled and one is an unlabelled configuration; checkpoint hashes, initialization-parent identifiers, and immutable full training manifests are not recorded in the report. We consequently call them separate training runs rather than a controlled three-seed estimate under a proven identical configuration.
+The near-parity comparison uses three reported supernet runs and three augmented Fast-SCNN runs. The router analysis uses the three separately trained checkpoints summarized in Table~\ref{tab:provenance}. Repository records identify two augmentation-labelled runs and one earlier unlabelled run; checkpoint hashes, initialization-parent identifiers, and immutable full training manifests are not recorded in the report. We consequently call them separate training runs rather than a controlled three-seed estimate under a proven identical configuration.
 
 \begin{table}[H]
 \centering
 \caption{Training-checkpoint provenance used by the router analysis. Missing fields are reported rather than inferred.}
 \label{tab:provenance}
 \small
-\begin{tabularx}{\textwidth}{@{}lXclX@{}}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}p{0.25\textwidth}lX@{}}
 \toprule
-Run & Repository experiment ID & Seed & Checkpoint & Provenance boundary \\
+Run & Training record & Checkpoint & Provenance boundary \\
 \midrule
-0 & \texttt{pace\_seg\_v1\_aug\_seed0} & 0 & step 100,000 & Augmentation-labelled ID; checkpoint/config hash and initialization parent unavailable \\
-2 & \texttt{pace\_seg\_v1\_seed2} & 2 & step 100,000 & Earlier unlabelled ID; checkpoint/config hash and initialization parent unavailable \\
-3 & \texttt{pace\_seg\_v1\_aug\_seed3} & 3 & step 100,000 & Augmentation-labelled ID; checkpoint/config hash and initialization parent unavailable \\
+A & Augmentation-labelled & step 100,000 & Full configuration hash and initialization parent unavailable \\
+B & Earlier unlabelled record & step 100,000 & Augmentation label, full configuration hash, and initialization parent unavailable \\
+C & Augmentation-labelled & step 100,000 & Full configuration hash and initialization parent unavailable \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Fixed-architecture comparisons include Fast-SCNN, BiSeNetV2, SegFormer-B0, DDRNet-23-slim, and MobileNetV3+DeepLabV3. Fast-SCNN is the parameter-matched RQ2 comparator for the large elastic level. Static-small, static-large, raw entropy, rank-based calibrated policy A, latency-spacing policy B, candidate-specific budget-unaware policy C, constrained policy D, and an oracle provide routing references.
+Fixed-architecture comparisons include Fast-SCNN, BiSeNetV2, SegFormer-B0, DDRNet-23-slim, and MobileNetV3 with DeepLabV3. Fast-SCNN is the parameter-matched RQ2 comparator for the large elastic level. Routing references comprise static tiny and large candidates, raw entropy, rank-based policy A, latency-spacing policy B, candidate-specific policy C without a budget, constrained policy D, and an oracle.
 
 \subsection{Hardware and compiler versions}
 
@@ -245,7 +245,7 @@ The route harnesses use compiled graphs with the correct post-rescale architectu
 
 \subsection{Metrics, seed policy, and unit of analysis}
 
-Segmentation quality is dataset-level \miou{}. Router calibration targets per-image pixel error, while routed quality is recomputed by accumulating confusion matrices from the selected candidates and calculating \miou{} once over the routed held-out set. Headline accuracy comparisons require three training runs. The router evidence uses three separately trained seed-labelled checkpoints, but incomplete configuration provenance prevents treating them as a perfectly controlled identical-configuration seed study.
+Segmentation quality is dataset-level \miou{}. Router calibration targets per-image pixel error, while routed quality is recomputed by accumulating confusion matrices from the selected candidates and calculating \miou{} once over the routed held-out set. Headline accuracy comparisons require three training runs. The router evidence uses Runs A--C, but incomplete configuration provenance prevents treating them as a perfectly controlled identical-configuration seed study.
 
 The router reporting unit is an operating cell defined by checkpoint, backend cost table, dataset split, and budget. Cells reuse images, predictions, thresholds, and candidate sets. They are correlated analysis points, not independent statistical samples. We therefore report descriptive counts and macro averages without cell-level $p$-values or confidence intervals.
 
@@ -258,7 +258,7 @@ Every candidate is evaluated once per image and its prediction is cached. Within
 
 For each budget and policy, the representative risk target is selected from fit-half statistics: among points whose fit-half mean cost satisfies the budget, the procedure chooses the highest fit-half \miou{} and breaks ties by lower cost. Held-out outcomes are read only after this choice. The oracle uses held-out ground truth only as a non-deployable upper bound.
 
-The current calibration feature is not deployment-matched. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. This is not held-out label leakage, but it changes the feature supplied to the calibrator. Under the evidence rule adopted here, router quality counts obtained with this mismatch are diagnostic and cannot support a frozen RQ3 headline until fitting is repeated with the deployment-time feature definition.
+The reported calibration feature is not deployment-matched. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. This is not held-out label leakage, but it changes the feature supplied to the calibrator. Router quality counts obtained with this mismatch are therefore diagnostic and cannot support a frozen RQ3 headline until fitting is repeated with the deployment-time feature definition.
 
 \section{Results}
 \label{sec:results}
@@ -278,12 +278,12 @@ The budget sweep confirms that the mismatch affects selection rather than only s
 
 \subsection{RQ2: Whether shared elastic training preserves quality}
 
-The elastic model preserves matched-capacity segmentation quality across clean and adverse conditions. Over three augmented runs per model, the large level differs from a similarly sized independently trained Fast-SCNN by +1.10, +0.21, $-0.65$, $-0.23$, and +0.07 \miou{} points on Cityscapes, fog, night, rain, and snow, respectively (Fig.~\ref{fig:rq2}). Every mean difference is within 1.1 points, and observed run variation crosses zero on four of five splits. Shared training therefore achieves near-parity rather than superiority. This comparison does not measure total training, packaging, or maintenance savings.
+The elastic model preserves matched-capacity segmentation quality across clean and adverse conditions. Across the three reported runs per model, the large level differs from a similarly sized independently trained Fast-SCNN by +1.10, +0.21, $-0.65$, $-0.23$, and +0.07 \miou{} points on Cityscapes, fog, night, rain, and snow, respectively (Fig.~\ref{fig:rq2}). Every observed mean difference remains within the prespecified $\pm1.5$-point practical near-parity band, and the run envelopes cross zero on four of five splits. This supports practical near-parity rather than superiority. The comparison does not measure total training, packaging, or maintenance savings.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig4_rq2_near_parity.pdf}
-\caption{Three-run matched-capacity comparison. Points are differences between the mean \miou{} of the large elastic candidate and independently trained Fast-SCNN; positive values favor the elastic candidate. Whiskers show the full observed cross-run envelope formed from the two three-run sets and are descriptive, not confidence intervals or paired-seed estimates. The shaded $\pm1.5$-point band is the prespecified near-parity criterion. The evidence supports parity across clean and adverse splits, not superiority.}
+\caption{Three-run matched-capacity comparison. Points are differences between the mean \miou{} of the large elastic candidate and independently trained Fast-SCNN; positive values favor the elastic candidate. Whiskers show the full observed cross-run envelope formed from the two three-run sets and are descriptive, not confidence intervals or paired-seed estimates. Every observed mean remains inside the prespecified $\pm1.5$-point practical near-parity band; this does not establish superiority or statistical equivalence.}
 \label{fig:rq2}
 \end{figure*}
 
@@ -349,7 +349,7 @@ The router's residual losses are concentrated rather than uniformly distributed.
 
 All four static candidate graphs compile and execute through TensorRT and Hailo-8 deployment paths. This establishes compiler compatibility for the constrained operator set, but the study has no trained unconstrained control and therefore does not attribute an accuracy benefit to compiler safety.
 
-Observer choice controls the worst adverse-condition degradation in the fake-quant study. Dynamic fake quantization of the shared large level loses 1.66, 2.54, and 1.39 \miou{} points in the worst condition of the three runs, whereas EMA-percentile calibration produces the bounds in Table~\ref{tab:qat}. A seed0 $2\times2$ comparison indicates a larger change from the observer than from subnet export. Because the identity of the worst condition can differ between cells and mean effects are not uniformly positive, the comparison does not establish additive causal effects.
+Observer choice controls the worst adverse-condition degradation in the fake-quant study. Dynamic fake quantization of the shared large level loses 1.66, 2.54, and 1.39 \miou{} points in the worst condition of the three runs, whereas EMA-percentile calibration produces the bounds in Table~\ref{tab:qat}. A Run A $2\times2$ comparison indicates a larger change from the observer than from subnet export. Because the identity of the worst condition can differ between cells and mean effects are not uniformly positive, the comparison does not establish additive causal effects.
 
 \begin{table}[H]
 \centering
@@ -359,9 +359,9 @@ Observer choice controls the worst adverse-condition degradation in the fake-qua
 \toprule
 Training run & tiny & small & medium & large \\
 \midrule
-seed-labelled run 0 & 0.32 & 0.97 & 0.51 & 0.97 \\
-seed-labelled run 3 & 0.36 & 0.33 & 0.56 & 0.86 \\
-seed-labelled run 2 & 0.69 & 0.33 & 0.49 & 1.38 \\
+Run A & 0.32 & 0.97 & 0.51 & 0.97 \\
+Run B & 0.69 & 0.33 & 0.49 & 1.38 \\
+Run C & 0.36 & 0.33 & 0.56 & 0.86 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -379,16 +379,16 @@ Candidate-specific calibration addresses a limitation of a single probe score: e
 
 Complete route measurement changes the deployment conclusion. Candidate-only inference time omits uncertainty computation and accelerator-specific switching or activation. These omissions are large on both evaluated backends even though their causes differ. Hardware-aware runtime selection should therefore account for the complete route path, not only isolated candidate latency.
 
-The quantization study reinforces the need to separate measurement from mechanism. EMA-percentile calibration reduces worst-condition fake-quant degradation across the tested runs and levels, but the data do not directly measure activation outliers or compiled integer behavior. QAT consequently remains secondary deployment evidence rather than a primary contribution.
+The quantization study reinforces the need to separate measurement from mechanism. Percentile/EMA calibration reduces worst-condition fake-quant degradation across the tested runs and levels, but the data do not directly measure activation outliers or compiled integer behavior. QAT consequently remains secondary deployment evidence rather than a primary contribution.
 
 \section{Limitations and threats to validity}
 \label{sec:limitations}
 
-First, the fit and deployment risk features are not identical. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. Held-out labels do not enter policy selection, so this is not test-label leakage; it is a train--deployment feature mismatch that can shift calibration bins. The router comparison is therefore reported as a conditional diagnostic rather than a frozen headline. Deployment-matched fitting and evaluation are required to close this claim.
+First, the available router result was fitted with a risk feature that differs from deployment. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. Held-out labels do not enter policy selection, so this is not test-label leakage; it is a fit--deployment feature mismatch that can shift calibration bins. The router comparison is therefore reported as a conditional diagnostic rather than a frozen headline. Deployment-matched fitting and evaluation are required to close this claim.
 
 Second, calibration is domain- and condition-specific. Cityscapes and each ACDC condition use separate fit-half calibrators. The evaluation assumes that the deployment condition is known or configured and does not demonstrate a pooled calibrator or automatic condition recognition.
 
-Third, the evaluation uses alternating halves of validation splits rather than an external test set. Multiple budgets and thresholds reuse the same images and predictions. Operating cells are correlated, and the 120-cell denominator is not a statistical sample size. Three seed-labelled checkpoint runs form the training-replication axis, but complete immutable provenance and checkpoint hashes are unavailable.
+Third, the evaluation uses alternating halves of validation splits rather than an external test set. Multiple budgets and thresholds reuse the same images and predictions. Operating cells are correlated, and the 120-cell denominator is not a statistical sample size. Runs A--C form the training-replication axis, but complete immutable provenance and checkpoint hashes are unavailable.
 
 Fourth, fair-cell conditioning is descriptive. It excludes A's budget-violating comparisons so that quality is compared only when A honors its contract, but the denominator depends on baseline behavior. Full-grid violation counts must accompany the fair-cell result. D's zero violations are partly guaranteed by construction and are not empirical reliability.
 
@@ -407,7 +407,7 @@ Finally, the study uses four candidates, two complete route-cost backends, and n
 
 \section*{Data and code availability}
 
-The repository records the implementation, experiment reports, and canonical result artifacts. The frozen evidence snapshot is commit \texttt{ac65b562} (the full identifier is recorded in the evidence manifest), tagged \texttt{gpt-review-v1-20260929}; the scientific-story manuscript is released as tag \texttt{ivc-scientific-story-v2-20260929}. Canonical router evidence comprises the E1/E3 overhead replay JSON files for runs 0, 2, and 3, \path{reports/router_overhead_v1_20260922.md}, and \path{reports/audit_gpu_risk_kernel_production_E3.json}. Dataset access remains subject to the Cityscapes and ACDC licenses.
+The repository records the implementation, experiment reports, and canonical result artifacts. The accompanying evidence manifest provides immutable snapshot identifiers, maps Runs A--C to repository experiment records, and traces every figure and numerical claim to its source artifact. Historical router replays remain available for audit but are not final RQ3 evidence because their calibration feature is not deployment-matched. Dataset access remains subject to the Cityscapes and ACDC licenses.
 
 \begin{thebibliography}{99}
 

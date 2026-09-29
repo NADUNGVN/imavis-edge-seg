@@ -14,6 +14,12 @@ pdfLaTeX. The four included figures are vector PDFs and require no shell escape.
 The repository also provides `paper/scripts/build_manuscript_pdf.ps1`. Running it
 from the repository updates the stable review artifact at
 `output/pdf/PACE-Seg_IVC_Manuscript.pdf` from this package's `main.tex`.
+Use this command after every TeX or figure change so the checked-in review PDF and
+the Overleaf source cannot drift:
+
+```powershell
+.\paper\scripts\build_manuscript_pdf.ps1
+```
 
 ## Main-paper visual narrative
 
@@ -34,9 +40,11 @@ manually.
   contain licensed RGB images, ground-truth masks, and checkpoint predictions. The
   deterministic median-error selection rule is documented in
   `paper/figures/qualitative/README.md`.
-- **Router quality--latency plot:** not manuscript-final because calibration fitting
-  uses a ground-truth ignore mask while deployment cannot. The correction and rerun
-  gate is documented in `paper/figures/ROUTER_FIGURE_GATE.md`.
+- **Router quality--latency plot:** the evaluator now uses deployment-matched
+  all-pixel entropy at fitting and inference, but the three checkpoints and licensed
+  datasets are not present in this local workspace. The plot remains gated until the
+  corrected Run A/B/C pipeline is executed. The dependency is documented in
+  `paper/figures/ROUTER_FIGURE_GATE.md`.
 
 No generated or manually retouched image is used as experimental evidence.
 
@@ -48,13 +56,11 @@ No generated or manually retouched image is used as experimental evidence.
 - Hardware accuracy is an offline replay using measured complete warm-route costs.
 - QAT uses fake quantization and does not establish compiled INT8 accuracy.
 - No energy result is claimed.
-- RQ3 remains conditional until the probe feature is identical at fitting and deployment.
+- RQ3 remains conditional until the corrected deployment-matched rerun completes.
 
 ## Repository references
 
 - Frozen evidence snapshot: `ac65b562ed1cc33b7a30a63b2451924b156f8bdd`
 - Previous scientific-story release: `ivc-scientific-story-v2-20260929`
+- Visual-scientific v3 release: `ivc-visual-scientific-v3-20260929`
 - Visual-scientific v3 source: this folder and `paper/figures/`
-
-The final v3 release tag should be created only after PDF compilation and page-by-page
-inspection.

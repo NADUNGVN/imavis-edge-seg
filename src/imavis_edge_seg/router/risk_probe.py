@@ -20,10 +20,9 @@ def compute_risk_score(logits: Tensor, target: Tensor | None = None) -> Tensor:
     """`logits`: `(B, C, H, W)` raw (pre-softmax) scores. Returns `(B,)`: mean
     per-pixel softmax entropy (nats), one scalar per image in the batch. If `target`
     (`(B, H, W)` integer class ids) is given, only pixels where `target !=
-    IGNORE_INDEX` count towards the mean -- pass it when *fitting* a calibrator (so
-    the risk score is computed over exactly the pixels the observed error will also
-    be computed over); omit it at real inference time, when there is no ground truth
-    to know which pixels would have been ignored."""
+    IGNORE_INDEX` count towards the mean. The target-masked branch is retained for
+    diagnostics only; calibrator fitting must call `compute_deployment_risk_score`
+    so its feature is identical to real inference, where ground truth is absent."""
     probs = F.softmax(logits, dim=1)
     entropy = -(probs * torch.log(probs.clamp_min(1e-12))).sum(dim=1)  # (B, H, W)
     if target is not None:
@@ -31,3 +30,15 @@ def compute_risk_score(logits: Tensor, target: Tensor | None = None) -> Tensor:
         denom = valid.sum(dim=(1, 2)).clamp_min(1)
         return (entropy * valid).sum(dim=(1, 2)) / denom
     return entropy.mean(dim=(1, 2))
+
+
+def compute_deployment_risk_score(logits: Tensor) -> Tensor:
+    """Return the entropy feature available to the deployed router.
+
+    This is the canonical feature for both calibrator fitting and inference.  It
+    deliberately accepts no target tensor, which makes accidental ground-truth
+    masking impossible at the call site.  Calibration targets may still exclude
+    ``IGNORE_INDEX`` pixels; supervised targets and deployable input features do
+    not need to use the same pixel domain.
+    """
+    return compute_risk_score(logits)
