@@ -1,4 +1,10 @@
-# PACE-Seg: Platform-Aware Calibrated Elastic Semantic Segmentation for Reliable Edge Vision
+# Historical Markdown manuscript draft
+
+> **Superseded for submission writing.** The canonical paper is
+> `paper/submission/ivc_2026-09-30_v4/main.tex`, which contains the completed
+> deployment-matched router rerun, pooled-calibration control, Figure 5, and current
+> claim boundaries. This Markdown file is retained only as a traceable drafting
+> record and must not be used as the numerical source of truth.
 
 > **Draft manuscript, section by section.** Distinct from `docs/MANUSCRIPT_SKELETON.md`
 > (the living status tracker, annotated with internal report citations and

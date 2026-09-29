@@ -4,29 +4,32 @@
 
 This packet is for an adversarial scientific review of PACE-Seg before manuscript submission.
 
-- Evidence baseline commit: `1c4d42a7ea525931154ebb2f9015d898ef7771a5`
-- Review snapshot/tag: `gpt-review-v1-20260929`
+- Deployment-matched method commit: `ababda12a9bfb6a5f92a7d79aad3560d361f863f`
+- Deployment-matched result commit: `b57fcb2`
+- Manuscript snapshot tag: `ivc-deployment-matched-v4-20260930`
 - Target venue: *Image and Vision Computing* (IMAVIS)
 - Scope: scientific validity, novelty, leakage, numerical consistency, deployment validity, reproducibility, and claim boundaries.
 
 Treat README statements as claims, not evidence. Trace every headline number to the report, raw JSON, and implementation. Operating cells and backend replays are correlated; do not treat them as independent statistical samples.
 
-**Scientific correction after the frozen review snapshot.** The historical router
-fit-half feature used a ground-truth-valid entropy mask unavailable at deployment.
-The evaluator now uses all-pixel entropy in both phases, but the three checkpoints
-and licensed datasets must be rerun. Therefore the router arithmetic below is an
-audit invariant for the historical artifacts, not a submission headline.
+**Scientific correction completed.** The historical router fit-half feature used a
+ground-truth-valid entropy mask unavailable at deployment. The final Run A--C package
+reruns fitting and deployment with all-pixel entropy and replays measured complete
+warm-route costs on E1 and E3. Historical masked-fit arithmetic remains auditable but
+is not submission evidence.
 
 ## Required reading order
 
 1. [README](../README.md) — project map and living status only.
 2. [Research plan](RESEARCH_PLAN.md) — research questions, contribution targets, go/no-go rules and ablations.
-3. [Manuscript draft](MANUSCRIPT_DRAFT.md) and [skeleton](MANUSCRIPT_SKELETON.md).
+3. [Canonical LaTeX manuscript](../paper/submission/ivc_2026-09-30_v4/main.tex), then
+   consult the [historical Markdown draft](MANUSCRIPT_DRAFT.md) and
+   [skeleton](MANUSCRIPT_SKELETON.md) only for provenance.
 4. [Baseline comparison](../reports/baseline_comparison_gap_check_20260912.md) — RQ2 and three-seed near-parity.
 5. [Pareto search](../reports/pareto_search_v1_20260912.md), [FLOPs baseline](../reports/flops_baseline_v1_20260917.md), and [RQ1 budget sweep](../reports/rq1_budget_sweep_v1_20260920.md).
 6. [QAT journey](../reports/qat_v1_20260913.md), [failed max calibration](../reports/calibrated_qat_v1_20260917.md), and [QAT rescue screen](../reports/qat_rescue_2x2_screen_infra_20260920.md).
-7. [Router progressive ablation](../reports/router_progressive_ablation_v1_20260921.md) and canonical per-device/per-seed JSON files named in that report.
-8. [Router overhead and FINAL LOCK](../reports/router_overhead_v1_20260922.md), including E1/E3 raw measurement, replay, and audit JSON files named there.
+7. [Deployment-matched FINAL router report](../reports/router_deployment_matched_v1_20260930.md), [manifest](../reports/router_deployment_matched_20260929/manifest.json), [summary](../reports/router_deployment_matched_20260929/summary.json), and all six replay JSON files.
+8. [Router progressive ablation](../reports/router_progressive_ablation_v1_20260921.md) and [router overhead report](../reports/router_overhead_v1_20260922.md) as historical/mechanistic support.
 9. Implementation:
    - [policy](../src/imavis_edge_seg/router/policy.py)
    - [risk probe](../src/imavis_edge_seg/router/risk_probe.py)
@@ -39,9 +42,13 @@ audit invariant for the historical artifacts, not a submission headline.
    - [quantization](../src/imavis_edge_seg/training/quantization.py)
 10. [Claims–evidence matrix](CLAIMS_EVIDENCE_MATRIX.md), then use [strict review prompt](GPT_STRICT_REVIEW_PROMPT.md).
 
-## Historical router result to audit
+## Final router result to audit
 
-The old artifacts report 67 of 69 fair operating cells (51 wins, 16 ties, 2 losses), a macro-averaged gain of 0.0241 mIoU, D 0/120 violating cells, and A 51/120. These values must remain reproducible for audit, but they cannot support the final RQ3 claim until the deployment-matched Run A--C rerun is complete.
+The deployment-matched artifacts report 70 of 74 fair operating cells (56 wins,
+14 ties, 4 losses), a macro-averaged gain of 0.0283549 mIoU, D 0/120 violating
+cells, and A 46/120. Pooled D reports 58/14/2 on the same fair subset, +0.0295859
+mIoU, and 0/120 violating cells. The reviewer must reproduce these values from the
+six replay JSON files rather than accepting the report summary.
 
 Required boundary: the two backend evaluations share model predictions and demonstrate cross-backend deployment robustness, not independent accuracy replication.
 
@@ -57,6 +64,6 @@ Required boundary: the two backend evaluations share model predictions and demon
 
 ## Reviewer focus
 
-The strict review must first verify that final router artifacts use identical all-pixel entropy at fit and deployment. It must then challenge: the fair-cell filter; fit-half/held-out separation; canonical per-run risk grids; budget-matched operating-point selection; oracle use; run provenance; latency double counting; tiny-output reuse; CUDA synchronization; Hailo activation semantics; stale HEFs; QAT scope; statistical dependence; missing closest work; and stale/conflicting numbers across README, reports and manuscript.
+The strict review must verify that final router artifacts use identical all-pixel entropy at fit and deployment. It must then challenge: the fair-cell filter; fit-half/held-out separation; pooled-calibrator construction; canonical per-run risk grids; budget-matched operating-point selection; oracle use; run provenance; latency double counting; tiny-output reuse; CUDA synchronization; Hailo activation semantics; stale HEFs; QAT scope; statistical dependence; missing closest work; and stale/conflicting numbers across README, reports and manuscript.
 
 The reviewer should recommend new experiments only when a central claim cannot stand without them. Otherwise separate mandatory manuscript corrections from optional extensions.

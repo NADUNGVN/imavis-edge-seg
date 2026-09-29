@@ -6,21 +6,21 @@ Copy the text below into a fresh GPT conversation that has browser access to the
 
 You are acting as a highly skeptical Reviewer #2 for an *Image and Vision Computing* submission.
 
-Frozen repository snapshot:
-https://github.com/NADUNGVN/imavis-edge-seg/tree/gpt-review-v1-20260929
+Frozen deployment-matched manuscript snapshot:
+https://github.com/NADUNGVN/imavis-edge-seg/tree/ivc-deployment-matched-v4-20260930
 
 Start here:
-https://github.com/NADUNGVN/imavis-edge-seg/blob/gpt-review-v1-20260929/docs/GPT_REVIEW_GUIDE.md
+https://github.com/NADUNGVN/imavis-edge-seg/blob/ivc-deployment-matched-v4-20260930/docs/GPT_REVIEW_GUIDE.md
 
 Claims–evidence matrix:
-https://github.com/NADUNGVN/imavis-edge-seg/blob/gpt-review-v1-20260929/docs/CLAIMS_EVIDENCE_MATRIX.md
+https://github.com/NADUNGVN/imavis-edge-seg/blob/ivc-deployment-matched-v4-20260930/docs/CLAIMS_EVIDENCE_MATRIX.md
 
 Your task is to audit scientific validity, novelty, experimental rigor, deployment validity and reproducibility. Do not praise or summarize the project before completing the audit. Treat README statements as claims, not evidence. Trace every important number to the canonical report, raw artifact and implementation. Cite exact repository files and sections for every concern.
 
 ## Mandatory audit
 
 1. Verify from code and metadata that calibrator fitting and deployment compute the identical all-pixel entropy feature. If final artifacts still use target-masked fit entropy, classify the RQ3 headline as unsupported.
-2. Recompute the historical diagnostic arithmetic: 69/120 fair cells; 51 wins, 16 ties, 2 losses; 67/69 win-or-tie; macro ΔmIoU +0.0241 = +2.41 points; D violations 0/120; A violating cells 51/120. Do not promote these values unless the deployment-matched rerun reproduces them.
+2. Recompute the final deployment-matched arithmetic: 74/120 fair cells; 56 wins, 14 ties, 4 losses; 70/74 win-or-tie; macro ΔmIoU +0.0283549 = +2.84 points; D violations 0/120; A violating cells 46/120. Also reproduce pooled D: 58/14/2, +0.0295859 mIoU, 0/120 violations.
 3. Determine whether “fair cells” favors D or removes important failures. State what all-cell results must accompany the fair-cell comparison.
 4. Verify the provenance of Runs A--C and that no checkpoint, split, calibrator, threshold or risk grid was accidentally reused.
 5. Audit fit-half versus held-out-half separation for calibrators, quantiles, operating-point selection, diagnostics and oracle construction.

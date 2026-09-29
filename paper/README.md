@@ -6,10 +6,12 @@ This directory separates the current submission package, immutable review rounds
 
 | Path | Role | Status |
 |---|---|---|
-| [`submission/ivc_2026-09-29_v3/`](submission/ivc_2026-09-29_v3/) | Current compiled Elsevier manuscript with evidence-backed vector figures | Canonical writing and visual package |
+| [`submission/ivc_2026-09-30_v4/`](submission/ivc_2026-09-30_v4/) | Deployment-matched Elsevier manuscript with five evidence-backed vector figures | Canonical writing and visual package |
+| [`submission/ivc_2026-09-29_v3/`](submission/ivc_2026-09-29_v3/) | Visual-scientific package before the deployment-matched router rerun | Preserved review input |
 | [`submission/ivc_2026-09-29_v2/`](submission/ivc_2026-09-29_v2/) | Scientific-story revision before the visual rebuild | Preserved review input |
 | [`submission/ivc_2026-09-29/`](submission/ivc_2026-09-29/) | Prior reviewed package before the scientific-story revision | Preserved review input |
-| [`reviews/2026-09-29_scientific-story-audit/`](reviews/2026-09-29_scientific-story-audit/) | Claim-status audit for the RQ-organized manuscript | Current review record |
+| [`reviews/2026-09-30_deployment-matched-final/`](reviews/2026-09-30_deployment-matched-final/) | Reviewer #2 audit of final RQ3 evidence and v4 manuscript | Current review record |
+| [`reviews/2026-09-29_scientific-story-audit/`](reviews/2026-09-29_scientific-story-audit/) | Claim-status audit for the RQ-organized manuscript | Preserved review record |
 | [`reviews/2026-09-29_gpt-strict/`](reviews/2026-09-29_gpt-strict/) | Markdown manuscript, two Reviewer \#2 audits, and readiness statement | Completed review round |
 | [`reviews/README.md`](reviews/README.md) | Naming and evidence protocol for future review rounds | Active protocol |
 | `releases/` | Locally generated upload archives | Intentionally ignored by Git |
@@ -17,13 +19,13 @@ This directory separates the current submission package, immutable review rounds
 The root-level `main.tex`, `sections/`, `references.bib`, and `tables/` are the earlier
 modular manuscript skeleton. They are retained for provenance but are not the current
 submission source. `figures/` is now the canonical reproducible figure workspace used
-by v3. The earlier `../manuscript/latex/main.tex` is also non-canonical.
+by v4. The earlier `../manuscript/latex/main.tex` is also non-canonical.
 
 ## Build the current manuscript
 
-Open [`submission/ivc_2026-09-29_v3/main.tex`](submission/ivc_2026-09-29_v3/main.tex)
-with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-29_v3` directory or the
-v3 archive from `releases/`, preserve the `figures/` subdirectory, and select
+Open [`submission/ivc_2026-09-30_v4/main.tex`](submission/ivc_2026-09-30_v4/main.tex)
+with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-30_v4` directory or the
+v4 archive from `output/overleaf/`, preserve the `figures/` subdirectory, and select
 `main.tex` as the main document.
 
 For a reproducible local build that also updates the stable review PDF, run:

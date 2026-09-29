@@ -1,5 +1,10 @@
 # PACE-Seg — manuscript skeleton
 
+> **Historical planning tracker.** The canonical submission source is
+> `paper/submission/ivc_2026-09-30_v4/main.tex`. Unresolved TODOs below describe the
+> earlier planning state and are not submission requirements unless repeated in the
+> current manuscript or strict-review report.
+
 > **Living skeleton, not a draft manuscript.** Snapshot date: 2026-09-13. This file
 > tracks what can honestly be written *today* against `docs/RESEARCH_PLAN.md` §12's
 > target structure, grounded only in what `README.md`'s status table and the reports
