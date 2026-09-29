@@ -1,0 +1,119 @@
+{
+  "definition": {
+    "fair_cell": "baseline A held-out violation_rate equals zero",
+    "comparison": "D minus A achieved mIoU at the same measured-cost budget",
+    "statistical_boundary": "operating cells are correlated descriptive evaluations, not independent samples"
+  },
+  "per_run_backend": [
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_a_e1_replay.json",
+      "run_label": "Run A",
+      "backend": "E1",
+      "total_cells": 20,
+      "fair_cells": 13,
+      "wins": 10,
+      "ties": 3,
+      "losses": 0,
+      "mean_delta_miou_fair": 0.029704812181997827,
+      "a_violating_cells": 7,
+      "d_violating_cells": 0
+    },
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_a_e3_replay.json",
+      "run_label": "Run A",
+      "backend": "E3",
+      "total_cells": 20,
+      "fair_cells": 13,
+      "wins": 10,
+      "ties": 3,
+      "losses": 0,
+      "mean_delta_miou_fair": 0.029704812181997827,
+      "a_violating_cells": 7,
+      "d_violating_cells": 0
+    },
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_b_e1_replay.json",
+      "run_label": "Run B",
+      "backend": "E1",
+      "total_cells": 20,
+      "fair_cells": 11,
+      "wins": 9,
+      "ties": 2,
+      "losses": 0,
+      "mean_delta_miou_fair": 0.024638893694279084,
+      "a_violating_cells": 9,
+      "d_violating_cells": 0
+    },
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_b_e3_replay.json",
+      "run_label": "Run B",
+      "backend": "E3",
+      "total_cells": 20,
+      "fair_cells": 11,
+      "wins": 9,
+      "ties": 2,
+      "losses": 0,
+      "mean_delta_miou_fair": 0.024638893694279084,
+      "a_violating_cells": 9,
+      "d_violating_cells": 0
+    },
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_c_e1_replay.json",
+      "run_label": "Run C",
+      "backend": "E1",
+      "total_cells": 20,
+      "fair_cells": 12,
+      "wins": 8,
+      "ties": 2,
+      "losses": 2,
+      "mean_delta_miou_fair": 0.029073073242828804,
+      "a_violating_cells": 8,
+      "d_violating_cells": 0
+    },
+    {
+      "artifact": "/home/ubuntu/Dung_TDTU/imavis-edge-seg/reports/router_deployment_matched_20260929/run_c_e3_replay.json",
+      "run_label": "Run C",
+      "backend": "E3",
+      "total_cells": 20,
+      "fair_cells": 14,
+      "wins": 10,
+      "ties": 2,
+      "losses": 2,
+      "mean_delta_miou_fair": 0.031071658652500927,
+      "a_violating_cells": 6,
+      "d_violating_cells": 0
+    }
+  ],
+  "by_backend": {
+    "E1": {
+      "total_cells": 60,
+      "fair_cells": 36,
+      "wins": 27,
+      "ties": 7,
+      "losses": 2,
+      "mean_delta_miou_fair": 0.02794631299769409,
+      "a_violating_cells": 24,
+      "d_violating_cells": 0
+    },
+    "E3": {
+      "total_cells": 60,
+      "fair_cells": 38,
+      "wins": 29,
+      "ties": 7,
+      "losses": 2,
+      "mean_delta_miou_fair": 0.028741937108896175,
+      "a_violating_cells": 22,
+      "d_violating_cells": 0
+    }
+  },
+  "overall": {
+    "total_cells": 120,
+    "fair_cells": 74,
+    "wins": 56,
+    "ties": 14,
+    "losses": 4,
+    "mean_delta_miou_fair": 0.028354876730473537,
+    "a_violating_cells": 46,
+    "d_violating_cells": 0
+  }
+}
