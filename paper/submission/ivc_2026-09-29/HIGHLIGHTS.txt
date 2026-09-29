@@ -1,0 +1,5 @@
+Candidate-specific risk maps route four elastic segmentation candidates.
+Measured complete route costs enforce hard accelerator latency budgets.
+Policy D wins or ties 67 of 69 fair cells with 0 of 120 violations.
+Two distinct accelerator backends expose different routing overheads.
+EMA-percentile fake-quant QAT stays within 1.5 mIoU points.

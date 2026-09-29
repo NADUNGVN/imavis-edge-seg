@@ -1,0 +1,19 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\sffamily]
+\matrix (m) [matrix of nodes,
+    nodes={minimum width=17mm,minimum height=11mm,draw=white,anchor=center,font=\bfseries},
+    column sep=0pt,row sep=0pt,
+    row 1/.style={nodes={fill=gray!15,font=\bfseries}},
+    column 1/.style={nodes={fill=gray!15,font=\bfseries}}
+] {
+ & tiny & small & medium & large \\
+run 0 & |[fill=yellow!35]| 0.32 & |[fill=orange!55]| 0.97 & |[fill=yellow!65]| 0.51 & |[fill=orange!55]| 0.97 \\
+run 3 & |[fill=yellow!40]| 0.36 & |[fill=yellow!35]| 0.33 & |[fill=yellow!70]| 0.56 & |[fill=orange!48]| 0.86 \\
+run 2 & |[fill=orange!32]| 0.69 & |[fill=yellow!35]| 0.33 & |[fill=yellow!60]| 0.49 & |[fill=red!62,text=white]| 1.38 \\
+};
+\node[below=5mm of m,align=center,text=pacegreen,font=\bfseries\small] {Predeclared upper bar: 1.5 mIoU points; every tested run--level cell passes};
+\end{tikzpicture}
+\caption{Absolute worst-condition mIoU degradation after shared-supernet EMA-percentile fake-quant QAT. These are simulated fake-quant results, not compiled INT8 deployment accuracy.}
+\label{fig:qat-heatmap}
+\end{figure}

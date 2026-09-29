@@ -1,0 +1,41 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.97\linewidth,
+    height=6.8cm,
+    ybar,
+    bar width=9pt,
+    ymin=0,
+    ymax=108,
+    ylabel={Median complete warm-route latency (ms)},
+    symbolic x coords={tt,ts,tm,tl},
+    xtick=data,
+    xticklabels={tiny$\rightarrow$tiny,tiny$\rightarrow$small,tiny$\rightarrow$medium,tiny$\rightarrow$large},
+    x tick label style={rotate=16,anchor=east,font=\scriptsize},
+    ymajorgrids=true,
+    grid style={gray!20},
+    axis line style={gray!60},
+    nodes near coords={\pgfmathprintnumber[fixed,precision=2]{\pgfplotspointmeta}},
+    nodes near coords style={font=\tiny,rotate=90,anchor=west},
+    legend style={draw=none,at={(0.5,1.02)},anchor=south,legend columns=2,font=\scriptsize},
+]
+\addplot[fill=paceblue,draw=paceblue] coordinates {
+    (tt,2.07)
+    (ts,5.23)
+    (tm,11.97)
+    (tl,26.70)
+};
+\addlegendentry{E3 TensorRT/CUDA}
+\addplot[fill=paceorange,draw=paceorange] coordinates {
+    (tt,34.95)
+    (ts,46.13)
+    (tm,63.36)
+    (tl,92.68)
+};
+\addlegendentry{E1 Hailo-8}
+\end{axis}
+\end{tikzpicture}
+\caption{Complete warm-route costs used in the final replay. E3 requires accelerator-resident entropy computation, while mandatory network-group activation dominates E1. The two backends therefore expose different overhead mechanisms.}
+\label{fig:route-overhead}
+\end{figure}

@@ -1,0 +1,57 @@
+\begin{figure*}[t]
+\centering
+\begin{minipage}[t]{0.57\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth,
+    height=6.2cm,
+    ybar stacked,
+    bar width=19pt,
+    ymin=0,
+    ymax=75,
+    ylabel={Conditionally fair cells},
+    symbolic x coords={E3,E1,Overall},
+    xtick=data,
+    ymajorgrids=true,
+    grid style={gray!20},
+    axis line style={gray!60},
+    legend style={draw=none,at={(0.5,1.02)},anchor=south,legend columns=3,font=\scriptsize},
+]
+\addplot[fill=pacegreen,draw=pacegreen] coordinates {(E3,26) (E1,25) (Overall,51)};
+\addlegendentry{D wins}
+\addplot[fill=pacesky,draw=pacesky] coordinates {(E3,8) (E1,8) (Overall,16)};
+\addlegendentry{Ties}
+\addplot[fill=pacevermillion,draw=pacevermillion] coordinates {(E3,1) (E1,1) (Overall,2)};
+\addlegendentry{D losses}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.39\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth,
+    height=6.2cm,
+    ybar,
+    bar width=25pt,
+    ymin=0,
+    ymax=60,
+    ylabel={Violating cells out of 120},
+    symbolic x coords={Policy D,Policy A},
+    xtick=data,
+    ymajorgrids=true,
+    grid style={gray!20},
+    axis line style={gray!60},
+    nodes near coords,
+    nodes near coords style={font=\bfseries},
+]
+\addplot[fill=pacegreen,draw=pacegreen,bar shift=0pt] coordinates {(Policy D,0)};
+\addplot[fill=pacevermillion,draw=pacevermillion,bar shift=0pt] coordinates {(Policy A,51)};
+\node[align=center,draw=paceblue,fill=blue!5,rounded corners=1mm,text=paceblue,font=\bfseries\scriptsize] at (axis cs:Policy D,45) {$+0.0241$ mIoU\\macro D--A\\on 69 fair cells};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{Canonical overhead-aware routing result. Left: D wins or ties in 67 of 69 fair cells (51 wins, 16 ties, 2 losses). Right: across all 120 correlated cells, D has 0 budget-violating cells and A has 51; D's zero count is partly structural because it enforces a hard budget.}
+\label{fig:router-result}
+\end{figure*}

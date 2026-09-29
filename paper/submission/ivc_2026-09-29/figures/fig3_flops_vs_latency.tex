@@ -1,0 +1,40 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.96\linewidth,
+    height=6.6cm,
+    ybar,
+    bar width=13pt,
+    ymin=0,
+    ymax=125,
+    ylabel={Large-to-tiny scaling ratio},
+    symbolic x coords={E1 Hailo-8,E2 Xavier NX,E3 AGX Xavier,E5 Orin Nano},
+    xtick=data,
+    x tick label style={rotate=18,anchor=east,font=\scriptsize},
+    ymajorgrids=true,
+    grid style={gray!20},
+    axis line style={gray!60},
+    nodes near coords={\pgfmathprintnumber[fixed,precision=1]{\pgfplotspointmeta}$\times$},
+    nodes near coords style={font=\scriptsize\bfseries},
+    legend style={draw=none,at={(0.5,1.02)},anchor=south,legend columns=2,font=\scriptsize},
+]
+\addplot[fill=paceblue,draw=paceblue] coordinates {
+    (E1 Hailo-8,11.08)
+    (E2 Xavier NX,19.53)
+    (E3 AGX Xavier,10.30)
+    (E5 Orin Nano,16.60)
+};
+\addlegendentry{Measured latency ratio}
+\addplot[pacevermillion,very thick,sharp plot] coordinates {
+    (E1 Hailo-8,110.2)
+    (E2 Xavier NX,110.2)
+    (E3 AGX Xavier,110.2)
+    (E5 Orin Nano,110.2)
+};
+\addlegendentry{FLOPs ratio: $110.2\times$}
+\end{axis}
+\end{tikzpicture}
+\caption{The four candidates span $110.2\times$ in FLOPs but only $10.3$--$19.5\times$ in measured candidate latency. This demonstrates failure of the evaluated proportional FLOPs proxy, not of every FLOPs-aware or learned hardware-cost model.}
+\label{fig:flops-latency}
+\end{figure}

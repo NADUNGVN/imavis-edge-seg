@@ -1,0 +1,26 @@
+\begin{figure*}[t]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily,
+    node distance=10mm,
+    block/.style={draw, rounded corners=2mm, line width=0.9pt, align=center, minimum height=29mm, text width=34mm, fill=white},
+    arrow/.style={-{Latex[length=3mm]}, line width=1pt, draw=gray!75},
+    note/.style={draw, rounded corners=1.5mm, align=center, font=\bfseries\small}
+]
+\node[block, draw=paceorange] (fit) {\textbf{Even-index fit half}\\probe scores\\candidate errors\\ground-truth-valid mask};
+\node[block, draw=pacepurple, right=of fit] (fitops) {\textbf{Fit only}\\candidate calibrators\\risk-target grid\\operating-point choice};
+\node[block, draw=pacegreen, right=of fitops] (locked) {\textbf{Locked policy}\\fixed calibrators\\fixed $\tau$\\measured backend costs};
+\node[block, draw=paceblue, right=of locked] (test) {\textbf{Odd-index held-out}\\routed mIoU\\latency\\budget violations};
+
+\draw[arrow] (fit) -- (fitops);
+\draw[arrow] (fitops) -- (locked);
+\draw[arrow] (locked) -- (test);
+
+\node[note, below=10mm of fitops, xshift=20mm, text width=91mm, fill=green!6, draw=pacegreen, text=pacegreen] (clean) {Held-out labels never fit calibrators, define thresholds, or select the deployable operating point};
+\node[note, below=6mm of clean, text width=128mm, fill=red!4, draw=pacevermillion, text=pacevermillion, font=\small] (mismatch) {Known mismatch: fit entropy excludes ignore pixels, whereas held-out/runtime entropy cannot use a ground-truth mask};
+\end{tikzpicture}%
+}
+\caption{Fit, operating-point selection, and held-out evaluation are separated within every domain or adverse-condition split. The final canonical replay uses the locked fit-half choice; the disclosed ignore-mask mismatch is not held-out label leakage.}
+\label{fig:protocol}
+\end{figure*}
