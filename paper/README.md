@@ -26,6 +26,17 @@ with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-29_v3` directory or t
 v3 archive from `releases/`, preserve the `figures/` subdirectory, and select
 `main.tex` as the main document.
 
+For a reproducible local build that also updates the stable review PDF, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File paper\scripts\build_manuscript_pdf.ps1
+```
+
+The command compiles the canonical `main.tex` and replaces
+`output/pdf/PACE-Seg_IVC_Manuscript.pdf`. This stable PDF is the file to distribute
+for reviews. Whenever the canonical TeX or its figures change, rebuild and commit the
+updated PDF in the same change.
+
 ## Evidence discipline
 
 - Numerical claims must trace to reports or raw artifacts listed in the submission evidence manifest.

@@ -11,6 +11,10 @@ pdfLaTeX. The four included figures are vector PDFs and require no shell escape.
 2. Select `main.tex` as the main document.
 3. Compile with pdfLaTeX.
 
+The repository also provides `paper/scripts/build_manuscript_pdf.ps1`. Running it
+from the repository updates the stable review artifact at
+`output/pdf/PACE-Seg_IVC_Manuscript.pdf` from this package's `main.tex`.
+
 ## Main-paper visual narrative
 
 | Figure | Scientific question | Reproducible source |
