@@ -93,3 +93,26 @@ docs/HARDWARE_PROFILE.local.md
 tmp/
 temp/
 .cache/
+
+# Local paper build and visual-QA artifacts
+.tools/
+paper/figures/previews/
+paper/figures/archify/**/visual-check*/
+paper/figures/archify/**/review-*/
+paper/figures/archify/**/*.html
+paper/figures/archify/**/*.browser-check.json
+paper/figures/archify/**/*.delivery.json
+paper/figures/archify/**/*.finalize-summary.json
+paper/figures/archify/**/*.finalize.json
+paper/figures/archify/fig1_pace_seg_system/candidate.before-review.json
+paper/submission/**/qa_*/
+paper/submission/**/*.aux
+paper/submission/**/*.out
+paper/submission/**/*.spl
+paper/submission/**/main.pdf
+
+# Canonical lightweight inputs required to reproduce manuscript Figure 3
+!outputs/
+outputs/*
+!outputs/flops_by_level.json
+!outputs/benchmark_lookup_table.csv

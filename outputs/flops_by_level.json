@@ -1,0 +1,15 @@
+{
+  "supernet": {
+    "tiny": 206009856,
+    "small": 1167753216,
+    "medium": 6171236352,
+    "large": 22699180032
+  },
+  "baselines": {
+    "fast_scnn": 3336257536,
+    "bisenetv2": 28897083392,
+    "ddrnet23_slim": 18989744128,
+    "segformer_b0": 19634585600,
+    "mobilenetv3_deeplabv3": 39298268928
+  }
+}

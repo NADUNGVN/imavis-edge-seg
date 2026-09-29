@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Elastic capacity family and static deployment portability",
+    "output": "paper/figures/archify/fig2_elastic_deployment/fig2_elastic_deployment.html",
+    "quality_profile": "showcase",
+    "visual_preset": "editorial",
+    "repository": {
+      "url": "https://github.com/NADUNGVN/imavis-edge-seg.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "f1ed7f1879bca588020fe92ae56c3e0bf216ee7d"
+    },
+    "legend": { "mode": "hidden" }
+  },
+  "components": [
+    {
+      "id": "supernet",
+      "type": "backend",
+      "label": "One trained supernet",
+      "sublabel": "shared convolutional weights",
+      "pos": [35, 215],
+      "size": [175, 70],
+      "sources": [
+        { "path": "src/imavis_edge_seg/models/supernet.py", "line": 47, "end_line": 94, "label": "shared-weight model" }
+      ]
+    },
+    {
+      "id": "tiny",
+      "type": "frontend",
+      "label": "tiny",
+      "sublabel": "384x192 | width 0.25 | depth 2",
+      "pos": [285, 35],
+      "size": [210, 62],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "tiny configuration" }
+      ]
+    },
+    {
+      "id": "small",
+      "type": "frontend",
+      "label": "small",
+      "sublabel": "512x256 | width 0.50 | depth 3",
+      "pos": [285, 145],
+      "size": [210, 62],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "small configuration" }
+      ]
+    },
+    {
+      "id": "medium",
+      "type": "frontend",
+      "label": "medium",
+      "sublabel": "768x384 | width 0.75 | depth 4",
+      "pos": [285, 255],
+      "size": [210, 62],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "medium configuration" }
+      ]
+    },
+    {
+      "id": "large",
+      "type": "frontend",
+      "label": "large",
+      "sublabel": "1024x512 | width 1.00 | depth 6",
+      "pos": [285, 365],
+      "size": [210, 62],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "large configuration" }
+      ]
+    },
+    {
+      "id": "extract",
+      "type": "backend",
+      "label": "Static extraction x4",
+      "sublabel": "slice channels and block prefixes",
+      "pos": [590, 215],
+      "size": [190, 70],
+      "sources": [
+        { "path": "src/imavis_edge_seg/models/subnet.py", "line": 125, "end_line": 185, "label": "materialize subnet" }
+      ]
+    },
+    {
+      "id": "onnx",
+      "type": "messagebus",
+      "label": "Fixed-shape ONNX",
+      "sublabel": "one graph per level",
+      "pos": [865, 215],
+      "size": [170, 70],
+      "sources": [
+        { "path": "src/imavis_edge_seg/export.py", "line": 17, "end_line": 38, "label": "static ONNX export" },
+        { "path": "scripts/export_all_levels.py", "line": 26, "end_line": 36, "label": "four exports" }
+      ]
+    },
+    {
+      "id": "trt",
+      "type": "cloud",
+      "label": "TensorRT GPU",
+      "sublabel": "four static FP16 engines",
+      "pos": [1120, 125],
+      "size": [180, 66],
+      "sources": [
+        { "path": "scripts/benchmark/run_trtexec_protocol.sh", "line": 1, "end_line": 43, "label": "TensorRT execution" }
+      ]
+    },
+    {
+      "id": "hailo",
+      "type": "cloud",
+      "label": "Hailo-8",
+      "sublabel": "four static HEF graphs",
+      "pos": [1120, 300],
+      "size": [180, 66],
+      "sources": [
+        { "path": "scripts/benchmark/run_hailo_protocol.sh", "line": 1, "end_line": 37, "label": "Hailo execution" }
+      ]
+    },
+    {
+      "id": "latency",
+      "type": "database",
+      "label": "Measured candidate costs",
+      "sublabel": "four entries per target",
+      "pos": [1390, 215],
+      "size": [195, 70],
+      "sources": [
+        { "path": "reports/flops_baseline_v1_20260917.md", "line": 45, "end_line": 49, "label": "four-device latency ratios" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "One shared parameter family; capacity changes along three axes",
+      "wraps": ["supernet", "tiny", "small", "medium", "large"],
+      "pad": 24
+    },
+    {
+      "kind": "region",
+      "label": "Static deployment artifacts; no dynamic graph on the accelerator",
+      "wraps": ["extract", "onnx", "trt", "hailo", "latency"],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    { "id": "supernet-to-tiny", "from": "supernet", "to": "tiny", "label": "shared weights", "variant": "emphasis" },
+    { "id": "supernet-to-small", "from": "supernet", "to": "small", "label": "shared weights", "variant": "emphasis" },
+    { "id": "supernet-to-medium", "from": "supernet", "to": "medium", "label": "shared weights", "variant": "emphasis" },
+    { "id": "supernet-to-large", "from": "supernet", "to": "large", "label": "shared weights", "variant": "emphasis" },
+    { "id": "tiny-to-extract", "from": "tiny", "to": "extract", "fromSide": "right", "toSide": "left", "variant": "dashed" },
+    { "id": "small-to-extract", "from": "small", "to": "extract", "fromSide": "right", "toSide": "left", "variant": "dashed" },
+    { "id": "medium-to-extract", "from": "medium", "to": "extract", "fromSide": "right", "toSide": "left", "variant": "dashed" },
+    { "id": "large-to-extract", "from": "large", "to": "extract", "fromSide": "right", "toSide": "left", "variant": "dashed" },
+    { "id": "extract-to-onnx", "from": "extract", "to": "onnx", "label": "export", "variant": "emphasis" },
+    { "id": "onnx-to-trt", "from": "onnx", "to": "trt", "label": "compile", "fromSide": "right", "toSide": "left" },
+    { "id": "onnx-to-hailo", "from": "onnx", "to": "hailo", "label": "compile", "fromSide": "right", "toSide": "left" },
+    { "id": "trt-to-latency", "from": "trt", "to": "latency", "label": "benchmark", "fromSide": "right", "toSide": "top" },
+    { "id": "hailo-to-latency", "from": "hailo", "to": "latency", "label": "benchmark", "fromSide": "right", "toSide": "bottom" }
+  ],
+  "cards": [
+    {
+      "dot": "slate",
+      "title": "Secondary path",
+      "items": ["Xavier DLA is retained as an encoder-only deployment diagnostic, not a primary backend."]
+    }
+  ]
+}
