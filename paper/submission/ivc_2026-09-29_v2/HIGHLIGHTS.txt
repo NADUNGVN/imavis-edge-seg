@@ -1,0 +1,5 @@
+One elastic model exposes four compiler-safe segmentation capacities.
+Measured latency changes budget-feasible choices across accelerators.
+The largest elastic capacity stays within 1.1 mIoU points of Fast-SCNN.
+Candidate-specific routing is evaluated under measured route budgets.
+Deployment-matched calibration remains required for the router claim.

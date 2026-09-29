@@ -1,0 +1,574 @@
+\documentclass[a4paper,review,12pt]{elsarticle}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,matrix}
+\pgfplotsset{compat=1.18}
+\definecolor{paceblue}{HTML}{0072B2}
+\definecolor{pacesky}{HTML}{56B4E9}
+\definecolor{pacegreen}{HTML}{009E73}
+\definecolor{paceorange}{HTML}{E69F00}
+\definecolor{pacevermillion}{HTML}{D55E00}
+\definecolor{pacepurple}{HTML}{CC79A7}
+
+\journal{Image and Vision Computing}
+
+\newcommand{\method}{PACE-Seg}
+\newcommand{\miou}{mIoU}
+\newcommand{\etal}{et al.}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{PACE-Seg: Hardware-Cost-Conditioned Elastic Semantic Segmentation with Calibrated Risk Routing for Edge Accelerators}
+
+\author{Dũng Nguyễn}
+
+\begin{abstract}
+Edge semantic segmentation faces two coupled deployment uncertainties: visual difficulty changes under adverse conditions, and model cost changes across accelerator architectures. We present \method, a compiler-safe elastic segmentation model that exposes four statically deployable capacities from one shared training process. A runtime policy uses measured route latency and candidate-specific mappings from a shared low-cost entropy probe to select capacity under a hardware budget. Experiments use Cityscapes, the fog, night, rain, and snow conditions of ACDC, and four edge devices. The four capacities span $110.2\times$ in FLOPs but only $10.3$--$19.5\times$ in measured candidate latency; a simple proportional FLOPs proxy therefore fails to reproduce measured budget choices. The largest elastic capacity remains within 1.1 \miou{} points of a similarly sized independently trained Fast-SCNN on every evaluated split, supporting shared-training near-parity rather than superiority. Candidate-specific routing is evaluated by held-out replay with complete warm-route costs measured on TensorRT/CUDA and Hailo-8. That analysis favors the budget-constrained policy, but its calibration feature is computed with a ground-truth-valid mask during fitting and without that mask at deployment. We therefore report the routing result as conditional diagnostic evidence rather than a frozen headline claim. A secondary fake-quant study finds that EMA-percentile activation calibration keeps worst-condition degradation within 1.5 \miou{} points for every tested run and elasticity level; it does not establish compiled INT8 accuracy. The study supports measured-cost elastic deployment while identifying deployment-matched calibration as the remaining requirement for a final routing claim.
+\end{abstract}
+
+\begin{keyword}
+semantic segmentation \sep elastic neural networks \sep dynamic inference \sep uncertainty calibration \sep edge acceleration \sep hardware-aware deployment
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Semantic segmentation on an edge device is governed by both scene difficulty and hardware cost. Fog, night, rain, and snow alter the visual evidence available to a model, while different accelerators assign different execution costs to the same network. A useful deployment method must therefore adapt computation to the image without assuming that FLOPs determine latency.
+
+Static efficient networks expose one operating point. They cannot reduce computation for easy inputs or use available budget for difficult inputs. Maintaining several independent networks creates additional operating points, but it does not provide a principled image-wise selection rule.
+
+Elastic networks address the candidate-generation problem by sharing parameters across multiple capacities. Elasticity alone does not determine which capacity should process an image, how a cheap prediction estimates the error of larger candidates, or whether a selected candidate satisfies a measured hardware budget.
+
+Hardware-aware search and dynamic inference address complementary parts of this gap. The former incorporates platform cost during model design; the latter adapts computation to an input. The unresolved intersection is runtime selection among elastic segmentation candidates when image difficulty varies and feasibility is defined by measured end-to-end accelerator cost.
+
+We hypothesize that one compiler-safe elastic model can preserve the quality of matched independent training while measured hardware costs and candidate-specific visual-risk estimates support budgeted runtime selection. \method{} tests this hypothesis with four static capacities. One tiny prediction supplies a shared image-level entropy feature, a separate calibrator estimates each candidate's expected error, and a hard constraint removes candidates whose measured route cost exceeds the budget.
+
+The experiments answer three research questions. RQ1 asks whether measured hardware cost is necessary for candidate selection. RQ2 asks whether shared elastic training preserves segmentation quality. RQ3 asks whether candidate-specific visual-risk routing improves the quality--latency trade-off under a measured budget. Quantization-aware training is retained as a secondary deployment study rather than a primary contribution.
+
+The contributions are as follows:
+\begin{enumerate}
+    \item A compiler-safe elastic segmentation model exposes four width--depth--resolution capacities as separately compilable static graphs from one shared training process.
+    \item A measured-cost candidate set replaces FLOPs with observed deployment latency when constructing hardware-feasible choices.
+    \item A candidate-specific calibrated-risk policy maps one inexpensive visual probe to candidate error estimates and selects capacity under an explicit hardware budget.
+\end{enumerate}
+
+The routing method is a primary methodological contribution, but its current quantitative comparison is not a frozen headline result. Calibration fitting and deployment use different pixel sets when computing entropy. Until that feature is made identical, the router experiment is interpreted as conditional evidence about the policy rather than a final estimate of deployment benefit.
+
+\section{Related work}
+\label{sec:related}
+
+\subsection{Efficient and real-time semantic segmentation}
+
+Efficient segmentation research seeks to preserve spatial detail and context while reducing latency. BiSeNet separates spatial and contextual processing~\cite{yu2018bisenet}, STDC removes redundancy from bilateral designs~\cite{fan2021stdc}, and PIDNet adds a boundary-oriented branch to control the interaction between detail and context~\cite{xu2023pidnet}. Transformer-based SegFormer and the recent offset-learning design OffSeg provide further accuracy--efficiency operating points~\cite{xie2021segformer,zhang2025offseg}. Collectively, these methods demonstrate that architecture design can substantially improve the static quality--latency trade-off.
+
+The remaining limitation for the present problem is not a lack of compact architectures. A static network commits to one operating point for every image and every budget. Even when several static networks are available, their runtime selection remains external to the architecture. \method{} therefore treats efficient architectures as comparison points and focuses on exposing and selecting multiple capacities within one elastic model.
+
+\subsection{Elastic, slimmable, and once-for-all networks}
+
+Slimmable neural networks introduced shared weights and switchable normalization for execution at multiple widths~\cite{yu2019slimmable}, while universally slimmable networks added the sandwich rule and in-place distillation~\cite{yu2019usnet}. Once-for-All extended the principle across depth, width, kernel size, and resolution and decoupled supernet training from deployment-time specialization~\cite{cai2020ofa}. For semantic segmentation, SlimSeg applied channel slimming, downward distillation, and boundary supervision to produce multiple capacities from one model~\cite{xue2022slimseg}. Multi-Exit Semantic Segmentation Networks pursued a related train-once, customize-at-deployment objective through intermediate exits~\cite{kouris2022mess}.
+
+These works establish that one training process can expose multiple accuracy--efficiency candidates. They do not, by themselves, solve image-wise selection under a hard budget measured on a specific accelerator. OFA-style specialization is primarily deployment-time subnet selection, SlimSeg exposes adjustable widths, and MESS optimizes exit configurations; \method{} instead asks how a shared probe can estimate the error of each available candidate and how those estimates should interact with complete route costs at runtime.
+
+\subsection{Hardware-aware deployment}
+
+Platform-aware NAS established that real latency can be a more faithful objective than FLOPs for mobile deployment~\cite{tan2019mnasnet}. Segmentation-specific systems such as FasterSeg, AutoSegEdge, multi-objective edge NAS, and RealtimeSeg incorporate latency into architecture optimization and deploy searched models on edge hardware~\cite{chen2020fasterseg,dou2023autosegedge,dou2024multiobjective,li2023realtimeseg}. HARD extends static architecture design across GPU and embedded targets~\cite{kwon2024hard}. These studies collectively establish that deployment cost should enter model design and that architectures optimized for one execution substrate need not transfer unchanged to another.
+
+The unresolved gap is runtime rather than design-time adaptation. Hardware-aware NAS chooses an architecture or search space before deployment, whereas \method{} selects among fixed elastic candidates for each image. Its RQ1 claim is narrow: a simple through-origin proportional FLOPs proxy does not reproduce the observed cost scale or all budget-feasible choices in the evaluated candidate set. This does not imply that learned latency predictors or FLOPs-aware NAS fail in general.
+
+\subsection{Uncertainty and adaptive inference under adverse conditions}
+
+Dynamic routing for semantic segmentation learns image-dependent paths through a multi-scale network~\cite{li2020dynamic}. Anytime Dense Prediction combines confidence-adaptive exits with spatial masking~\cite{liu2022anytime}, while MESS adapts exit selection to input difficulty~\cite{kouris2022mess}. These methods establish that dense prediction can allocate computation conditionally rather than execute one graph for every image.
+
+Confidence calibration introduces a second requirement. Segmentation confidence depends on prediction correctness, model capacity, crop size, and domain shift~\cite{wang2023calibrating}; improved in-domain accuracy does not ensure calibrated uncertainty under adverse conditions~\cite{dejorge2023reliability}. ACDC provides paired fog, night, rain, and snow scenes and supports uncertainty-aware evaluation through invalid-region annotations~\cite{sakaridis2021acdc}. These studies motivate risk-aware adaptation but do not show how one cheap candidate's confidence should estimate the errors of several larger candidates.
+
+The unresolved gap is candidate-specific visual risk under a measured hardware constraint. \method{} uses one image-level entropy feature from the tiny candidate and fits one monotonic mapping for each candidate and evaluation domain. It does not claim condition-agnostic calibration, formal risk control, or universally reliable uncertainty.
+
+\subsection{Quantization of elastic networks}
+
+Adaptive-bit and elastic quantization methods such as AdaBits and EQ-Net train shared networks that support multiple numerical precisions or quantized subnetworks~\cite{jin2020adabits,xu2023eqnet}. They establish that weight sharing and quantization can be optimized jointly, but they do not make fake-quant evidence equivalent to compiled accelerator accuracy. Quantization remains a secondary deployment study in this paper.
+
+\subsection{Positioning of PACE-Seg}
+
+Prior work has separately demonstrated efficient segmentation, elastic subnetworks, hardware-aware architecture selection, adaptive inference, and uncertainty-aware prediction. \method{} connects these directions through a compiler-safe elastic candidate set, measured deployment costs, and candidate-specific visual-risk routing under a hard budget. The contribution is integrative and deployment-oriented; none of the inherited components is claimed as individually new.
+
+\section{Method}
+\label{sec:method}
+
+\subsection{System overview}
+\label{sec:overview}
+
+\method{} separates candidate construction from runtime selection. Shared training produces four elastic capacities. Each capacity is exported as a static graph that can be compiled independently. At inference time, the tiny candidate produces both a segmentation and an image-level entropy feature. Candidate-specific calibrators map that shared feature to expected error, while measured route costs define which candidates satisfy the hardware budget. The policy returns the least costly feasible candidate predicted to meet the risk target, or the lowest-risk feasible candidate when no prediction meets that target.
+
+Figure~\ref{fig:overview} summarizes this path. Visual evidence influences the predicted candidate errors; hardware measurements influence feasibility. No compiled graph contains data-dependent control flow.
+
+\input{figures/fig1_system_overview.tex}
+
+\subsection{Compiler-safe elastic candidate family}
+\label{sec:elastic}
+
+\method{} contains four discrete levels: tiny, small, medium, and large. Their width multipliers are 0.25, 0.50, 0.75, and 1.00; their repeated block counts are 2, 3, 4, and 6; and their input resolutions are $384\times192$, $512\times256$, $768\times384$, and $1024\times512$ pixels. The levels share convolutional weights through active-channel slicing and use level-specific batch-normalization state. The operator set is restricted to convolutions, normalization, standard activations, pooling, elementwise operations, concatenation, and static-factor bilinear resizing that passed compiler smoke tests in the evaluated toolchains. Because no unconstrained-operator control was trained, compiler compatibility is deployment evidence rather than a measured accuracy contribution.
+
+The four levels are exported as separate static graphs. Runtime routing therefore selects an engine before the selected candidate is executed; no compiled graph contains data-dependent control flow.
+
+\subsection{Measured-cost candidate set}
+\label{sec:measured-cost}
+
+For target hardware $h$, each candidate $l$ has a measured route cost $t_{h,l}$. Candidate-only measurements characterize the hardware ordering and Pareto set. Runtime measurements include the complete decision path: tiny probe inference, entropy computation, policy evaluation, engine activation or dispatch, and any additional candidate inference. The tiny prediction is reused when the policy selects tiny.
+
+Measured cost enters the policy after training. It does not alter supernet optimization and therefore should not be interpreted as hardware-aware training or continuous architecture search. A new target requires a four-entry measured cost table, not retraining the segmentation model.
+
+\subsection{Candidate-specific visual-risk calibration}
+\label{sec:calibration}
+
+Let the tiny candidate produce logits $z(x)$. The raw probe score is mean pixel entropy,
+\begin{equation}
+s(x)=\frac{1}{|\Omega|}\sum_{u\in\Omega}-\sum_{c=1}^{C}p_{u,c}\log\max(p_{u,c},10^{-12}),
+\label{eq:entropy}
+\end{equation}
+where $p$ is the softmax of $z$ and $C=19$. The score is image-level and requires no separate probe network.
+
+For each candidate $l$, we fit a monotonic calibrator $g_l$ that maps the same $s(x)$ to the candidate's observed per-image pixel error. A separate set of candidate calibrators is fitted for Cityscapes and for each ACDC condition; calibrators are not pooled across the five splits. Fit-half samples are divided into ten equal-count bins by probe score. The target in each bin is the mean observed error of candidate $l$, and a cumulative-maximum pass enforces non-decreasing expected error. Thus
+\begin{equation}
+\widehat{r}_l(x)=g_l(s(x))
+\label{eq:risk}
+\end{equation}
+is candidate-specific calibration from shared sensing, not candidate-specific probing. At deployment, this formulation requires the relevant domain or condition to be known or otherwise configured so that the corresponding calibrator set is selected.
+
+The implementation computes fit-half entropy only over ground-truth-valid pixels but computes inference and held-out entropy over all pixels because an ignore mask is unavailable at deployment. This does not expose held-out ground truth to the policy, but it is a fit--deployment feature mismatch. We retain the frozen evidence and disclose the mismatch rather than describing the calibrator as perfectly deployment-matched.
+
+\subsection{Hardware-cost-conditioned policy}
+\label{sec:policy}
+
+For a target device, candidate $l$ has measured route cost $t_l$, risk target $\tau$, and budget $B$. The proposed policy D forms the feasible set
+\begin{equation}
+\mathcal{S}_B=\{l:t_l\leq B\}.
+\label{eq:feasible}
+\end{equation}
+If at least one feasible candidate satisfies $\widehat{r}_l(x)\leq\tau$, D selects the cheapest such candidate. Otherwise it selects the feasible candidate with minimum predicted error, breaking ties by lower cost. If no candidate is within budget, it selects the globally cheapest candidate. This fallback can still exceed a budget smaller than the cheapest available route; the evaluated budget grid uses the four measured route costs, so this case does not occur in the reported cells.
+
+We compare D with three progressive ablations. A uses one calibrator for the probe candidate and escalates by latency rank according to integer multiples of $\tau$. B retains the single risk value but targets a latency magnitude before choosing the closest candidate. C uses candidate-specific risks but has no explicit budget. The progression is not a factorial $2\times2$ because D adds a hard-budget axis absent from A--C. Static candidates, uncalibrated entropy routing, and a ground-truth oracle are additional references. The oracle is used only as an upper bound and never supplies information to a deployable policy.
+
+\subsection{Implementation details and secondary QAT study}
+\label{sec:qatmethod}
+
+Elastic training uses the sandwich rule: each step evaluates the smallest and largest levels and one randomly selected intermediate level. The largest level receives supervised segmentation loss; smaller levels receive supervised and in-place distillation terms; and a boundary auxiliary term emphasizes semantic transitions. Training uses 100,000 optimization steps, batch size 8, AdamW with weight decay $10^{-4}$, initial learning rate $3\times10^{-4}$, cosine decay, 500 warm-up steps, and gradient clipping at 5.0. The data stream combines Cityscapes and ACDC with random scale/crop/pad, horizontal flip, and color jitter.
+
+QAT replaces each convolution with per-tensor symmetric 8-bit fake quantization of its input activation and active weight tensor, using PyTorch's straight-through estimator. Dynamic mode derives the activation scale from every call. Calibrated mode freezes one activation range per layer after a 200-image calibration pass spanning clean and adverse conditions. The maximum observer retains the largest activation observed over all calls. The EMA-percentile observer computes the 99.9th percentile of absolute activation in each call and combines successive values with momentum 0.9.
+
+For a slimmable convolution, one calibration buffer belongs to the shared layer and aggregates calls from all elasticity levels; the implementation does not maintain a separate frozen activation scale for each level. Each QAT run fine-tunes 10,000 steps from an FP32 checkpoint at learning rate $3\times10^{-5}$. These are simulated fake-quant results. They neither execute integer kernels nor establish compiled TensorRT or Hailo INT8 accuracy.
+
+\section{Experimental protocol}
+\label{sec:protocol}
+
+\subsection{Datasets and splits}
+
+Cityscapes supplies 2,975 training and 500 validation images~\cite{cordts2016cityscapes}. ACDC supplies 1,600 training and 406 validation images distributed across fog, night, rain, and snow~\cite{sakaridis2021acdc}. Both use the 19 Cityscapes train classes. Each validation split is partitioned by alternating index: even-index images form the calibration and operating-point fit half, and odd-index images form the held-out evaluation half. The study does not use an external test server.
+
+\subsection{Training runs and baselines}
+
+The near-parity comparison uses three augmented supernet runs and three augmented Fast-SCNN runs. The router analysis uses the three separately trained seed-labelled checkpoints summarized in Table~\ref{tab:provenance}. Repository naming indicates that two runs are augmentation-labelled and one is an unlabelled configuration; checkpoint hashes, initialization-parent identifiers, and immutable full training manifests are not recorded in the report. We consequently call them separate training runs rather than a controlled three-seed estimate under a proven identical configuration.
+
+\begin{table}[t]
+\centering
+\caption{Training-checkpoint provenance used by the router analysis. Missing fields are reported rather than inferred.}
+\label{tab:provenance}
+\small
+\begin{tabularx}{\textwidth}{@{}lXclX@{}}
+\toprule
+Run & Repository experiment ID & Seed & Checkpoint & Provenance boundary \\
+\midrule
+0 & \texttt{pace\_seg\_v1\_aug\_seed0} & 0 & step 100,000 & Augmentation-labelled ID; checkpoint/config hash and initialization parent unavailable \\
+2 & \texttt{pace\_seg\_v1\_seed2} & 2 & step 100,000 & Earlier unlabelled ID; checkpoint/config hash and initialization parent unavailable \\
+3 & \texttt{pace\_seg\_v1\_aug\_seed3} & 3 & step 100,000 & Augmentation-labelled ID; checkpoint/config hash and initialization parent unavailable \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Fixed-architecture comparisons include Fast-SCNN, BiSeNetV2, SegFormer-B0, DDRNet-23-slim, and MobileNetV3+DeepLabV3. Fast-SCNN is the parameter-matched RQ2 comparator for the large elastic level. Static-small, static-large, raw entropy, rank-based calibrated policy A, latency-spacing policy B, candidate-specific budget-unaware policy C, constrained policy D, and an oracle provide routing references.
+
+\subsection{Hardware and compiler versions}
+
+Table~\ref{tab:hardware} identifies the four latency targets and their compiler stacks. TensorRT measurements use GPU FP16. Hailo candidates are compiled from ONNX through Hailo's Dataflow Compiler to HEF. Compiler smoke tests establish that all four static candidates execute on the primary TensorRT GPU and Hailo paths; DLA is excluded from headline analysis because decoder execution falls back to the GPU.
+
+\begin{table}[t]
+\centering
+\caption{Hardware and compiler stacks used for candidate-latency measurement. Versions are reported because engine behavior is toolchain-specific.}
+\label{tab:hardware}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+ID & Hardware & Runtime and system versions \\
+\midrule
+E1 & Raspberry Pi 5 + Hailo-8 M.2 & HailoRT 4.23.0; HEFs produced with Dataflow Compiler 3.34.0 and Model Zoo 2.19.0 \\
+E2 & Jetson Xavier NX & L4T R35.4.1; CUDA 11.4.19; cuDNN 8.6.0.166; TensorRT 8.5.2.2 \\
+E3 & Jetson AGX Xavier & L4T R35.6.4; CUDA 11.4.19; TensorRT 8.5.2.2 \\
+E5 & Jetson Orin Nano Super & L4T R36.5.0; CUDA 12.6.68; cuDNN 9.3.0; TensorRT 10.3.0.30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Latency protocol}
+
+Candidate-only latency is measured on four devices: E1, a Raspberry Pi 5 host with a Hailo-8 M.2 accelerator; E2, a Jetson Xavier NX; E3, a Jetson AGX Xavier; and E5, a Jetson Orin Nano. NVIDIA devices use TensorRT FP16. Measurements use batch size one, warm-up, three independent benchmark runs for the candidate lookup table, and bootstrap intervals. Energy is excluded because no external calibrated power meter was available.
+
+Complete warm route costs are measured on E1 and E3. On E3, all four TensorRT contexts are resident; route timing includes tiny inference, device-resident entropy, policy evaluation, dispatch, and additional candidate inference. On E1, route timing includes mandatory network-group activation and deactivation, tiny inference, host entropy, policy evaluation, and additional candidate inference. Each route class uses 50 warm-up iterations and at least 500 timed iterations. Tiny output is reused when tiny is selected. Backend-specific cold-start measurements are excluded because the two runtimes impose different reload semantics.
+
+The route harnesses use compiled graphs with the correct post-rescale architecture but do not execute trained checkpoint weights for the accuracy evaluation. The analysis combines measured route latency with cached trained-model predictions in an offline, per-image policy replay. It is not an integrated on-device accuracy run.
+
+\subsection{Metrics, seed policy, and unit of analysis}
+
+Segmentation quality is dataset-level \miou{}. Router calibration targets per-image pixel error, while routed quality is recomputed by accumulating confusion matrices from the selected candidates and calculating \miou{} once over the routed held-out set. Headline accuracy comparisons require three training runs. The router evidence uses three separately trained seed-labelled checkpoints, but incomplete configuration provenance prevents treating them as a perfectly controlled identical-configuration seed study.
+
+The router reporting unit is an operating cell defined by checkpoint, backend cost table, dataset split, and budget. Cells reuse images, predictions, thresholds, and candidate sets. They are correlated analysis points, not independent statistical samples. We therefore report descriptive counts and macro averages without cell-level $p$-values or confidence intervals.
+
+A fair A-versus-D cell is one in which A has zero held-out per-image budget violations at its fit-selected operating point. An operating cell is violating when at least one held-out image exceeds its budget. Fair-cell quality counts are always paired with violation counts over the full grid. D's zero violating-cell count is partly structural because D removes candidates above budget.
+
+\subsection{Fit/held-out separation and leakage safeguards}
+\label{sec:split}
+
+Every candidate is evaluated once per image and its prediction is cached. Within each dataset split, candidate calibrators use only fit-half probe scores and candidate errors. Five risk targets are the 10th, 25th, 50th, 75th, and 90th percentiles of fit-half observed error, macro-aggregated across the five splits. One grid is generated per checkpoint and reused across E1 and E3 cost tables.
+
+For each budget and policy, the representative risk target is selected from fit-half statistics: among points whose fit-half mean cost satisfies the budget, the procedure chooses the highest fit-half \miou{} and breaks ties by lower cost. Held-out outcomes are read only after this choice. The oracle uses held-out ground truth only as a non-deployable upper bound.
+
+The current calibration feature is not deployment-matched. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. This is not held-out label leakage, but it changes the feature supplied to the calibrator. Under the evidence rule adopted here, router quality counts obtained with this mismatch are diagnostic and cannot support a frozen RQ3 headline until fitting is repeated with the deployment-time feature definition.
+
+Figure~\ref{fig:protocol} summarizes the separation and the remaining mismatch.
+
+\input{figures/fig2_protocol_split.tex}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{RQ1: Why measured hardware cost is necessary}
+
+The four levels require 0.2060, 1.1678, 6.1712, and 22.6992 GFLOPs. Their large-to-tiny ratio is 110.2. Measured end-to-end candidate latency grows much less sharply, as shown in Table~\ref{tab:latency}.
+
+\begin{table}[t]
+\centering
+\caption{Candidate-only mean latency (ms) used for RQ1. The same four elastic candidates produce different budget-feasible choices across hardware targets.}
+\label{tab:latency}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Level & E1 Hailo-8 & E2 Xavier NX & E3 AGX Xavier & E5 Orin Nano \\
+\midrule
+tiny & 3.714 & 2.061 & 0.912 & 1.081 \\
+small & 6.597 & 4.964 & 1.781 & 2.604 \\
+medium & 20.29 & 15.10 & 4.546 & 7.727 \\
+large & 41.14 & 40.26 & 9.389 & 17.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Measured latency is necessary because FLOPs does not preserve cost magnitude or budget choices. The $110.2\times$ FLOPs span contracts to $10.3$--$19.5\times$ measured latency, and a 10~ms budget selects small on E1/E2, large on E3, and medium on E5. This variation supports target-specific measured costs. The result applies to the evaluated proportional proxy and four-candidate set, not to every learned latency model or hardware-aware search method.
+
+\input{figures/fig3_flops_vs_latency.tex}
+
+The budget sweep confirms that the mismatch affects selection rather than only scale. Across 640 proxy evaluations, same-device proportional fits mis-select 37.5--65\% of budgets, and the worst cross-device transfers reach 85--95\% mis-selection or violation. Measured cost is therefore required for this candidate set. The sweep does not compare against learned latency predictors.
+
+\subsection{RQ2: Whether shared elastic training preserves quality}
+
+The elastic model preserves matched-capacity segmentation quality across clean and adverse conditions. Table~\ref{tab:rq2} compares the large level with a similarly sized Fast-SCNN over three augmented runs per model.
+
+\begin{table}[t]
+\centering
+\caption{Three-run mean \miou{} for the matched RQ2 comparison. Positive gap favors the elastic large level.}
+\label{tab:rq2}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Split & Fast-SCNN & \method{} large & Gap \\
+\midrule
+Cityscapes & 0.5228 & 0.5338 & +0.0110 \\
+ACDC/fog & 0.5629 & 0.5650 & +0.0021 \\
+ACDC/night & 0.3822 & 0.3757 & $-0.0065$ \\
+ACDC/rain & 0.5050 & 0.5027 & $-0.0023$ \\
+ACDC/snow & 0.5048 & 0.5055 & +0.0007 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The absolute gap is at most 0.0110 \miou{} on every split; the elastic level is higher on three splits and lower on two. Shared training therefore achieves near-parity rather than superiority. This comparison does not measure total training, packaging, or maintenance savings.
+
+\subsection{RQ3: Candidate-specific routing under measured budgets}
+
+The routing study tests whether candidate-specific expected-error estimates improve budget-constrained selection over a single-score rank policy. Under candidate-only costs for one training run, policy D incurs no violation in 80 device--split--budget cells, compared with 28 for A, 5 for B, 44 for C, and 20 for raw entropy. In the 52 cells where A is feasible, D records 36 wins, 12 ties, and 4 losses, with a mean D-minus-A gap of +0.0224 \miou{}. These ablations support the candidate-specific, budget-constrained design, but they omit complete route overhead and use a fit-time entropy feature that is not identical to the deployment feature. They are therefore directional evidence rather than the router headline.
+
+\subsubsection{Measured route costs}
+
+Complete route costs materially exceed candidate-only inference costs, and the dominant source depends on the accelerator. Table~\ref{tab:routes} reports the warm-route medians used in the overhead-aware replay; every value includes the tiny probe, risk evaluation, policy decision, switching or activation, and any additional candidate inference.
+
+\begin{table}[t]
+\centering
+\caption{Median warm end-to-end route cost used in the overhead-aware replay.}
+\label{tab:routes}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Route & E3 TensorRT/CUDA & E1 Hailo-8 \\
+\midrule
+tiny $\rightarrow$ tiny & 2.07 ms & 34.95 ms \\
+tiny $\rightarrow$ small & 5.23 ms & 46.13 ms \\
+tiny $\rightarrow$ medium & 11.97 ms & 63.36 ms \\
+tiny $\rightarrow$ large & 26.70 ms & 92.68 ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On E3, complete routes range from 2.07 to 26.70~ms; on E1 they range from 34.95 to 92.68~ms. Host-side uncertainty evaluation is the main avoidable cost on E3, whereas network-group activation dominates E1. A production-path audit on 40 TensorRT outputs measures a maximum risk-score deviation of $7.15\times10^{-7}$ nats from the PyTorch reference, below the prespecified $10^{-4}$ tolerance. The measurements show that candidate-only lookup tables omit substantial, backend-specific costs. They cover two warm execution paths and do not establish equivalent cold-start semantics across the backends.
+
+\input{figures/fig4_route_overhead.tex}
+
+\subsubsection{Conditional routing diagnostic}
+
+The overhead-aware replay recomputes A and D decisions with measured warm route costs, constructs each backend's budget grid from its four route costs, and selects risk targets using fit-half data. One canonical risk grid per training run is shared across E1 and E3. Each visual condition retains its own fit-half calibrators, so the result evaluates configured condition-specific calibration rather than automatic recognition of an unknown condition.
+
+\begin{table}[t]
+\centering
+\caption{Conditional A-versus-D diagnostic with measured complete route costs. W/T/L uses fair cells; violations use the full grid.}
+\label{tab:routerfinal}
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Backend & Fair & D W/T/L & Win/tie & Macro $\Delta$\miou{} & D viol. & A viol. \\
+\midrule
+E3 TensorRT/CUDA & 35/60 & 26/8/1 & 97.1\% & +0.0241 & 0/60 & 25/60 \\
+E1 Hailo-8 & 34/60 & 25/8/1 & 97.1\% & +0.0241 & 0/60 & 26/60 \\
+Overall & 69/120 & 51/16/2 & 97.1\% & +0.0241 & 0/120 & 51/120 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under this protocol, D outperforms or matches A in 67 of 69 fair cells (51 wins, 16 ties, and 2 losses), with a macro D-minus-A gap of +0.0241 \miou{}. Across the full 120-cell grid, D has no budget-violating operating point and A has 51. The result suggests that candidate-specific calibration can retain more segmentation quality than rank escalation under measured budgets. It is not frozen as a deployment-matched headline because fit-half entropy excludes ground-truth ignore pixels whereas deployment entropy includes all pixels.
+
+The 69 fair cells are the subset in which A satisfies its own budget; they are correlated operating points rather than independent trials. D's zero-violation count follows partly from enforcing feasibility by construction, and E1 and E3 share segmentation predictions. The cross-backend comparison therefore tests the effect of different measured cost tables, not independent accuracy replication. Absolute hardware costs determine feasibility and latency, but identical candidate ordering can still produce identical decisions.
+
+\input{figures/fig5_router_result.tex}
+
+\subsection{Adverse-condition behavior}
+
+Adverse conditions affect both segmentation quality and the informativeness of the shared probe. The large elastic level averages 0.5338 \miou{} on Cityscapes but 0.3757 on ACDC/night, while the probe's mean area under the risk--coverage curve is 0.1467 and reaches its worst value, 0.2616, at night. Night imagery therefore weakens both prediction quality and uncertainty ranking. This observation is specific to the evaluated validation halves and condition-specific calibrators.
+
+The router's residual losses are concentrated rather than uniformly distributed. Both losses in the overhead-aware diagnostic occur in correlated ACDC/rain cells, consistent with the four rain losses in the earlier candidate-only ablation. This pattern identifies rain as a boundary case for the present score and calibration scheme; repeated cells reuse images and predictions, so the count is not a failure probability.
+
+\subsection{Secondary deployment and fake-quant evidence}
+\label{sec:qatresults}
+
+All four static candidate graphs compile and execute through TensorRT and Hailo-8 deployment paths. This establishes compiler compatibility for the constrained operator set, but the study has no trained unconstrained control and therefore does not attribute an accuracy benefit to compiler safety.
+
+Observer choice controls the worst adverse-condition degradation in the fake-quant study. Dynamic fake quantization of the shared large level loses 1.66, 2.54, and 1.39 \miou{} points in the worst condition of the three runs, whereas EMA-percentile calibration produces the bounds in Table~\ref{tab:qat}. A seed0 $2\times2$ comparison indicates a larger change from the observer than from subnet export. Because the identity of the worst condition can differ between cells and mean effects are not uniformly positive, the comparison does not establish additive causal effects.
+
+\begin{table}[t]
+\centering
+\caption{Absolute worst-condition \miou{} degradation under shared-supernet EMA-percentile fake-quant QAT.}
+\label{tab:qat}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Training run & tiny & small & medium & large \\
+\midrule
+seed-labelled run 0 & 0.32 & 0.97 & 0.51 & 0.97 \\
+seed-labelled run 3 & 0.36 & 0.33 & 0.56 & 0.86 \\
+seed-labelled run 2 & 0.69 & 0.33 & 0.49 & 1.38 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Every evaluated run and level remains within 1.5 points, and the worst large-level run improves from 2.54 to 1.38 points. EMA-percentile calibration therefore stabilizes worst-condition fake-quant degradation in this setting. Mean quality is not consistently improved, activation outlier suppression remains an untested explanation, and no compiled INT8 accuracy claim follows.
+
+\input{figures/fig6_qat_heatmap.tex}
+
+\section{Discussion}
+\label{sec:discussion}
+
+The experiments separate candidate construction, hardware feasibility, and image-dependent selection. Shared elastic training supplies four static candidates without a large quality penalty at matched capacity. Direct measurement then defines which candidates fit a deployment budget. Candidate-specific calibration finally estimates whether additional capacity is warranted for an image. Treating these as distinct decisions makes clear which evidence supports each part of the system.
+
+FLOPs fails here primarily as a cost scale rather than an ordering statistic. The 110.2-fold compute range contracts to a 10.3--19.5-fold latency range because operators, memory behavior, compiler mappings, and accelerator execution differ. A ranking may therefore transfer when candidate order is preserved, while budget feasibility still changes with absolute measured cost. This explains why some routing decisions coincide across devices without making the cost table dispensable.
+
+Candidate-specific calibration addresses a limitation of a single probe score: equal probe entropy need not imply equal error for every candidate. The routing diagnostics are consistent with this premise, but calibration cannot recover visual information absent from the probe. The high AURC on ACDC/night and the clustered rain losses show two distinct failure modes: weak uncertainty ordering and condition-dependent calibration error. The present per-condition calibrators also assume that the condition is known.
+
+Complete route measurement changes the deployment conclusion. Candidate-only inference time omits uncertainty computation and accelerator-specific switching or activation. These omissions are large on both evaluated backends even though their causes differ. Hardware-aware runtime selection should therefore account for the complete route path, not only isolated candidate latency.
+
+The quantization study reinforces the need to separate measurement from mechanism. EMA-percentile calibration reduces worst-condition fake-quant degradation across the tested runs and levels, but the data do not directly measure activation outliers or compiled integer behavior. QAT consequently remains secondary deployment evidence rather than a primary contribution.
+
+\section{Limitations and threats to validity}
+\label{sec:limitations}
+
+First, the fit and deployment risk features are not identical. Fit-half entropy excludes ground-truth ignore pixels, whereas held-out and runtime entropy include all pixels. Held-out labels do not enter policy selection, so this is not test-label leakage; it is a train--deployment feature mismatch that can shift calibration bins. The router comparison is therefore reported as a conditional diagnostic rather than a frozen headline. Deployment-matched fitting and evaluation are required to close this claim.
+
+Second, calibration is domain- and condition-specific. Cityscapes and each ACDC condition use separate fit-half calibrators. The evaluation assumes that the deployment condition is known or configured and does not demonstrate a pooled calibrator or automatic condition recognition.
+
+Third, the evaluation uses alternating halves of validation splits rather than an external test set. Multiple budgets and thresholds reuse the same images and predictions. Operating cells are correlated, and the 120-cell denominator is not a statistical sample size. Three seed-labelled checkpoint runs form the training-replication axis, but complete immutable provenance and checkpoint hashes are unavailable.
+
+Fourth, fair-cell conditioning is descriptive. It excludes A's budget-violating comparisons so that quality is compared only when A honors its contract, but the denominator depends on baseline behavior. Full-grid violation counts must accompany the fair-cell result. D's zero violations are partly guaranteed by construction and are not empirical reliability.
+
+Fifth, E1 and E3 share segmentation predictions. Separately measured route-cost tables are combined with the same per-image prediction caches. The compiled timing engines have the correct architecture but are not the trained engines that produced accuracy. The study validates cost accounting and overhead-aware replay, not bit-exact compiled-model accuracy or a continuously running application.
+
+Sixth, breakpoint budgets can reduce hardware conditioning to latency rank. Absolute costs change feasibility and mean-latency operating-point selection, but identical orderings can produce identical route choices. Hardware-cost-conditioned describes the policy input; it does not imply device-specific decisions in every case.
+
+Seventh, QAT uses fake quantization in PyTorch. No compiled INT8 accuracy, integer-kernel speedup, or backend-specific quantization behavior is established. The observed EMA-percentile result is consistent with reduced outlier sensitivity but does not measure that mechanism directly.
+
+Finally, the study uses four candidates, two complete route-cost backends, and no external power meter. It makes no energy claim. Temporal routing, unknown-condition calibration, cold-frontier behavior, and uncertainty-aware segmentation metrics remain outside scope. The compiler-safe operator set was validated without a trained unconstrained control, so portability is an engineering property rather than an independently isolated accuracy contribution.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\method{} studies elastic semantic segmentation when both visual difficulty and accelerator cost vary. Measured latency is necessary to define feasible candidates, and shared elastic training preserves matched-capacity quality across the evaluated clean and adverse conditions. Candidate-specific calibrated routing is promising under complete measured route costs, but its quantitative advantage remains conditional until fitting and deployment use the same risk feature. The evidence supports measured-cost elastic deployment while defining the calibration and external-validity work required for a definitive routing claim.
+
+\section*{Data and code availability}
+
+The repository records the implementation, experiment reports, and canonical result artifacts. The frozen evidence snapshot is commit \texttt{ac65b562ed1cc33b7a30a63b2451924b156f8bdd}, tagged \texttt{gpt-review-v1-20260929}; the scientific-story manuscript is released as tag \texttt{ivc-scientific-story-v2-20260929}. The overhead-aware router artifacts are \path{reports/router_overhead_replay_E3_20260922.json}, \path{reports/router_overhead_replay_E1_20260928.json}, the corresponding seed2 and seed3 E1/E3 replay files dated 2026-09-29, \path{reports/router_overhead_v1_20260922.md}, and \path{reports/audit_gpu_risk_kernel_production_E3.json}. Dataset access remains subject to the Cityscapes and ACDC licenses.
+
+\begin{thebibliography}{99}
+
+\bibitem{yu2018bisenet}
+C. Yu, J. Wang, C. Peng, C. Gao, G. Yu, N. Sang,
+BiSeNet: Bilateral segmentation network for real-time semantic segmentation,
+in: European Conference on Computer Vision, 2018, pp. 325--341.
+\url{https://openaccess.thecvf.com/content_ECCV_2018/html/Changqian_Yu_BiSeNet_Bilateral_Segmentation_ECCV_2018_paper.html}.
+
+\bibitem{fan2021stdc}
+M. Fan, S. Lai, J. Huang, X. Wei, Z. Chai, J. Luo, X. Wei,
+Rethinking BiSeNet for real-time semantic segmentation,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2021, pp. 9716--9725.
+\url{https://openaccess.thecvf.com/content/CVPR2021/html/Fan_Rethinking_BiSeNet_for_Real-Time_Semantic_Segmentation_CVPR_2021_paper.html}.
+
+\bibitem{xu2023pidnet}
+J. Xu, Z. Xiong, S.P. Bhattacharyya,
+PIDNet: A real-time semantic segmentation network inspired by PID controllers,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 19529--19539.
+\url{https://openaccess.thecvf.com/content/CVPR2023/html/Xu_PIDNet_A_Real-Time_Semantic_Segmentation_Network_Inspired_by_PID_Controllers_CVPR_2023_paper.html}.
+
+\bibitem{xie2021segformer}
+E. Xie, W. Wang, Z. Yu, A. Anandkumar, J.M. Alvarez, P. Luo,
+SegFormer: Simple and efficient design for semantic segmentation with transformers,
+Advances in Neural Information Processing Systems 34 (2021) 12077--12090.
+
+\bibitem{zhang2025offseg}
+S.-C. Zhang, Y. Li, Y.-H. Wu, Q. Hou, M.-M. Cheng,
+Revisiting efficient semantic segmentation: Learning offsets for better spatial and class feature alignment,
+in: IEEE/CVF International Conference on Computer Vision, 2025, pp. 22361--22371.
+\url{https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Revisiting_Efficient_Semantic_Segmentation_Learning_Offsets_for_Better_Spatial_and_ICCV_2025_paper.html}.
+
+\bibitem{yu2019slimmable}
+J. Yu, L. Yang, N. Xu, J. Yang, T. Huang,
+Slimmable neural networks,
+in: ICLR Workshop, 2019.
+\url{https://arxiv.org/abs/1812.08928}.
+
+\bibitem{yu2019usnet}
+J. Yu, T. Huang,
+Universally slimmable networks and improved training techniques,
+in: IEEE/CVF International Conference on Computer Vision, 2019, pp. 1803--1811.
+\url{https://doi.org/10.1109/ICCV.2019.00189}.
+
+\bibitem{cai2020ofa}
+H. Cai, C. Gan, T. Wang, Z. Zhang, S. Han,
+Once-for-All: Train one network and specialize it for efficient deployment,
+in: International Conference on Learning Representations, 2020.
+\url{https://openreview.net/forum?id=HylxE1HKwS}.
+
+\bibitem{xue2022slimseg}
+D. Xue, F. Yang, P. Wang, L. Herranz, J. Sun, Y. Zhu, Y. Zhang,
+SlimSeg: Slimmable semantic segmentation with boundary supervision,
+in: Proceedings of the 30th ACM International Conference on Multimedia, 2022, pp. 6539--6548.
+\url{https://doi.org/10.1145/3503161.3548191}.
+
+\bibitem{kouris2022mess}
+A. Kouris, S.I. Venieris, S. Laskaridis, N.D. Lane,
+Multi-exit semantic segmentation networks,
+in: European Conference on Computer Vision, 2022, pp. 330--349.
+
+\bibitem{li2020dynamic}
+Y. Li, L. Song, Y. Chen, Z. Li, X. Zhang, X. Wang, J. Sun,
+Learning dynamic routing for semantic segmentation,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2020, pp. 8553--8562.
+
+\bibitem{liu2022anytime}
+Z. Liu, Z. Xu, H.-J. Wang, T. Darrell, E. Shelhamer,
+Anytime dense prediction with confidence adaptivity,
+in: International Conference on Learning Representations, 2022.
+\url{https://openreview.net/forum?id=kNKFOXleuC}.
+
+\bibitem{tan2019mnasnet}
+M. Tan, B. Chen, R. Pang, V. Vasudevan, M. Sandler, A. Howard, Q.V. Le,
+MnasNet: Platform-aware neural architecture search for mobile,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2019, pp. 2820--2828.
+
+\bibitem{chen2020fasterseg}
+W. Chen, X. Gong, X. Liu, Q. Zhang, Y. Li, Z. Wang,
+FasterSeg: Searching for faster real-time semantic segmentation,
+in: International Conference on Learning Representations, 2020.
+\url{https://openreview.net/forum?id=BJgqQ6NYvB}.
+
+\bibitem{dou2023autosegedge}
+Z. Dou, D.-Y. Ye, B. Wang, X. Wang, S. Sun,
+AutoSegEdge: Searching for the edge device real-time semantic segmentation based on multi-task learning,
+Image and Vision Computing 136 (2023) 104719.
+\url{https://doi.org/10.1016/j.imavis.2023.104719}.
+
+\bibitem{dou2024multiobjective}
+Z. Dou, D.-Y. Ye, B. Wang, X. Wang, S. Sun,
+Multi-objective neural architecture search for efficient and fast semantic segmentation on edge,
+IEEE Transactions on Intelligent Vehicles 9 (1) (2024) 1346--1357.
+\url{https://doi.org/10.1109/TIV.2023.3332594}.
+
+\bibitem{li2023realtimeseg}
+Y. Li, C. Yang, P. Zhao, G. Yuan, W. Niu, J. Guan, H. Tang, M. Qin, Q. Jin, B. Ren, X. Lin, Y. Wang,
+Towards real-time segmentation on the edge,
+Proceedings of the AAAI Conference on Artificial Intelligence 37 (2) (2023) 1339--1347.
+\url{https://doi.org/10.1609/aaai.v37i2.25232}.
+
+\bibitem{kwon2024hard}
+Y. Kwon, W. Kim, H. Kim,
+HARD: Hardware-aware lightweight real-time semantic segmentation model deployable from edge to GPU,
+in: Asian Conference on Computer Vision, 2024, pp. 3552--3569.
+\url{https://openaccess.thecvf.com/content/ACCV2024/html/Kwon_HARD__Hardware-Aware_lightweight_Real-time_semantic_segmentation_model_Deployable_from_ACCV_2024_paper.html}.
+
+\bibitem{wang2023calibrating}
+D. Wang, B. Gong, L. Wang,
+On calibrating semantic segmentation models: Analyses and an algorithm,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 23652--23662.
+
+\bibitem{dejorge2023reliability}
+P. de Jorge, R. Volpi, P.H.S. Torr, G. Rogez,
+Reliability in semantic segmentation: Are we on the right track?,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 2456--2465.
+
+\bibitem{sakaridis2021acdc}
+C. Sakaridis, D. Dai, L. Van Gool,
+ACDC: The adverse conditions dataset with correspondences for semantic driving scene understanding,
+in: IEEE/CVF International Conference on Computer Vision, 2021, pp. 10765--10775.
+
+\bibitem{cordts2016cityscapes}
+M. Cordts, M. Omran, S. Ramos, T. Rehfeld, M. Enzweiler, R. Benenson, U. Franke, S. Roth, B. Schiele,
+The Cityscapes dataset for semantic urban scene understanding,
+in: IEEE Conference on Computer Vision and Pattern Recognition, 2016, pp. 3213--3223.
+
+\bibitem{xu2023eqnet}
+S. Xu, Y. Li, M. Lin, P. Gao, G. Guo, J. Lue, B. Zhang,
+EQ-Net: Elastic quantization neural networks,
+in: IEEE/CVF International Conference on Computer Vision, 2023, pp. 15072--15082.
+
+\bibitem{jin2020adabits}
+Q. Jin, L. Yang, Z. Liao,
+AdaBits: Neural network quantization with adaptive bit-widths,
+in: IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2020, pp. 2146--2156.
+
+\end{thebibliography}
+
+\end{document}

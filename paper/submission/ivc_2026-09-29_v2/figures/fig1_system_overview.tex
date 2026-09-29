@@ -1,0 +1,33 @@
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily,
+    node distance=7mm,
+    block/.style={draw, rounded corners=2mm, line width=0.9pt, align=center, minimum height=19mm, text width=25mm, fill=white},
+    arrow/.style={-{Latex[length=3mm]}, line width=1pt, draw=gray!75},
+    note/.style={draw, rounded corners=1.5mm, align=center, fill=blue!5, draw=paceblue, text=paceblue, font=\bfseries\small}
+]
+\node[block, draw=gray!75, text width=18mm] (input) {\textbf{Input}\\image $x$};
+\node[block, draw=paceblue, right=of input] (probe) {\textbf{Tiny probe}\\cheap full-image segmentation};
+\node[block, draw=pacepurple, right=of probe] (entropy) {\textbf{Risk feature}\\mean softmax entropy $s(x)$};
+\node[block, draw=paceorange, right=of entropy, text width=31mm, minimum height=31mm] (calib) {\textbf{Candidate calibration}\\$g_{\mathrm{tiny}}(s)$\\$g_{\mathrm{small}}(s)$\\$g_{\mathrm{medium}}(s)$\\$g_{\mathrm{large}}(s)$\\[-1mm]\scriptsize per domain/condition};
+\node[block, draw=pacegreen, right=of calib, text width=28mm, minimum height=31mm] (policy) {\textbf{Policy D}\\filter by hard budget $B$\\then minimize predicted risk};
+\node[block, draw=pacevermillion, right=of policy, text width=22mm, minimum height=31mm] (engine) {\textbf{Selected static engine}\\tiny, small, medium, or large};
+
+\draw[arrow] (input) -- (probe);
+\draw[arrow] (probe) -- (entropy);
+\draw[arrow] (entropy) -- (calib);
+\draw[arrow] (calib) -- (policy);
+\draw[arrow] (policy) -- (engine);
+
+\node[note, above=8mm of policy, text width=61mm] (cost) {Measured complete route costs $t_l$\\\scriptsize probe + risk + policy + activation/dispatch + candidate};
+\draw[-{Latex[length=3mm]}, line width=1pt, paceblue] (cost) -- (policy);
+
+\node[note, below=8mm of probe, text width=48mm] (reuse) {If tiny is selected, its probe output is reused};
+\draw[-{Latex[length=3mm]}, line width=1pt, paceblue] (reuse) -- (probe);
+\end{tikzpicture}%
+}
+\caption{PACE-Seg inference path. A single tiny prediction supplies the shared entropy feature. Per-domain candidate calibrators estimate each candidate's error, and policy D selects only among candidates feasible under directly measured complete route costs.}
+\label{fig:overview}
+\end{figure*}

@@ -6,7 +6,9 @@ This directory separates the current submission package, immutable review rounds
 
 | Path | Role | Status |
 |---|---|---|
-| [`submission/ivc_2026-09-29/`](submission/ivc_2026-09-29/) | Current self-contained Elsevier `elsarticle` manuscript and six TikZ figures | Canonical writing package |
+| [`submission/ivc_2026-09-29_v2/`](submission/ivc_2026-09-29_v2/) | Current self-contained Elsevier `elsarticle` manuscript organized by scientific question | Canonical writing package |
+| [`submission/ivc_2026-09-29/`](submission/ivc_2026-09-29/) | Prior reviewed package before the scientific-story revision | Preserved review input |
+| [`reviews/2026-09-29_scientific-story-audit/`](reviews/2026-09-29_scientific-story-audit/) | Claim-status audit for the RQ-organized manuscript | Current review record |
 | [`reviews/2026-09-29_gpt-strict/`](reviews/2026-09-29_gpt-strict/) | Markdown manuscript, two Reviewer \#2 audits, and readiness statement | Completed review round |
 | [`reviews/README.md`](reviews/README.md) | Naming and evidence protocol for future review rounds | Active protocol |
 | `releases/` | Locally generated upload archives | Intentionally ignored by Git |
@@ -15,7 +17,7 @@ The root-level `main.tex`, `sections/`, `references.bib`, `figures/`, and `table
 
 ## Build the current manuscript
 
-Open [`submission/ivc_2026-09-29/main.tex`](submission/ivc_2026-09-29/main.tex) with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-29` directory or the local archive from `releases/`, preserve the `figures/` subdirectory, and select `main.tex` as the main document.
+Open [`submission/ivc_2026-09-29_v2/main.tex`](submission/ivc_2026-09-29_v2/main.tex) with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-29_v2` directory or the local archive from `releases/`, preserve the `figures/` subdirectory, and select `main.tex` as the main document.
 
 ## Evidence discipline
 
