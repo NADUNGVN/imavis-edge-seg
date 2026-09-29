@@ -36,9 +36,9 @@
 - Macro D-minus-A: +0.0241 mIoU, or +2.41 points.
 - Budget-violating cells: D 0/120; A 51/120.
 
-## Repository documentation fixes still required
+## Repository documentation fixes closed after review
 
-1. The advertised tag `gpt-review-v1-20260929` does not currently resolve. Create it at the intended snapshot or replace the tag references with the exact authoring commit.
-2. In `reports/router_overhead_v1_20260922.md`, replace nonexistent `reports/router_overhead_replay_E3_20260928.json` with canonical `reports/router_overhead_replay_E3_20260922.json`.
+1. Tag `gpt-review-v1-20260929` now identifies authoring snapshot `ac65b562ed1cc33b7a30a63b2451924b156f8bdd`.
+2. The stale seed0 E3 filename in `reports/router_overhead_v1_20260922.md` has been corrected to canonical `reports/router_overhead_replay_E3_20260922.json`.
 
-These are documentation and reproducibility fixes. They do not require new experiments.
+Both changes are documentation and reproducibility fixes; no experimental evidence was modified.

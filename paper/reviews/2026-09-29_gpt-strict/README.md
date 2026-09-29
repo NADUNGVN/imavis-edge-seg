@@ -19,6 +19,6 @@ This round converted the frozen evidence package into an Image and Vision Comput
 
 ## Outcome
 
-No reject-level issue remains for the narrowed claims, and no additional experiment is required before submission. Two repository-documentation fixes remain: make the advertised immutable tag resolve and correct the stale seed0 E3 replay filename in the canonical overhead report.
+No reject-level issue remains for the narrowed claims, and no additional experiment is required before submission. The two repository-documentation issues identified by the reviewer were subsequently closed: the immutable tag now resolves and the stale seed0 E3 replay filename has been corrected in the canonical overhead report.
 
 The final router headline is 120 total correlated operating cells, 69 conditionally fair cells, D versus A equal to 51 wins / 16 ties / 2 losses, macro $+0.0241$ mIoU, D equal to 0/120 budget-violating cells, and A equal to 51/120.

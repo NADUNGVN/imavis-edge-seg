@@ -562,8 +562,8 @@ the items below does.**
   the exact SHA — deliberately not hardcoded here per this project's
   existing convention of pointing to `git log` rather than a SHA that would
   go stale if this file is ever amended).
-- **Canonical result files**: `reports/router_overhead_replay_E3_20260928
-  .json` (seed0/E3), `reports/router_overhead_replay_E1_20260928.json`
+- **Canonical result files**: `reports/router_overhead_replay_E3_20260922.json`
+  (seed0/E3), `reports/router_overhead_replay_E1_20260928.json`
   (seed0/E1), `reports/router_overhead_replay_E3_seed2_20260929.json`,
   `reports/router_overhead_replay_E1_seed2_20260929.json`,
   `reports/router_overhead_replay_E3_seed3_20260929.json`,

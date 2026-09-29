@@ -4,14 +4,14 @@
 
 The scientific manuscript has completed one authoring pass, an independent Reviewer #2 audit, a mandatory revision pass, and a second independent audit. No unresolved reject-level issue remains for the narrowed claims, and no new experiment is required before submission.
 
-The second audit recommends **Minor Revision** because two repository-documentation defects remain. The paper should not be labelled fully submission-ready until they are corrected and the manuscript is transferred to the target journal template.
+The second audit recommended **Minor Revision** because two repository-documentation defects remained. Both defects were subsequently closed without changing experimental evidence. The manuscript has also been transferred to the target journal's `elsarticle` template.
 
-## Unresolved blockers
+## Resolved documentation blockers
 
-1. The repository documentation advertises tag `gpt-review-v1-20260929`, but that tag does not resolve. Create it at the intended frozen snapshot or replace all tag references with commit `ac65b562ed1cc33b7a30a63b2451924b156f8bdd`.
-2. `reports/router_overhead_v1_20260922.md` refers to nonexistent seed0 E3 file `reports/router_overhead_replay_E3_20260928.json`. Replace it with the committed canonical file `reports/router_overhead_replay_E3_20260922.json`.
+1. Tag `gpt-review-v1-20260929` now resolves to frozen authoring snapshot `ac65b562ed1cc33b7a30a63b2451924b156f8bdd`.
+2. `reports/router_overhead_v1_20260922.md` now references canonical seed0 E3 file `reports/router_overhead_replay_E3_20260922.json`.
 
-These are reproducibility/documentation fixes, not requests for new data.
+No unresolved documentation blocker or request for new experimental data remains.
 
 ## Unresolved but acceptable limitations
 
@@ -45,7 +45,7 @@ Using directly measured complete warm-route costs, candidate-specific, hardware-
 
 - Authoring snapshot: `ac65b562ed1cc33b7a30a63b2451924b156f8bdd`
 - Canonical evidence baseline inside that snapshot: `1c4d42a7ea525931154ebb2f9015d898ef7771a5`
-- Expected freeze label: `gpt-review-v1-20260929` (currently unresolved and therefore not yet an acceptable immutable citation)
+- Freeze label: `gpt-review-v1-20260929`, resolving to the authoring snapshot above
 
 ## Canonical router artifacts
 
