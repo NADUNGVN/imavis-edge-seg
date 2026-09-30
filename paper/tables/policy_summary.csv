@@ -1,0 +1,7 @@
+policy,candidate_specific_risk,hard_budget,calibrator_scope,deployable,purpose
+Static small / large,No,No,None,Yes,Fixed-capacity references
+Raw entropy,No,No,None,Yes,Uncalibrated adaptive baseline
+Policy A rank escalation,No,No,Per condition,Yes,Main rank-based comparator
+Policy D configured,Yes,Yes,Per condition,Yes,Primary method
+Policy D pooled,Yes,Yes,Pooled across conditions,Yes,Condition-agnostic calibration check
+Oracle,Ground-truth error,Yes,None,No,Upper bound only
