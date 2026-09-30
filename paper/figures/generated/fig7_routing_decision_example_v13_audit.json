@@ -1,0 +1,48 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_composite": "paper\\figures\\qualitative\\generated\\fig7_qualitative_grid.png",
+  "source_composite_sha256": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+  "image_id": "GOPR0402_frame_000748",
+  "condition": "rain",
+  "risk_target": 0.0662188060581684,
+  "predicted_risk": {
+    "tiny": 0.10575122684240341,
+    "small": 0.0798797607421875,
+    "medium": 0.0681419923901558,
+    "large": 0.05799320936203003
+  },
+  "illustrative_budget_ms": 60.0,
+  "scope_boundary": "derived policy illustration, not a canonical headline evaluation cell",
+  "backends": {
+    "E3": {
+      "route_cost_ms": {
+        "tiny": 2.0663830000557937,
+        "small": 5.225304503255757,
+        "medium": 11.968131999310572,
+        "large": 26.70406800461933
+      },
+      "feasible": [
+        "tiny",
+        "small",
+        "medium",
+        "large"
+      ],
+      "selected": "large",
+      "reason": "cheapest feasible candidate meeting risk target"
+    },
+    "E1": {
+      "route_cost_ms": {
+        "tiny": 34.9547440000606,
+        "small": 46.12584000096831,
+        "medium": 63.36133049990167,
+        "large": 92.68139550113119
+      },
+      "feasible": [
+        "tiny",
+        "small"
+      ],
+      "selected": "small",
+      "reason": "lowest predicted risk among feasible candidates"
+    }
+  }
+}

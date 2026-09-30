@@ -1,0 +1,6 @@
+dataset_condition,train_images,validation_images,fit_half,held_out_half,role
+Cityscapes clean,2975,500,250,250,training and clean evaluation
+ACDC fog,400,100,50,50,adverse-condition training and evaluation
+ACDC night,400,106,53,53,adverse-condition training and evaluation
+ACDC rain,400,100,50,50,adverse-condition training and evaluation
+ACDC snow,400,100,50,50,adverse-condition training and evaluation

@@ -1,0 +1,13 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_hashes": {
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+    "figS1_hardest_failure.png": "64df04c1535cb59ed782f2cf7cc08a93a40fac3b3369f3bb4e23b528c732e868"
+  },
+  "evidence_boundary": "V13 changes only deterministic layout, borders, labels, and candidate badges; all image and prediction pixels come from the audited V11 sources.",
+  "outputs": {
+    "fig1_visual_domains_v13.png": "cbe59ca032d1787d9d7fc1fa43f4c781f69e53fff38a8317572f7e412bc328fc",
+    "fig9_qualitative_capacity_v13.png": "c99cdc077b2b881ef5c1a2c373b7b4825e18a9df6e30510e8761f32d03beacf6",
+    "figS1_failure_gallery_v13.png": "2aa0488fc3522bbe78b0b59a0b877872550aa817c59cdadb7e3fa6575605f99c"
+  }
+}

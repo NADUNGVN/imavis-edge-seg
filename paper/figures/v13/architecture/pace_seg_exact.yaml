@@ -1,0 +1,151 @@
+version: "1.0"
+figure:
+  title: "PACE-Seg elastic segmentation architecture"
+  direction: LR
+  target: paper
+  theme: paper-light
+  font: Arial
+  width_mm: 178
+metadata:
+  source_framework: pytorch
+  source_files:
+    - src/imavis_edge_seg/models/supernet.py
+    - src/imavis_edge_seg/models/blocks.py
+    - src/imavis_edge_seg/models/subnet.py
+    - src/imavis_edge_seg/config.py
+  source_class: PaceSegSupernet
+  architecture_family: unet
+  mode: paper-overview
+  unresolved: []
+  semantic_review:
+    statement: "Manually normalized from the active forward path after AST parser review."
+    verified_forward_order:
+      - stem
+      - stage1
+      - stage2
+      - stage3
+      - reduce3 + upsample + add(stage2) + fuse2
+      - reduce2 + upsample + add(stage1) + fuse1
+      - reduce1 + upsample + add(stem) + fuse0
+      - upsample + classifier
+nodes:
+  - id: image
+    label: "RGB input"
+    role: input
+    kind: data
+    subtitle: "resolution selected per level"
+    illustration: {type: feature_grid, composition: illustration-top}
+  - id: level
+    label: "Elastic level"
+    role: auxiliary
+    kind: data
+    subtitle: "resolution, width, depth"
+  - id: stem
+    label: "Stem"
+    role: representation
+    kind: module
+    subtitle: "3x3 stride-2 conv"
+  - id: stage1
+    label: "Encoder stage 1"
+    role: backbone
+    kind: module
+    subtitle: "DW-separable blocks, prefix depth d_l"
+  - id: stage2
+    label: "Encoder stage 2"
+    role: backbone
+    kind: module
+    subtitle: "DW-separable blocks, prefix depth d_l"
+  - id: stage3
+    label: "Encoder stage 3"
+    role: backbone
+    kind: module
+    subtitle: "DW-separable blocks, prefix depth d_l"
+  - id: reduce3
+    label: "1x1 reduce"
+    role: representation
+    kind: module
+  - id: up2
+    label: "2x upsample"
+    role: backbone
+    kind: operator
+  - id: add2
+    label: "+"
+    role: fusion
+    kind: merge
+  - id: fuse2
+    label: "DW fusion"
+    role: backbone
+    kind: module
+  - id: reduce2
+    label: "1x1 reduce"
+    role: representation
+    kind: module
+  - id: up1
+    label: "2x upsample"
+    role: backbone
+    kind: operator
+  - id: add1
+    label: "+"
+    role: fusion
+    kind: merge
+  - id: fuse1
+    label: "DW fusion"
+    role: backbone
+    kind: module
+  - id: reduce1
+    label: "1x1 reduce"
+    role: representation
+    kind: module
+  - id: up0
+    label: "2x upsample"
+    role: backbone
+    kind: operator
+  - id: add0
+    label: "+"
+    role: fusion
+    kind: merge
+  - id: fuse0
+    label: "DW fusion"
+    role: backbone
+    kind: module
+  - id: up_out
+    label: "2x upsample"
+    role: backbone
+    kind: operator
+  - id: classifier
+    label: "Segmentation head"
+    role: head
+    kind: module
+    subtitle: "1x1 conv, 19 classes"
+  - id: logits
+    label: "Dense logits"
+    role: output
+    kind: output
+edges:
+  - {from: image, to: stem, type: main}
+  - {from: level, to: image, type: conditioning, label: "resolution"}
+  - {from: level, to: stem, type: conditioning, label: "width"}
+  - {from: stem, to: stage1, type: main}
+  - {from: stage1, to: stage2, type: main}
+  - {from: stage2, to: stage3, type: main}
+  - {from: level, to: stage1, type: conditioning, label: "depth + width"}
+  - {from: level, to: stage2, type: conditioning}
+  - {from: level, to: stage3, type: conditioning}
+  - {from: stage3, to: reduce3, type: main}
+  - {from: reduce3, to: up2, type: main}
+  - {from: up2, to: add2, type: main}
+  - {from: stage2, to: add2, type: residual, label: "skip"}
+  - {from: add2, to: fuse2, type: main}
+  - {from: fuse2, to: reduce2, type: main}
+  - {from: reduce2, to: up1, type: main}
+  - {from: up1, to: add1, type: main}
+  - {from: stage1, to: add1, type: residual, label: "skip"}
+  - {from: add1, to: fuse1, type: main}
+  - {from: fuse1, to: reduce1, type: main}
+  - {from: reduce1, to: up0, type: main}
+  - {from: up0, to: add0, type: main}
+  - {from: stem, to: add0, type: residual, label: "skip"}
+  - {from: add0, to: fuse0, type: main}
+  - {from: fuse0, to: up_out, type: main}
+  - {from: up_out, to: classifier, type: main}
+  - {from: classifier, to: logits, type: main}
