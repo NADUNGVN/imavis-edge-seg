@@ -1,0 +1,5 @@
+One elastic model exposes four compiler-safe segmentation capacities.
+Measured latency changes budget-feasible choices across accelerators.
+The largest elastic capacity stays within 1.1 mIoU points of Fast-SCNN.
+Deployment-matched routing wins or ties in 70 of 74 fair cells.
+Pooled calibration retains the gain without condition selection.

@@ -1,0 +1,7 @@
+component,evaluated_setting
+Visual domains,Cityscapes clean and ACDC fog/night/rain/snow
+Prediction task,Semantic segmentation over the 19 Cityscapes train classes
+Elastic choices,Tiny/small/medium/large static capacities
+Candidate-cost devices,E1/E2/E3/E5
+Complete-route backends,E1 Hailo-8 and E3 TensorRT/CUDA
+Router protocol,Alternating fit/held-out validation halves; three training runs

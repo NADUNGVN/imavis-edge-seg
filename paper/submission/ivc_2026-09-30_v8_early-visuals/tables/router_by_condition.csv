@@ -1,0 +1,6 @@
+condition,total_cells,fair_cells,configured_w_t_l,configured_mean_delta_miou,pooled_w_t_l,pooled_mean_delta_miou,a_violating_cells,configured_d_violating_cells,pooled_d_violating_cells
+Cityscapes,24,7,7/0/0,0.06104613119960441,7/0/0,0.061212138756111326,17,0,0
+ACDC/Fog,24,20,14/4/2,0.03730041614828852,16/4/0,0.03919829490796069,4,0,0
+ACDC/Night,24,11,11/0/0,0.012493368275169918,11/0/0,0.012493368275169918,13,0,0
+ACDC/Rain,24,24,12/10/2,0.02480120455249533,14/10/0,0.027139680255532806,0,0,0
+ACDC/Snow,24,12,12/0/0,0.016022806367106967,10/0/2,0.01567697130904915,12,0,0

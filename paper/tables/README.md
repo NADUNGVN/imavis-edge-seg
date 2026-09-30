@@ -12,6 +12,11 @@ tables in the v5 manuscript.
   alternating-index fit/held-out split is implemented by `scripts/evaluate_router.py`.
 - `policy_summary.csv`: properties follow `src/imavis_edge_seg/router/policy.py` and
   the deployment-matched protocol in `scripts/replay_router_with_overhead.py`.
+- `study_setting.csv`: compact Introduction summary traced to dataset manifests,
+  `src/imavis_edge_seg/config.py`, the benchmark lookup table, and the canonical
+  deployment-matched manifest.
+- `related_work_positioning.csv`: mechanism-level literature synthesis used by the
+  Related Work table; claims are bounded to the cited primary papers.
 
 Candidate-only latency in the first table must not be confused with complete warm
 route cost, which additionally includes the probe, entropy, policy, activation or
