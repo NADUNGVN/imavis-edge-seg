@@ -1,0 +1,33 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_hashes": {
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+    "figS1_hardest_failure.png": "64df04c1535cb59ed782f2cf7cc08a93a40fac3b3369f3bb4e23b528c732e868"
+  },
+  "primary_image_ids": [
+    "frankfurt_000000_003920",
+    "GP010476_frame_000031",
+    "GOPR0356_frame_000324",
+    "GOPR0402_frame_000748",
+    "GOPR0122_frame_000352"
+  ],
+  "failure_gallery": {
+    "median_conditions": [
+      "fog",
+      "night",
+      "rain",
+      "snow"
+    ],
+    "highest_error_image_id": "GOPR0351_frame_000825"
+  },
+  "displayed_operating_point": {
+    "selected_candidate": "medium",
+    "budget_ms": 11.968131999310572,
+    "backend": "E3 TensorRT/CUDA warm complete route"
+  },
+  "outputs": {
+    "fig1_data_gt_routed_v9.png": "62e1f2eb94945ec3dbdb9da1e0aff43e59ca390759ceca058faac8c545d3cf96",
+    "fig3_condition_probe_routes_v9.png": "5e007a8b2f44204e0c6163813f9de3cfca84a74171de70b006d491e985f7d7c6",
+    "figS1_failure_gallery_v9.png": "61fb176d761edcbe861c4538f44607aedfa7515b233025ef43f25bccf1668c9e"
+  }
+}

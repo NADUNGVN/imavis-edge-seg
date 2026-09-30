@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PACE-Seg elastic candidate family and static deployment",
+    "output": "paper/figures/archify/fig2_candidate_family_v9/fig2_candidate_family_v9.html",
+    "quality_profile": "showcase",
+    "visual_preset": "editorial",
+    "repository": {
+      "url": "https://github.com/NADUNGVN/imavis-edge-seg.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "23a688ebac77827e57047767e0b6478af5ca4a77"
+    },
+    "legend": { "mode": "hidden" }
+  },
+  "components": [
+    {
+      "id": "supernet",
+      "type": "backend",
+      "label": "One trained elastic supernet",
+      "sublabel": "shared convolutional weights",
+      "pos": [390, 30],
+      "size": [300, 68],
+      "sources": [
+        { "path": "src/imavis_edge_seg/models/supernet.py", "line": 47, "end_line": 94, "label": "shared-weight model" }
+      ]
+    },
+    {
+      "id": "tiny",
+      "type": "frontend",
+      "label": "Tiny",
+      "sublabel": "384x192 | w=.25 | d=2 | 0.206G | .033M params",
+      "tag": "E3 .94 ms | E1 3.72 ms",
+      "pos": [45, 165],
+      "size": [400, 96],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "elastic level" },
+        { "path": "paper/tables/candidate_family.csv", "line": 2, "end_line": 2, "label": "candidate metrics" }
+      ]
+    },
+    {
+      "id": "small",
+      "type": "frontend",
+      "label": "Small",
+      "sublabel": "512x256 | w=.50 | d=3 | 1.168G | .152M params",
+      "tag": "E3 1.80 ms | E1 6.63 ms",
+      "pos": [600, 165],
+      "size": [400, 96],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "elastic level" },
+        { "path": "paper/tables/candidate_family.csv", "line": 3, "end_line": 3, "label": "candidate metrics" }
+      ]
+    },
+    {
+      "id": "medium",
+      "type": "frontend",
+      "label": "Medium",
+      "sublabel": "768x384 | w=.75 | d=4 | 6.171G | .420M params",
+      "tag": "E3 4.61 ms | E1 20.47 ms",
+      "pos": [45, 330],
+      "size": [400, 96],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "elastic level" },
+        { "path": "paper/tables/candidate_family.csv", "line": 4, "end_line": 4, "label": "candidate metrics" }
+      ]
+    },
+    {
+      "id": "large",
+      "type": "frontend",
+      "label": "Large",
+      "sublabel": "1024x512 | w=1.0 | d=6 | 22.699G | 1.021M params",
+      "tag": "E3 9.41 ms | E1 41.18 ms",
+      "pos": [600, 330],
+      "size": [400, 96],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 22, "end_line": 40, "label": "elastic level" },
+        { "path": "paper/tables/candidate_family.csv", "line": 5, "end_line": 5, "label": "candidate metrics" }
+      ]
+    },
+    {
+      "id": "extract",
+      "type": "backend",
+      "label": "Materialize four static subnetworks",
+      "sublabel": "slice channel ranges and block prefixes",
+      "pos": [375, 550],
+      "size": [330, 70],
+      "sources": [
+        { "path": "src/imavis_edge_seg/models/subnet.py", "line": 125, "end_line": 185, "label": "static subnet materialization" }
+      ]
+    },
+    {
+      "id": "onnx",
+      "type": "messagebus",
+      "label": "Fixed-shape ONNX x4",
+      "sublabel": "one deployment graph per capacity",
+      "pos": [750, 550],
+      "size": [250, 70],
+      "sources": [
+        { "path": "src/imavis_edge_seg/export.py", "line": 17, "end_line": 38, "label": "static ONNX export" },
+        { "path": "scripts/export_all_levels.py", "line": 26, "end_line": 36, "label": "four-level export" }
+      ]
+    },
+    {
+      "id": "trt",
+      "type": "cloud",
+      "label": "TensorRT / CUDA GPU",
+      "sublabel": "four static FP16 engines",
+      "pos": [1030, 505],
+      "size": [250, 66],
+      "sources": [
+        { "path": "scripts/benchmark/run_trtexec_protocol.sh", "line": 1, "end_line": 43, "label": "TensorRT deployment protocol" }
+      ]
+    },
+    {
+      "id": "hailo",
+      "type": "cloud",
+      "label": "Hailo-8 dataflow NPU",
+      "sublabel": "four static HEF graphs",
+      "pos": [1030, 615],
+      "size": [250, 66],
+      "sources": [
+        { "path": "scripts/benchmark/run_hailo_protocol.sh", "line": 1, "end_line": 37, "label": "Hailo deployment protocol" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Shared training: one parameter family, four capacity settings",
+      "wraps": ["supernet", "tiny", "small", "medium", "large"],
+      "pad": 24
+    },
+    {
+      "kind": "region",
+      "label": "Static deployment: no dynamic graph on the accelerator",
+      "wraps": ["extract", "onnx", "trt", "hailo"],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    { "id": "supernet-tiny", "from": "supernet", "to": "tiny", "label": "activate", "variant": "emphasis" },
+    { "id": "supernet-small", "from": "supernet", "to": "small", "label": "activate", "variant": "emphasis" },
+    { "id": "supernet-medium", "from": "supernet", "to": "medium", "label": "activate", "variant": "emphasis" },
+    { "id": "supernet-large", "from": "supernet", "to": "large", "label": "activate", "variant": "emphasis" },
+    { "id": "extract-onnx", "from": "extract", "to": "onnx", "label": "export", "variant": "emphasis" },
+    { "id": "onnx-trt", "from": "onnx", "to": "trt", "label": "compile", "fromSide": "right", "toSide": "left" },
+    { "id": "onnx-hailo", "from": "onnx", "to": "hailo", "label": "compile", "fromSide": "right", "toSide": "left" }
+  ],
+  "cards": [
+    {
+      "dot": "slate",
+      "title": "Metric key",
+      "items": ["Candidate cards report input resolution, width multiplier, repeated-block depth, GFLOPs, parameter count, and measured p95 candidate-only latency on E3 / E1."]
+    }
+  ]
+}
