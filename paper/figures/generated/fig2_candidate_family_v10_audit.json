@@ -1,0 +1,25 @@
+{
+  "source": "paper\\tables\\candidate_family.csv",
+  "source_sha256": "f5a6f5864786ba4563d24838e4f688aaa15c4a3ba33a27b8043f495085fe3fbb",
+  "candidate_order": [
+    "tiny",
+    "small",
+    "medium",
+    "large"
+  ],
+  "metrics": [
+    "Input",
+    "Width",
+    "Depth",
+    "Parameters",
+    "Compute",
+    "E3 p95",
+    "E1 p95"
+  ],
+  "boundary": "E1/E3 values are candidate-only p95 latency, not complete route cost",
+  "outputs": {
+    ".pdf": "f71591a549fc097998230fc0fb7d3a262238b59b89de43d1255ecbab23afe607",
+    ".svg": "cee772e14d1c2f07e3566c44611baab54d3e18fe4098c45c613de71c9ff59335",
+    ".png": "e67aa5725f0d4eb13a27a64c629beab97688c19ee8d7f882a116a1a9b3e9cd6a"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_hashes": {
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+    "figS1_hardest_failure.png": "64df04c1535cb59ed782f2cf7cc08a93a40fac3b3369f3bb4e23b528c732e868"
+  },
+  "layout": {
+    "fig1": "three conditions above two conditions; input/ground truth/routed output",
+    "fig3": "three conditions above two conditions; raw/tiny probe/selected output",
+    "figS1": "four median cases plus enlarged predetermined highest-error detail"
+  },
+  "outputs": {
+    "fig1_data_gt_routed_v10.png": "86496b653ac1324b20dc90f11f7a9cdb1b710b7f7dc09388c656b0bb300513ae",
+    "fig3_condition_probe_routes_v10.png": "df09a1e55226aeb87372eedcfc53d884aaf25a111618473b30865ad74a0fc9f2",
+    "figS1_failure_gallery_v10.png": "f0644572b69b250b6db87902a64f1e47a6d720ab97256c3e3c77621d3bc93e9f"
+  }
+}

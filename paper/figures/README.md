@@ -21,6 +21,9 @@ scientific question and traces to repository evidence.
 | `scripts/plot_input_output_pipeline.py` | Builds the audited raw-image--probe--risk--budget--output Method figure from canonical artifacts |
 | `scripts/plot_route_cost_expansion.py` | Compares candidate-only p95 latency with complete warm-route medians |
 | `scripts/assemble_visual_story_v9.py` | Reframes audited composites as the V9 Introduction, Method, and supplementary panels |
+| `scripts/plot_candidate_family_summary.py` | Generates the V10 candidate-family summary directly from `paper/tables/candidate_family.csv` |
+| `scripts/plot_routing_decision_example_v10.py` | Generates the enlarged V10 hardware-conditioned decision example |
+| `scripts/assemble_visual_story_v10.py` | Reframes audited composites as enlarged V10 Introduction, Method, and supplementary panels |
 | `scripts/summarize_router_by_condition.py` | Generates the condition-level CSV and LaTeX table rows from six canonical replays |
 | `scripts/select_qualitative_examples.py` | Freezes median-error and failure-case IDs without raster access |
 | `scripts/render_qualitative_examples.py` | Audits hashes/predictions and renders the real-data panels on the server |
@@ -46,9 +49,12 @@ From the repository root, using the project virtual environment:
 .venv\Scripts\python.exe paper\figures\scripts\plot_input_output_pipeline.py
 .venv\Scripts\python.exe paper\figures\scripts\plot_route_cost_expansion.py
 .venv\Scripts\python.exe paper\figures\scripts\summarize_router_by_condition.py
-.venv\Scripts\python.exe paper\figures\scripts\assemble_visual_story_v9.py
+.venv\Scripts\python.exe paper\figures\scripts\plot_candidate_family_summary.py
+.venv\Scripts\python.exe paper\figures\scripts\plot_routing_decision_example_v10.py
+.venv\Scripts\python.exe paper\figures\scripts\assemble_visual_story_v10.py
 ```
 
-Repeat the Archify export commands for the V9 candidate-family source when it changes.
-Final diagrams and plots remain vector; audited qualitative assemblies remain
+Archify remains the editable source for architecture diagrams. The V10 candidate-family
+summary is a quantitative Matplotlib figure rather than an architecture diagram. Final
+diagrams and plots remain vector; audited qualitative assemblies remain
 publication-resolution PNG files.

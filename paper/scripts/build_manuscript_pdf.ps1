@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Submission = "ivc_2026-09-30_v9_figure-revision",
+    [string]$Submission = "ivc_2026-09-30_v10_research-visuals",
     [string]$OutputName = "PACE-Seg_IVC_Manuscript.pdf"
 )
 
