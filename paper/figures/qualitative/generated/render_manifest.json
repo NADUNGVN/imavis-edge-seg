@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "checkpoint": "outputs/pace_seg_v1_aug_seed0/checkpoints/step_00100000.pt",
+  "checkpoint_sha256": "a24441568a4cd14e5aabfbcad833d4797ee61a7921bf631994ba1c3f26274ad2",
+  "per_image_dump": "reports/router_deployment_matched_20260929/run_a_per_image.json",
+  "replay_json": "reports/router_deployment_matched_20260929/run_a_e3_replay.json",
+  "budget_index": 2,
+  "examples": [
+    {
+      "split": "cityscapes",
+      "condition": "clean",
+      "selection_kind": "median_large_error",
+      "heldout_position": 4,
+      "dataset_index": 9,
+      "image_id": "frankfurt_000000_003920",
+      "image_path": "leftImg8bit/val/frankfurt/frankfurt_000000_003920_leftImg8bit.png",
+      "label_path": "gtFine/val/frankfurt/frankfurt_000000_003920_gtFine_labelIds.png",
+      "image_sha256": "7a7db46fef29a35a0500c867cb0dadf5874b627c46200456cc620cea8355d9a4",
+      "label_sha256": "c4764120b069113756584bd74c8827678545ddda1e3a78cb4272f36b4453316a",
+      "large_pixel_error": 0.06336266007482982,
+      "selection_target_error": 0.06336854749258408,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.17314051032066347,
+        "small": 0.14262435972690582,
+        "medium": 0.12072300538420677,
+        "large": 0.09582353428006173
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    },
+    {
+      "split": "acdc/fog",
+      "condition": "fog",
+      "selection_kind": "median_large_error",
+      "heldout_position": 26,
+      "dataset_index": 53,
+      "image_id": "GP010476_frame_000031",
+      "image_path": "rgb_anon/fog/val/GP010476/GP010476_frame_000031_rgb_anon.png",
+      "label_path": "gt/fog/val/GP010476/GP010476_frame_000031_gt_labelTrainIds.png",
+      "image_sha256": "9d5e6dd9e3da75d8fcacd1eb8188b29b3c3436a85fe23e5a41be4abaccbf7e84",
+      "label_sha256": "98c98929e7a23244c824871c986f03f22482d04803b92ab4595b241d9fe1fc77",
+      "large_pixel_error": 0.06020757871556348,
+      "selection_target_error": 0.06122037491653859,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.13924550414085388,
+        "small": 0.08400699272751808,
+        "medium": 0.07465677484869956,
+        "large": 0.06052398607134819
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    },
+    {
+      "split": "acdc/night",
+      "condition": "night",
+      "selection_kind": "median_large_error",
+      "heldout_position": 28,
+      "dataset_index": 57,
+      "image_id": "GOPR0356_frame_000324",
+      "image_path": "rgb_anon/night/val/GOPR0356/GOPR0356_frame_000324_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0356/GOPR0356_frame_000324_gt_labelTrainIds.png",
+      "image_sha256": "490076854b7409846c51ea50703a76af1f64a86da5329d8c526c7a6ca9373b81",
+      "label_sha256": "b7ec8f21b295dde579993a73c52504434707a779630a65194ef411ac951817de",
+      "large_pixel_error": 0.1669578340605311,
+      "selection_target_error": 0.1669578340605311,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.31772108376026154,
+        "small": 0.24423908889293672,
+        "medium": 0.22113891194264093,
+        "large": 0.2091059274971485
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    },
+    {
+      "split": "acdc/rain",
+      "condition": "rain",
+      "selection_kind": "median_large_error",
+      "heldout_position": 16,
+      "dataset_index": 33,
+      "image_id": "GOPR0402_frame_000748",
+      "image_path": "rgb_anon/rain/val/GOPR0402/GOPR0402_frame_000748_rgb_anon.png",
+      "label_path": "gt/rain/val/GOPR0402/GOPR0402_frame_000748_gt_labelTrainIds.png",
+      "image_sha256": "d28e0d6c714a641c8af13a4cb338847a8beac879bd18b5d6485154883b445ecd",
+      "label_sha256": "df13396dfe39220122d9fa10a50d73f39954a0039cddadaaa27af17781f06890",
+      "large_pixel_error": 0.06894902114714685,
+      "selection_target_error": 0.06806041965818266,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.10575122684240341,
+        "small": 0.0798797607421875,
+        "medium": 0.0681419923901558,
+        "large": 0.05799320936203003
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    },
+    {
+      "split": "acdc/snow",
+      "condition": "snow",
+      "selection_kind": "median_large_error",
+      "heldout_position": 11,
+      "dataset_index": 23,
+      "image_id": "GOPR0122_frame_000352",
+      "image_path": "rgb_anon/snow/val/GOPR0122/GOPR0122_frame_000352_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0122/GOPR0122_frame_000352_gt_labelTrainIds.png",
+      "image_sha256": "243fe0311bfafab2e99434c6a015cb006f6143c966c88a994656d3b346c4c3dd",
+      "label_sha256": "20b9a532566406a3a0b19bbff08ccd90a4f5b0c0c727be2193236f86725132d5",
+      "large_pixel_error": 0.0744528469472644,
+      "selection_target_error": 0.07482329003354998,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.22223782837390899,
+        "small": 0.17615517675876619,
+        "medium": 0.1542880728840828,
+        "large": 0.1265055939555168
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    },
+    {
+      "split": "acdc/night",
+      "condition": "night",
+      "selection_kind": "hardest_acdc_large_error",
+      "heldout_position": 27,
+      "dataset_index": 55,
+      "image_id": "GOPR0351_frame_000825",
+      "image_path": "rgb_anon/night/val/GOPR0351/GOPR0351_frame_000825_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0351/GOPR0351_frame_000825_gt_labelTrainIds.png",
+      "image_sha256": "82eb873319b4aee13cb463f1cb75f4301235752e333a810aa7d1e9051ea1e3b9",
+      "label_sha256": "1c0dc3b7d8834280a51877db9335efdb09ae37df8f07621b2bb732ca50b5e826",
+      "large_pixel_error": 0.4435868948866042,
+      "selection_target_error": 0.4435868948866042,
+      "selected_candidate": "medium",
+      "budget_ms": 11.968131999310572,
+      "risk_target": 0.0662188060581684,
+      "predicted_risk": {
+        "tiny": 0.38789514303207395,
+        "small": 0.3056221276521683,
+        "medium": 0.2738322913646698,
+        "large": 0.2091059274971485
+      },
+      "confusion_matrix_audit": "exact match for all four levels"
+    }
+  ],
+  "outputs": {
+    "fig6_dataset_overview.png": "3da37886eae4a0676343237272032a7ffb2dc5ac8a0791ad4a940730e1edcbca",
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+    "figS1_hardest_failure.png": "64df04c1535cb59ed782f2cf7cc08a93a40fac3b3369f3bb4e23b528c732e868"
+  }
+}
