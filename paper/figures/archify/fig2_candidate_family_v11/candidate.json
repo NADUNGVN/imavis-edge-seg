@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PACE-Seg elastic candidate family",
+    "output": "paper/figures/archify/fig2_candidate_family_v11/fig2_candidate_family_v11.html",
+    "quality_profile": "showcase",
+    "visual_preset": "editorial",
+    "repository": {
+      "url": "https://github.com/NADUNGVN/imavis-edge-seg.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "9754fccdbdf58757e4513da8984f565d5fad9bef"
+    },
+    "legend": { "mode": "hidden" }
+  },
+  "components": [
+    {
+      "id": "shared",
+      "type": "backend",
+      "label": "One shared elastic model",
+      "sublabel": "shared convolutional weights",
+      "pos": [420, 24],
+      "size": [300, 66],
+      "sources": [
+        { "path": "src/imavis_edge_seg/models/supernet.py", "line": 47, "end_line": 94, "label": "shared-weight supernet" }
+      ]
+    },
+    {
+      "id": "tiny",
+      "type": "frontend",
+      "label": "Tiny",
+      "sublabel": "384x192  |  width 0.25  |  depth 2",
+      "pos": [35, 190],
+      "size": [210, 92],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 18, "end_line": 39, "label": "elastic axes" }
+      ]
+    },
+    {
+      "id": "small",
+      "type": "frontend",
+      "label": "Small",
+      "sublabel": "512x256  |  width 0.50  |  depth 3",
+      "pos": [300, 174],
+      "size": [230, 108],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 18, "end_line": 39, "label": "elastic axes" }
+      ]
+    },
+    {
+      "id": "medium",
+      "type": "frontend",
+      "label": "Medium",
+      "sublabel": "768x384  |  width 0.75  |  depth 4",
+      "pos": [585, 154],
+      "size": [250, 128],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 18, "end_line": 39, "label": "elastic axes" }
+      ]
+    },
+    {
+      "id": "large",
+      "type": "frontend",
+      "label": "Large",
+      "sublabel": "1024x512  |  width 1.00  |  depth 6",
+      "pos": [890, 130],
+      "size": [270, 152],
+      "sources": [
+        { "path": "src/imavis_edge_seg/config.py", "line": 18, "end_line": 39, "label": "elastic axes" }
+      ]
+    },
+    {
+      "id": "tiny_metrics",
+      "type": "database",
+      "label": "0.033M  |  0.206G",
+      "sublabel": "E3 0.94 ms  |  E1 3.72 ms",
+      "pos": [35, 330],
+      "size": [210, 58],
+      "sources": [
+        { "path": "paper/tables/candidate_family.csv", "line": 2, "end_line": 2, "label": "measured metrics" }
+      ]
+    },
+    {
+      "id": "small_metrics",
+      "type": "database",
+      "label": "0.152M  |  1.168G",
+      "sublabel": "E3 1.80 ms  |  E1 6.63 ms",
+      "pos": [310, 330],
+      "size": [210, 58],
+      "sources": [
+        { "path": "paper/tables/candidate_family.csv", "line": 3, "end_line": 3, "label": "measured metrics" }
+      ]
+    },
+    {
+      "id": "medium_metrics",
+      "type": "database",
+      "label": "0.420M  |  6.171G",
+      "sublabel": "E3 4.61 ms  |  E1 20.47 ms",
+      "pos": [605, 330],
+      "size": [210, 58],
+      "sources": [
+        { "path": "paper/tables/candidate_family.csv", "line": 4, "end_line": 4, "label": "measured metrics" }
+      ]
+    },
+    {
+      "id": "large_metrics",
+      "type": "database",
+      "label": "1.021M  |  22.699G",
+      "sublabel": "E3 9.41 ms  |  E1 41.18 ms",
+      "pos": [920, 330],
+      "size": [210, 58],
+      "sources": [
+        { "path": "paper/tables/candidate_family.csv", "line": 5, "end_line": 5, "label": "measured metrics" }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "shared_tiny", "from": "shared", "to": "tiny", "variant": "emphasis" },
+    { "id": "shared_small", "from": "shared", "to": "small", "variant": "emphasis" },
+    { "id": "shared_medium", "from": "shared", "to": "medium", "variant": "emphasis" },
+    { "id": "shared_large", "from": "shared", "to": "large", "variant": "emphasis" },
+    { "id": "tiny_scale", "from": "tiny", "to": "tiny_metrics", "label": "capacity", "variant": "dashed" },
+    { "id": "small_scale", "from": "small", "to": "small_metrics", "label": "capacity", "variant": "dashed" },
+    { "id": "medium_scale", "from": "medium", "to": "medium_metrics", "label": "capacity", "variant": "dashed" },
+    { "id": "large_scale", "from": "large", "to": "large_metrics", "label": "capacity", "variant": "dashed" }
+  ]
+}

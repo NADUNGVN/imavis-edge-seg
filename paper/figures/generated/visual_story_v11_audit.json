@@ -1,0 +1,16 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_hashes": {
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+    "figS1_hardest_failure.png": "64df04c1535cb59ed782f2cf7cc08a93a40fac3b3369f3bb4e23b528c732e868"
+  },
+  "evidence_boundary": "V11 reorganizes the five audited median-error cases and one audited highest-error night case; it does not introduce new easy/hard selections.",
+  "local_crop_rule": "fixed normalized lower-center crop: x=[0.25,0.75], y=[0.36,1.00]",
+  "outputs": {
+    "fig1_visual_domains_v11.png": "adb9d18fce29b89d20a7f08ad3bb33b2dbdd6a93fd4cefea49ccc420dfb27007",
+    "fig9_qualitative_capacity_v11.png": "8d3791f89b163d833d688b491250d1b0cb3d7db870808ca2206fb0c65e9df92b",
+    "figS1_expanded_failures_v11.png": "291e0840a1240d9921be4e5fd29ab18f6f54993d6547f597a64805b396cc326a",
+    "figS3_additional_qualitative_v11.png": "68d451157d6b78b1e113c3d08c5d29fdaaa2b523becd17dec619b69f7cc1eb68",
+    "figS4_local_crops_v11.png": "b6ae2e1475ab6f658694365f07d5c79b85ac98349e2c4f5c78f9ed8d4cc5fdea"
+  }
+}

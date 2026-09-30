@@ -1,0 +1,37 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_composite": "paper\\figures\\qualitative\\generated\\fig7_qualitative_grid.png",
+  "source_composite_sha256": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+  "source_per_image_dump": "reports\\router_deployment_matched_20260929\\run_a_per_image.json",
+  "source_overhead_report": "reports\\router_overhead_E3_20260922.json",
+  "image_id": "GOPR0402_frame_000748",
+  "condition": "rain",
+  "heldout_position": 16,
+  "probe_resolution": [
+    384,
+    192
+  ],
+  "raw_entropy_nats": 0.4606344401836395,
+  "risk_target": 0.0662188060581684,
+  "predicted_risk": {
+    "tiny": 0.10575122684240341,
+    "small": 0.0798797607421875,
+    "medium": 0.0681419923901558,
+    "large": 0.05799320936203003
+  },
+  "budget_ms": 11.968131999310572,
+  "route_cost_ms": {
+    "tiny": 2.0663830000557937,
+    "small": 5.225304503255757,
+    "medium": 11.968131999310572,
+    "large": 26.70406800461933
+  },
+  "feasible_candidates": [
+    "tiny",
+    "small",
+    "medium"
+  ],
+  "selected_candidate": "medium",
+  "selection_reason": "no feasible candidate meets tau; choose lowest predicted risk among feasible candidates",
+  "confusion_matrix_audit": "exact match for all four levels"
+}

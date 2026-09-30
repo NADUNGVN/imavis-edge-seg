@@ -1,0 +1,28 @@
+{
+  "source": "paper\\tables\\candidate_family.csv",
+  "source_sha256": "f5a6f5864786ba4563d24838e4f688aaa15c4a3ba33a27b8043f495085fe3fbb",
+  "candidate_order": [
+    "tiny",
+    "small",
+    "medium",
+    "large"
+  ],
+  "encoding": {
+    "silhouette_width": "width_multiplier",
+    "silhouette_blocks": "depth_blocks",
+    "labels": [
+      "resolution",
+      "params",
+      "gflops",
+      "E3 p95",
+      "E1 p95"
+    ]
+  },
+  "boundary": "E1/E3 values are candidate-only p95 latency",
+  "archify_source": "paper/figures/archify/fig2_candidate_family_v11/candidate.json",
+  "outputs": {
+    ".pdf": "ca54a255d0472b820010bebdd35f366ed9bca35b2f709fc7f742687c96397495",
+    ".svg": "299c91f8aaf1acf3b1bb8ff7f6b1ebae59d051c0b7da3db852c5c59737bb7c2c",
+    ".png": "7d957450b6f3d10e2d97e40ff854b1d7427b80b2e9172dadc69c8516077178a2"
+  }
+}

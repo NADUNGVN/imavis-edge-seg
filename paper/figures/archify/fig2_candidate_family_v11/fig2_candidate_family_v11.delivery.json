@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "8f428643-c4d2-4130-b351-923662d1cf63",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\Research\\Teacher_Vu\\IMAVIS_EDGE_SEG\\paper\\figures\\archify\\fig2_candidate_family_v11\\candidate.json",
+  "output": "D:\\Research\\Teacher_Vu\\IMAVIS_EDGE_SEG\\paper\\figures\\archify\\fig2_candidate_family_v11\\fig2_candidate_family_v11.html",
+  "specification": {
+    "sha256": "9e342290e21ab3da75d8ae46884e809aca03bdea38086757552fa338f11efb6f",
+    "bytes": 4368
+  },
+  "artifact": {
+    "sha256": "58e0cf9df7db186102fc3fec5ed37dae61893a54d27b2a24dee5054d48433951",
+    "bytes": 759587
+  }
+}

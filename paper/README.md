@@ -6,7 +6,8 @@ This directory separates the current submission package, immutable review rounds
 
 | Path | Role | Status |
 |---|---|---|
-| [`submission/ivc_2026-09-30_v10_research-visuals/`](submission/ivc_2026-09-30_v10_research-visuals/) | Shorter research-oriented manuscript with enlarged evidence panels and a quantitative candidate-family summary | Canonical writing and visual package |
+| [`submission/ivc_2026-09-30_v11_final-figure-map/`](submission/ivc_2026-09-30_v11_final-figure-map/) | Final nine-figure visual narrative with S1--S4 audited supplementary views | Canonical writing and visual package |
+| [`submission/ivc_2026-09-30_v10_research-visuals/`](submission/ivc_2026-09-30_v10_research-visuals/) | Shorter research-oriented manuscript with enlarged evidence panels and a quantitative candidate-family summary | Preserved review input |
 | [`submission/ivc_2026-09-30_v9_figure-revision/`](submission/ivc_2026-09-30_v9_figure-revision/) | Manuscript with the revised input--ground-truth--route narrative, candidate-family diagram, and expanded error gallery | Preserved review input |
 | [`submission/ivc_2026-09-30_v8_early-visuals/`](submission/ivc_2026-09-30_v8_early-visuals/) | Manuscript with early data onboarding, literature positioning table, and audited input-to-output routing pipeline | Preserved review input |
 | [`submission/ivc_2026-09-30_v7_expanded/`](submission/ivc_2026-09-30_v7_expanded/) | Manuscript with a real-image routing explainer, route-cost expansion, and condition-level router table | Preserved review input |
@@ -25,13 +26,13 @@ This directory separates the current submission package, immutable review rounds
 The root-level `main.tex`, `sections/`, `references.bib`, and `tables/` are the earlier
 modular manuscript skeleton. They are retained for provenance but are not the current
 submission source. `figures/` is now the canonical reproducible figure workspace used
-by v10. The earlier `../manuscript/latex/main.tex` is also non-canonical.
+by v11. The earlier `../manuscript/latex/main.tex` is also non-canonical.
 
 ## Build the current manuscript
 
-Open [`submission/ivc_2026-09-30_v10_research-visuals/main.tex`](submission/ivc_2026-09-30_v10_research-visuals/main.tex)
-with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-30_v10_research-visuals` directory or the
-v10 archive from `output/overleaf/`, preserve the `figures/` and `tables/` subdirectories, and select
+Open [`submission/ivc_2026-09-30_v11_final-figure-map/main.tex`](submission/ivc_2026-09-30_v11_final-figure-map/main.tex)
+with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-30_v11_final-figure-map` directory or the
+v11 archive from `output/overleaf/`, preserve the `figures/` and `tables/` subdirectories, and select
 `main.tex` as the main document.
 
 For a reproducible local build that also updates the stable review PDF, run:
