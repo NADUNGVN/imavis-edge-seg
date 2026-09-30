@@ -16,6 +16,9 @@ scientific question and traces to repository evidence.
 | `scripts/plot_flops_latency.py` | Generates the RQ1 FLOPs/latency figure from canonical artifacts |
 | `scripts/plot_rq2_near_parity.py` | Generates the RQ2 near-parity figure from six evaluation JSON files |
 | `scripts/plot_router_deployment_matched.py` | Generates the RQ3 figure from six canonical E1/E3 replay JSON files |
+| `scripts/plot_routing_decision_example.py` | Combines audited real-image panels, candidate risks, and E1/E3 measured costs into the routing explainer |
+| `scripts/plot_route_cost_expansion.py` | Compares candidate-only p95 latency with complete warm-route medians |
+| `scripts/summarize_router_by_condition.py` | Generates the condition-level CSV and LaTeX table rows from six canonical replays |
 | `scripts/select_qualitative_examples.py` | Freezes median-error and failure-case IDs without raster access |
 | `scripts/render_qualitative_examples.py` | Audits hashes/predictions and renders the real-data panels on the server |
 | `generated/` | Final SVG/PDF and high-resolution plot previews |
@@ -36,6 +39,9 @@ From the repository root, using the project virtual environment:
 .venv\Scripts\python.exe paper\figures\scripts\plot_flops_latency.py
 .venv\Scripts\python.exe paper\figures\scripts\plot_rq2_near_parity.py
 .venv\Scripts\python.exe paper\figures\scripts\plot_router_deployment_matched.py
+.venv\Scripts\python.exe paper\figures\scripts\plot_routing_decision_example.py
+.venv\Scripts\python.exe paper\figures\scripts\plot_route_cost_expansion.py
+.venv\Scripts\python.exe paper\figures\scripts\summarize_router_by_condition.py
 ```
 
 Repeat the first two commands for Figure 2. Final diagrams and plots remain vector;

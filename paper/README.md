@@ -6,7 +6,8 @@ This directory separates the current submission package, immutable review rounds
 
 | Path | Role | Status |
 |---|---|---|
-| [`submission/ivc_2026-09-30_v6_qualitative/`](submission/ivc_2026-09-30_v6_qualitative/) | Manuscript with audited real-data overview, qualitative comparison, and predetermined failure panel | Canonical writing and visual package |
+| [`submission/ivc_2026-09-30_v7_expanded/`](submission/ivc_2026-09-30_v7_expanded/) | Manuscript with a real-image routing explainer, route-cost expansion, and condition-level router table | Canonical writing and visual package |
+| [`submission/ivc_2026-09-30_v6_qualitative/`](submission/ivc_2026-09-30_v6_qualitative/) | Manuscript with audited real-data overview, qualitative comparison, and predetermined failure panel | Preserved review input |
 | [`submission/ivc_2026-09-30_v5_visual-data/`](submission/ivc_2026-09-30_v5_visual-data/) | Deployment-matched manuscript with onboarding tables and the qualitative rendering pipeline | Preserved review input |
 | [`submission/ivc_2026-09-30_v4/`](submission/ivc_2026-09-30_v4/) | Deployment-matched Elsevier manuscript before the visual-data addendum | Preserved review input |
 | [`submission/ivc_2026-09-29_v3/`](submission/ivc_2026-09-29_v3/) | Visual-scientific package before the deployment-matched router rerun | Preserved review input |
@@ -21,13 +22,13 @@ This directory separates the current submission package, immutable review rounds
 The root-level `main.tex`, `sections/`, `references.bib`, and `tables/` are the earlier
 modular manuscript skeleton. They are retained for provenance but are not the current
 submission source. `figures/` is now the canonical reproducible figure workspace used
-by v6. The earlier `../manuscript/latex/main.tex` is also non-canonical.
+by v7. The earlier `../manuscript/latex/main.tex` is also non-canonical.
 
 ## Build the current manuscript
 
-Open [`submission/ivc_2026-09-30_v6_qualitative/main.tex`](submission/ivc_2026-09-30_v6_qualitative/main.tex)
-with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-30_v6_qualitative` directory or the
-v6 archive from `output/overleaf/`, preserve the `figures/` subdirectory, and select
+Open [`submission/ivc_2026-09-30_v7_expanded/main.tex`](submission/ivc_2026-09-30_v7_expanded/main.tex)
+with pdfLaTeX. On Overleaf, upload the entire `ivc_2026-09-30_v7_expanded` directory or the
+v7 archive from `output/overleaf/`, preserve the `figures/` and `tables/` subdirectories, and select
 `main.tex` as the main document.
 
 For a reproducible local build that also updates the stable review PDF, run:

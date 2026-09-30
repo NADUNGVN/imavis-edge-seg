@@ -1,0 +1,45 @@
+{
+  "candidate_only_p95_ms": {
+    "E3": {
+      "large": 9.41406,
+      "medium": 4.60742,
+      "small": 1.7959,
+      "tiny": 0.941406
+    },
+    "E1": {
+      "large": 41.18071,
+      "medium": 20.47293,
+      "small": 6.631906,
+      "tiny": 3.720021
+    }
+  },
+  "complete_warm_route_median_ms": {
+    "E3": {
+      "tiny": 2.0663830000557937,
+      "small": 5.225304503255757,
+      "medium": 11.968131999310572,
+      "large": 26.70406800461933
+    },
+    "E1": {
+      "tiny": 34.9547440000606,
+      "small": 46.12584000096831,
+      "medium": 63.36133049990167,
+      "large": 92.68139550113119
+    }
+  },
+  "ratio_complete_to_candidate": {
+    "E3": {
+      "tiny": 2.1949966327554677,
+      "small": 2.909574309959216,
+      "medium": 2.5975778199752946,
+      "large": 2.8366154458989357
+    },
+    "E1": {
+      "tiny": 9.396383515055588,
+      "small": 6.955140799789429,
+      "medium": 3.094883365492954,
+      "large": 2.250602175172094
+    }
+  },
+  "boundary": "Comparison of two measured totals; not a component decomposition."
+}
