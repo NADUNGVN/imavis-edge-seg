@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
-    [string]$Submission = "ivc_2026-09-30_v11_final-figure-map",
+    [string]$Submission = "ivc_2026-09-30_v12_compressed-visual",
+    [string]$TexFile = "main.tex",
     [string]$OutputName = "PACE-Seg_IVC_Manuscript.pdf"
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $sourceDir = Join-Path $repoRoot "paper\submission\$Submission"
-$sourceTex = Join-Path $sourceDir "main.tex"
+$sourceTex = Join-Path $sourceDir $TexFile
 $outputDir = Join-Path $repoRoot "output\pdf"
 $outputPdf = Join-Path $outputDir $OutputName
 
@@ -37,7 +38,7 @@ if ($tectonicCommand) {
 
 Push-Location $sourceDir
 try {
-    & $tectonic "main.tex" "--keep-logs" "--keep-intermediates"
+    & $tectonic $TexFile "--keep-logs" "--keep-intermediates"
     if ($LASTEXITCODE -ne 0) {
         throw "Tectonic failed with exit code $LASTEXITCODE"
     }
@@ -45,7 +46,7 @@ try {
     Pop-Location
 }
 
-$builtPdf = Join-Path $sourceDir "main.pdf"
+$builtPdf = [System.IO.Path]::ChangeExtension($sourceTex, ".pdf")
 if (-not (Test-Path -LiteralPath $builtPdf)) {
     throw "Expected PDF was not produced: $builtPdf"
 }

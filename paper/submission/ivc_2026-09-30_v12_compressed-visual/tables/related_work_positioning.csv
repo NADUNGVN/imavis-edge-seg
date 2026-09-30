@@ -1,0 +1,7 @@
+method,candidate_source,selection_time,cost_signal,risk_signal,hard_measured_budget,deployed_form
+Once-for-All,Elastic subnetworks,Design time,Latency predictor / lookup,None,Design constraint,Static subnet
+SlimSeg,Slimmable widths,Configured at inference,Desired efficiency setting,None,No,Static width
+MESS,Multi-exit network,Per image / deployment configured,Exit latency and compute,Exit confidence,No measured hard route budget,Multi-exit graph
+Dynamic Routing,Multi-scale paths,Per image,Compute-budget regularization,Learned gates,No measured accelerator budget,Dynamic paths
+AutoSegEdge,Searched architectures,Design time,FLOPs + target-device latency,None,Search constraint,Static architecture
+PACE-Seg,Four elastic capacities,Per image,Measured complete route cost,Candidate-specific expected error,Yes,Static compiled engines
