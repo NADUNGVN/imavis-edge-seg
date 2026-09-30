@@ -13,11 +13,13 @@ scientific question and traces to repository evidence.
 | `archify/VALIDATION.md` | Archify version, hashes, gate results, and visual-review outcome |
 | `scripts/export_archify_svg.py` | Calls Archify's vector exporter through Chromium |
 | `scripts/svg_to_vector_pdf.py` | Converts exported SVG to tightly cropped vector PDF |
-| `scripts/plot_flops_latency.py` | Generates RQ1 Figure 3 from canonical FLOPs/latency artifacts |
-| `scripts/plot_rq2_near_parity.py` | Generates RQ2 Figure 4 from six evaluation JSON files |
-| `scripts/plot_router_deployment_matched.py` | Generates RQ3 Figure 5 from the six canonical E1/E3 replay JSON files |
+| `scripts/plot_flops_latency.py` | Generates the RQ1 FLOPs/latency figure from canonical artifacts |
+| `scripts/plot_rq2_near_parity.py` | Generates the RQ2 near-parity figure from six evaluation JSON files |
+| `scripts/plot_router_deployment_matched.py` | Generates the RQ3 figure from six canonical E1/E3 replay JSON files |
+| `scripts/select_qualitative_examples.py` | Freezes median-error and failure-case IDs without raster access |
+| `scripts/render_qualitative_examples.py` | Audits hashes/predictions and renders the real-data panels on the server |
 | `generated/` | Final SVG/PDF and high-resolution plot previews |
-| `qualitative/` | Evidence gate and deterministic selection protocol for a future real-image panel |
+| `qualitative/` | Selection manifest, rendered panels, and complete output audit |
 | `ROUTER_FIGURE_GATE.md` | Required correction/rerun before the router quality--latency plot is frozen |
 
 ## Rebuild
