@@ -1,0 +1,10 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_hashes": {
+    "fig7_qualitative_grid.png": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d"
+  },
+  "evidence_boundary": "V15 changes only the deterministic Figure 9 layout, spacing, borders, and labels; all image and prediction pixels come from the audited V11 source composite.",
+  "outputs": {
+    "fig9_qualitative_capacity_v15.png": "7aa80ac0c1d952dc3e46e5b2654265d0d736b131b04d065180c6a308dfea2188"
+  }
+}

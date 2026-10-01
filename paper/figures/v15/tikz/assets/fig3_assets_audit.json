@@ -1,0 +1,13 @@
+{
+  "source_manifest": "paper\\figures\\qualitative\\generated\\render_manifest.json",
+  "source_composite": "paper\\figures\\qualitative\\generated\\fig7_qualitative_grid.png",
+  "source_composite_sha256": "d5a5206c0a9edd03cccef783bd8c3b9eb3571b52ee133531a49e7d6e4825577d",
+  "condition": "rain",
+  "image_id": "GOPR0402_frame_000748",
+  "evidence_boundary": "Unmodified audited raster crops; the schematic carries no numerical claim.",
+  "outputs": {
+    "fig3_input.png": "5996f113c4291f5c578fb6d9688130a46cf521be50a21df91cf153cbfd851b4f",
+    "fig3_tiny_probe.png": "62d6b2abf5665ad03ccc4e0d86a2e1cf9a45c675213001f7ec401a6f60ea4a19",
+    "fig3_selected_output.png": "98fec13cbcaf471908163b7c3bc3cf21d5464db62f4934d97a7218d1da292ecc"
+  }
+}

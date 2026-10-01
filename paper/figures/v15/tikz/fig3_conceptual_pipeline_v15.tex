@@ -1,0 +1,86 @@
+\documentclass[tikz,border=2mm]{standalone}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds}
+
+\definecolor{ink}{HTML}{1F2937}
+\definecolor{muted}{HTML}{64748B}
+\definecolor{panel}{HTML}{F8FAFC}
+\definecolor{edge}{HTML}{CBD5E1}
+\definecolor{tiny}{HTML}{E69F00}
+\definecolor{small}{HTML}{56B4E9}
+\definecolor{medium}{HTML}{009E73}
+\definecolor{large}{HTML}{0072B2}
+\definecolor{risk}{HTML}{CC79A7}
+\definecolor{hardware}{HTML}{475569}
+
+\tikzset{
+  arr/.style={-{Latex[length=1.4mm,width=1.1mm]}, line width=0.65pt, draw=ink},
+  card/.style={draw=edge, rounded corners=1.5mm, fill=white, line width=0.7pt,
+               inner sep=1.1mm, align=center, font=\sffamily},
+  stage/.style={card, minimum height=19mm},
+  smalltext/.style={font=\sffamily\fontsize{6.1}{6.9}\selectfont, text=muted},
+  title/.style={font=\sffamily\fontsize{7.0}{7.8}\selectfont\bfseries, text=ink},
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1mm,y=1mm]
+  \node[card, anchor=south west, inner sep=0.8mm] (input) at (0,18.5)
+    {\includegraphics[width=18mm,height=9mm]{assets/fig3_input.png}};
+  \node[title, anchor=south] at ([yshift=1.6mm]input.north) {Adverse image};
+
+  \node[card, anchor=south west, inner sep=0.8mm] (probe) at (25,18.5)
+    {\includegraphics[width=18mm,height=9mm]{assets/fig3_tiny_probe.png}};
+  \node[title, anchor=south] at ([yshift=1.6mm]probe.north) {Tiny probe};
+  \node[smalltext, anchor=north] at ([yshift=-1.0mm]probe.south) {fixed engine};
+
+  \node[card, circle, minimum size=12.5mm, fill=risk!8, draw=risk, line width=0.9pt]
+    (entropy) at (53.5,24) {$s(x)$};
+  \node[title, anchor=south] at ([yshift=1.8mm]entropy.north) {Visual risk};
+  \node[smalltext, anchor=north] at ([yshift=-1.0mm]entropy.south) {mean entropy};
+
+  \node[stage, anchor=west, minimum width=26.5mm, minimum height=20mm] (risks) at (63.5,24) {};
+  \node[title, anchor=north] at ([yshift=-1.0mm]risks.north) {Candidate risk};
+  \foreach \name/\col/\yy in {T/tiny/3.5,S/small/0.3,M/medium/-2.9,L/large/-6.1}{
+    \draw[\col, line width=2.2pt, line cap=round]
+      ([xshift=-8.5mm,yshift=\yy mm]risks.center) -- ([xshift=3.5mm,yshift=\yy mm]risks.center);
+    \node[font=\fontsize{5.4}{6.2}\selectfont, anchor=west, text=ink]
+      at ([xshift=4.5mm,yshift=\yy mm]risks.center) {$g_{\name}(s(x))$};
+  }
+
+  \node[stage, anchor=west, minimum width=21mm, minimum height=20mm] (costs) at (96,24) {};
+  \node[title, anchor=north] at ([yshift=-1.0mm]costs.north) {Measured cost};
+  \node[font=\sffamily\fontsize{5.9}{6.7}\selectfont, text=hardware] at ([yshift=3.0mm]costs.center)
+    {$C_h(T)\quad C_h(S)$};
+  \node[font=\sffamily\fontsize{5.9}{6.7}\selectfont, text=hardware] at ([yshift=-1.0mm]costs.center)
+    {$C_h(M)\quad C_h(L)$};
+  \draw[hardware, dashed, line width=0.7pt]
+    ([xshift=-7mm,yshift=-6mm]costs.center) -- ([xshift=4mm,yshift=-6mm]costs.center)
+    node[right, font=\sffamily\fontsize{5.9}{6.7}\selectfont, text=ink] {$B_h$};
+
+  \node[diamond, draw=hardware, fill=panel, aspect=1.55, inner sep=1.2mm,
+        font=\fontsize{6.1}{6.9}\selectfont\bfseries, align=center, text=ink]
+    (filter) at (132.5,24) {budget\\feasible?};
+  \node[smalltext, anchor=north] at ([yshift=-1.7mm]filter.south) {$C_h(\ell)\leq B_h$};
+
+  \node[card, minimum width=13mm, minimum height=13mm, draw=medium, line width=1.2pt,
+        fill=medium!8, font=\fontsize{7.2}{8}\selectfont\bfseries]
+    (engine) at (150,24) {$\ell^*$};
+  \node[title, anchor=south] at ([yshift=1.8mm]engine.north) {Static engine};
+
+  \node[card, anchor=south west, inner sep=0.8mm] (output) at (160,18.5)
+    {\includegraphics[width=18mm,height=9mm]{assets/fig3_selected_output.png}};
+  \node[title, anchor=south] at ([yshift=1.6mm]output.north) {Segmentation};
+
+  \draw[arr] (input.east) -- (probe.west);
+  \draw[arr] (probe.east) -- (entropy.west);
+  \draw[arr] (entropy.east) -- (risks.west);
+  \draw[arr] (risks.north east) -- ++(3,6) -| (filter.north);
+  \draw[arr] (costs.east) -- ([yshift=-2.5mm]filter.west);
+  \draw[arr] (filter.east) -- (engine.west);
+  \draw[arr] (engine.east) -- (output.west);
+
+\end{tikzpicture}
+\end{document}
