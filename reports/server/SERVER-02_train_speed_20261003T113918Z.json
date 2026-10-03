@@ -1,0 +1,171 @@
+{
+  "host": "SERVER-02",
+  "gpu": "Quadro RTX 8000",
+  "torch": "2.5.1+cu121",
+  "cpu_count": 28,
+  "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+  "runs": [
+    {
+      "job": "supernet",
+      "num_workers": 4,
+      "amp": false,
+      "steps_per_s": 0.9378341865602,
+      "hours_per_100k": 29.61907144765266,
+      "data_batches_per_s": 1.1482053146762885,
+      "peak_gpu_gib": 19.49329900741577
+    },
+    {
+      "job": "supernet",
+      "num_workers": 4,
+      "amp": true,
+      "steps_per_s": 1.5448576674635632,
+      "hours_per_100k": 17.980800667148152,
+      "data_batches_per_s": 1.8277177677158452,
+      "peak_gpu_gib": 13.93091630935669
+    },
+    {
+      "job": "supernet",
+      "num_workers": 8,
+      "amp": false,
+      "steps_per_s": 2.636600055569774,
+      "hours_per_100k": 10.535453687447848,
+      "data_batches_per_s": 3.424502446904804,
+      "peak_gpu_gib": 15.910332679748535
+    },
+    {
+      "job": "supernet",
+      "num_workers": 8,
+      "amp": true,
+      "steps_per_s": 4.017253932662482,
+      "hours_per_100k": 6.9146183545752935,
+      "data_batches_per_s": 5.348264317569933,
+      "peak_gpu_gib": 9.041674137115479
+    },
+    {
+      "job": "supernet",
+      "num_workers": 12,
+      "amp": false,
+      "steps_per_s": 2.645808928692433,
+      "hours_per_100k": 10.498784502743984,
+      "data_batches_per_s": 9.753672081342264,
+      "peak_gpu_gib": 15.910332679748535
+    },
+    {
+      "job": "supernet",
+      "num_workers": 12,
+      "amp": true,
+      "steps_per_s": 3.9200795135256374,
+      "hours_per_100k": 7.086024067097309,
+      "data_batches_per_s": 10.633168379055416,
+      "peak_gpu_gib": 9.041674137115479
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 4,
+      "amp": false,
+      "steps_per_s": 4.323140569317837,
+      "hours_per_100k": 6.425370013393048,
+      "data_batches_per_s": 4.612601388762964,
+      "peak_gpu_gib": 4.1003851890563965
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 4,
+      "amp": true,
+      "steps_per_s": 4.6324908901635435,
+      "hours_per_100k": 5.996294096715886,
+      "data_batches_per_s": 4.727942508690152,
+      "peak_gpu_gib": 3.5437583923339844
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 8,
+      "amp": false,
+      "steps_per_s": 8.355899982805587,
+      "hours_per_100k": 3.324331051704508,
+      "data_batches_per_s": 8.482258191716888,
+      "peak_gpu_gib": 2.553770065307617
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 8,
+      "amp": true,
+      "steps_per_s": 8.103501733530202,
+      "hours_per_100k": 3.427873367736875,
+      "data_batches_per_s": 8.004809900448127,
+      "peak_gpu_gib": 1.7930097579956055
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 12,
+      "amp": false,
+      "steps_per_s": 11.531473695755954,
+      "hours_per_100k": 2.408866248205649,
+      "data_batches_per_s": 11.513985489033688,
+      "peak_gpu_gib": 2.553770065307617
+    },
+    {
+      "job": "fast_scnn",
+      "num_workers": 12,
+      "amp": true,
+      "steps_per_s": 11.31413821503464,
+      "hours_per_100k": 2.455138628310696,
+      "data_batches_per_s": 11.4631784032742,
+      "peak_gpu_gib": 1.7930097579956055
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 4,
+      "amp": false,
+      "steps_per_s": 3.7156906032079573,
+      "hours_per_100k": 7.47580483525612,
+      "data_batches_per_s": 5.509521541105278,
+      "peak_gpu_gib": 12.026284217834473
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 4,
+      "amp": true,
+      "steps_per_s": 4.099971984189675,
+      "hours_per_100k": 6.775114045875077,
+      "data_batches_per_s": 4.397230864900068,
+      "peak_gpu_gib": 7.020272254943848
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 8,
+      "amp": false,
+      "steps_per_s": 3.709497583045275,
+      "hours_per_100k": 7.488285719537763,
+      "data_batches_per_s": 10.507455402793447,
+      "peak_gpu_gib": 12.026284217834473
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 8,
+      "amp": true,
+      "steps_per_s": 5.822577778833846,
+      "hours_per_100k": 4.770701025026264,
+      "data_batches_per_s": 10.2660808904399,
+      "peak_gpu_gib": 7.020272254943848
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 12,
+      "amp": false,
+      "steps_per_s": 3.689305996439748,
+      "hours_per_100k": 7.52926913749737,
+      "data_batches_per_s": 15.842877540084505,
+      "peak_gpu_gib": 12.026284217834473
+    },
+    {
+      "job": "pace_large",
+      "num_workers": 12,
+      "amp": true,
+      "steps_per_s": 5.801958841396775,
+      "hours_per_100k": 4.787655089792139,
+      "data_batches_per_s": 14.217494831641421,
+      "peak_gpu_gib": 7.020272254943848
+    }
+  ]
+}
