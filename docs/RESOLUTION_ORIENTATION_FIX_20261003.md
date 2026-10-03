@@ -20,11 +20,17 @@ Confirmed independently by Claude Code and Codex; no document records it as inte
 
 ## Retraining batch (9 runs × 100k steps)
 
-| Server | GPU | Queue (sequential) |
-|---|---|---|
-| SERVER-01 | Quadro RTX 8000 48 GB | supernet seed0 → PACE-Large seed0 → Fast-SCNN seed0 |
-| SERVER-02 | Quadro RTX 8000 48 GB | supernet seed1 → Fast-SCNN seed1 |
-| SERVER-03 | RTX 3090 24 GB | supernet seed2 → PACE-Large seed1 → PACE-Large seed2 → Fast-SCNN seed2 |
+| Server | GPU | Queue (sequential) | Estimate |
+|---|---|---|---|
+| SERVER-01 | Quadro RTX 8000 48 GB | supernet seed0 → PACE-Large seed0 | ~11.8 h |
+| SERVER-02 | Quadro RTX 8000 48 GB | supernet seed1 → Fast-SCNN seed0 → Fast-SCNN seed1 | ~11.8 h |
+| SERVER-03 | RTX 3090 24 GB | supernet seed2 → PACE-Large seed1 → PACE-Large seed2 → Fast-SCNN seed2 | ~13.3 h |
+
+Benchmark (reports/server/*_train_speed_20261003*.json, three servers concurrently):
+with 4 workers and no AMP the RTX 8000 supernet was data-bound (0.8–1.5 it/s), which
+explains the 13–16 h V1 runs; with 12 workers + AMP it reaches ~3.9–4.0 it/s (~7 h) on
+RTX 8000 and ~5.75 it/s (~4.8 h) on RTX 3090. Chosen for all nine runs: amp=true,
+num_workers=12, cudnn_benchmark=true.
 
 Queue files: `configs/queues/landscape_server0{1,2,3}.txt`. PACE-Large standalone
 (`build_baseline_model("pace_large")`) is the exact large static graph of a randomly
@@ -34,7 +40,7 @@ The queue assignment may be rebalanced after the throughput benchmark.
 Recipe: unchanged from V1 (AdamW 3e-4, wd 1e-4, cosine, 500 warm-up, batch 8, clip 5.0,
 boundary weight 1, α_distill 0.5, T 1, same augmentation), plus speed settings that are
 identical for all nine runs: `training.amp=true` (FP16 autocast + GradScaler),
-`training.cudnn_benchmark=true`, `training.num_workers` from the benchmark.
+`training.cudnn_benchmark=true`, `training.num_workers=12`.
 
 ## Procedure
 

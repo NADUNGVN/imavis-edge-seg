@@ -3,7 +3,7 @@
 # one job at a time on this server's GPU. Skips a job whose final checkpoint exists.
 set -uo pipefail
 QUEUE="$1"; QDIR="$2"
-WORKERS="${WORKERS:-8}"; AMP="${AMP:-true}"
+WORKERS="${WORKERS:-12}"; AMP="${AMP:-true}"
 COMMON=(--override "training.num_workers=$WORKERS" --override "training.amp=$AMP" --override "training.cudnn_benchmark=true")
 STEPS=100000
 if [ -n "${SMOKE:-}" ]; then STEPS=30; COMMON+=(--override training.checkpoint_interval_steps=30 --override training.log_interval_steps=10); fi

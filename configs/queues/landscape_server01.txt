@@ -1,4 +1,3 @@
-# kind  experiment_id                         seed  [baseline_model]
-supernet  pace_seg_landscape_supernet_seed0     0
-baseline  pace_large_landscape_seed0            0     pace_large
-baseline  fast_scnn_landscape_seed0             0     fast_scnn
+# kind  experiment_id  seed  [baseline_model]   (benchmark 2026-10-03: ~11.8 h)
+supernet  pace_seg_landscape_supernet_seed0  0
+baseline  pace_large_landscape_seed0  0  pace_large
