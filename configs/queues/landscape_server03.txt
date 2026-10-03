@@ -1,0 +1,5 @@
+# kind  experiment_id                         seed  [baseline_model]
+supernet  pace_seg_landscape_supernet_seed2     2
+baseline  pace_large_landscape_seed1            1     pace_large
+baseline  pace_large_landscape_seed2            2     pace_large
+baseline  fast_scnn_landscape_seed2             2     fast_scnn

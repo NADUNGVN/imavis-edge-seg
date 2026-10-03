@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 
 from imavis_edge_seg.config import ElasticityLevel, ExperimentConfig
 from imavis_edge_seg.models.baselines import build_baseline_model
+from imavis_edge_seg.training.speed import SpeedSettings
 from imavis_edge_seg.training.checkpoint import (
     find_latest_checkpoint,
     load_checkpoint,
@@ -114,6 +115,7 @@ def run_baseline_training(
         )
 
     optimizer = AdamW(model.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay)
+    speed = SpeedSettings(config, device, qat)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: lr_lambda(step, config))
 
     # Resume if a checkpoint already exists for this experiment_id -- see
@@ -152,20 +154,22 @@ def run_baseline_training(
         mask = mask.to(device)
 
         optimizer.zero_grad(set_to_none=True)
-        logits = model(image)
-        loss = boundary_aware_segmentation_loss(logits, mask, boundary_weight=config.training.boundary_loss_weight)
-        loss.backward()  # type: ignore[no-untyped-call]  # torch stub gap, not ours
-        torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.grad_clip_norm)
-        optimizer.step()
+        with speed.autocast():
+            logits = model(image)
+            loss = boundary_aware_segmentation_loss(logits, mask, boundary_weight=config.training.boundary_loss_weight)
+        speed.backward_and_step(loss, model, optimizer, config.training.grad_clip_norm)
         scheduler.step()
 
-        running_loss += float(loss.detach())
+        running_loss += loss.detach()
 
         if step % config.training.log_interval_steps == 0:
-            avg_loss = running_loss / config.training.log_interval_steps
+            avg_loss = float(running_loss) / config.training.log_interval_steps
             running_loss = 0.0
             lr = scheduler.get_last_lr()[0]
-            console.print(f"[{baseline_name}] step {step}/{config.training.max_steps} loss={avg_loss:.4f} lr={lr:.2e}")
+            console.print(
+                f"[{baseline_name}] step {step}/{config.training.max_steps} loss={avg_loss:.4f} lr={lr:.2e} "
+                f"{speed.throughput(step, config.training.max_steps)}"
+            )
 
         if step % config.training.checkpoint_interval_steps == 0 or step == config.training.max_steps:
             ckpt_path = output_dir / "checkpoints" / f"step_{step:08d}.pt"

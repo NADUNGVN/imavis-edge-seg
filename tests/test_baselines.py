@@ -39,7 +39,7 @@ def test_build_baseline_model_from_scratch_archs_output_shape_and_gradient_flow(
     ), "every parameter should receive a finite gradient -- no dead/detached path"
 
 
-_IMPLEMENTED = {"mobilenetv3_deeplabv3", "fast_scnn", "bisenetv2", "ddrnet23_slim", "segformer_b0"}
+_IMPLEMENTED = {"mobilenetv3_deeplabv3", "fast_scnn", "bisenetv2", "ddrnet23_slim", "segformer_b0", "pace_large"}
 
 
 @pytest.mark.parametrize("name", [n for n in BASELINE_NAMES if n not in _IMPLEMENTED])

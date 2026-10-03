@@ -28,6 +28,7 @@ from imavis_edge_seg.training.data import build_calibration_dataloader
 from imavis_edge_seg.training.losses import resize_image
 from imavis_edge_seg.training.quantization import CalibrationObserver, apply_qat, run_calibration
 from imavis_edge_seg.training.schedule import lr_lambda
+from imavis_edge_seg.training.speed import SpeedSettings
 from imavis_edge_seg.training.step import train_step
 
 _Sample = tuple[torch.Tensor, torch.Tensor]
@@ -117,6 +118,7 @@ def run_training(
     optimizer = AdamW(
         supernet.parameters(), lr=config.training.lr, weight_decay=config.training.weight_decay
     )
+    speed = SpeedSettings(config, device, qat)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: lr_lambda(step, config))
 
     # Resume if a checkpoint already exists for this experiment_id (e.g. after an
@@ -159,21 +161,21 @@ def run_training(
         mask = mask.to(device)
 
         optimizer.zero_grad(set_to_none=True)
-        result = train_step(supernet, image, mask, config, rng)
-        result.total_loss.backward()  # type: ignore[no-untyped-call]  # torch stub gap, not ours
-        torch.nn.utils.clip_grad_norm_(supernet.parameters(), config.training.grad_clip_norm)
-        optimizer.step()
+        with speed.autocast():
+            result = train_step(supernet, image, mask, config, rng)
+        speed.backward_and_step(result.total_loss, supernet, optimizer, config.training.grad_clip_norm)
         scheduler.step()
 
-        running_loss += float(result.total_loss.detach())
+        running_loss += result.total_loss.detach()
 
         if step % config.training.log_interval_steps == 0:
-            avg_loss = running_loss / config.training.log_interval_steps
+            avg_loss = float(running_loss) / config.training.log_interval_steps
             running_loss = 0.0
             lr = scheduler.get_last_lr()[0]
             console.print(
                 f"step {step}/{config.training.max_steps} "
-                f"loss={avg_loss:.4f} lr={lr:.2e} levels={result.levels_trained}"
+                f"loss={avg_loss:.4f} lr={lr:.2e} levels={result.levels_trained} "
+                f"{speed.throughput(step, config.training.max_steps)}"
             )
 
         if step % config.training.checkpoint_interval_steps == 0 or step == config.training.max_steps:

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 from omegaconf import OmegaConf
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Backend = Literal["tensorrt_gpu", "xavier_dla", "hailo_hef", "onnxruntime_cpu"]
 ElasticityLevel = Literal["tiny", "small", "medium", "large"]
@@ -32,11 +32,19 @@ def _default_depth_blocks() -> dict[ElasticityLevel, int]:
 
 
 def _default_input_resolutions() -> dict[ElasticityLevel, tuple[int, int]]:
+    """(height, width) per level -- every consumer unpacks `height, width = ...`.
+
+    Landscape, matching Cityscapes/ACDC's 2:1 frames: tiny is 384 wide x 192 high.
+    Until 2026-10-03 these tuples were written as (384, 192) etc. and therefore read
+    as height=384, width=192 -- a portrait, aspect-distorted input for every model,
+    engine and latency measurement of the V1 runs (see
+    docs/RESOLUTION_ORIENTATION_FIX_20261003.md). `SupernetConfig` now rejects any
+    portrait resolution."""
     return {
-        "tiny": (384, 192),
-        "small": (512, 256),
-        "medium": (768, 384),
-        "large": (1024, 512),
+        "tiny": (192, 384),
+        "small": (256, 512),
+        "medium": (384, 768),
+        "large": (512, 1024),
     }
 
 
@@ -64,6 +72,19 @@ class SupernetConfig(BaseModel):
     )
     num_classes: int = 19  # Cityscapes trainId classes
     compiler_safe_ops_only: bool = True
+
+    @field_validator("input_resolutions")
+    @classmethod
+    def _require_landscape(cls, value: dict[ElasticityLevel, tuple[int, int]]) -> dict[ElasticityLevel, tuple[int, int]]:
+        """(height, width): width must be >= height. Square sizes stay allowed for
+        unit tests; a portrait tuple is the 2026-10-03 orientation bug."""
+        for level, (height, width) in value.items():
+            if width < height:
+                raise ValueError(
+                    f"input_resolutions[{level!r}]=({height}, {width}) is portrait; entries are "
+                    "(height, width) and must be landscape, e.g. tiny=(192, 384)"
+                )
+        return value
 
 
 class SearchConfig(BaseModel):
@@ -127,6 +148,9 @@ class TrainingConfig(BaseModel):
     boundary_loss_weight: float = 1.0
     distillation_temperature: float = 1.0
     grad_clip_norm: float = 5.0
+    # Speed settings (training/speed.py); off by default so earlier runs reproduce.
+    amp: bool = False  # FP16 autocast + GradScaler on CUDA
+    cudnn_benchmark: bool = False
     log_interval_steps: int = 50
     checkpoint_interval_steps: int = 1000
     augment: bool = True  # data.transforms.SegmentationTrainAugment vs. plain resize

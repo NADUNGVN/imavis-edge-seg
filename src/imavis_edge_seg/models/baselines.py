@@ -45,6 +45,7 @@ BASELINE_NAMES = (
     "segformer_b0",
     "hard",
     "ucpnet",
+    "pace_large",
 )
 
 
@@ -85,6 +86,17 @@ def build_baseline_model(name: str, num_classes: int = 19) -> nn.Module:
         return DDRNetSlim(num_classes)
     if name == "segformer_b0":
         return SegformerB0(num_classes)
+    if name == "pace_large":
+        # Standalone PACE-Seg large architecture (2026-10-03, RQ2 confound): the exact
+        # static graph `extract_subnet(supernet, "large")` exports, built from a freshly
+        # RANDOM-initialized supernet and then trained alone with the baseline recipe --
+        # no weight sharing, sandwich sampling or distillation. Comparing it with the
+        # large level of the shared elastic supernet isolates the shared-training effect.
+        from imavis_edge_seg.config import SupernetConfig
+        from imavis_edge_seg.models.subnet import extract_subnet
+        from imavis_edge_seg.models.supernet import PaceSegSupernet
+
+        return extract_subnet(PaceSegSupernet(SupernetConfig(num_classes=num_classes)), "large")
     if name in BASELINE_NAMES:
         raise NotImplementedError(
             f"baseline {name!r} is a required baseline (RESEARCH_PLAN.md §7) but has no "
