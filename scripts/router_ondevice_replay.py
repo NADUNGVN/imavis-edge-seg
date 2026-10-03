@@ -18,13 +18,13 @@ import json
 from pathlib import Path
 
 import numpy as np
-from router_review_analyses import BASE, LEVELS, Split, pixel_error, run_policy
+from router_review_analyses import TAG, BASE, LEVELS, Split, pixel_error, run_policy
 from router_review_analyses_v2 import compare, mixture_gain, static_fair, threshold_policy
 from router_same_harness_analysis import tables_from
 
 DEVICES = {
-    "E3": ("reports/compiled_eval_E3_20261003_per_image.npz", "reports/static_vs_route_E3_20261003.json", "|logits"),
-    "E1": ("reports/compiled_eval_E1_20261003_per_image.npz", "reports/static_vs_route_E1_explicit_float32_20261003.json", ""),
+    "E3": (f"reports/compiled_eval_E3_{TAG}_per_image.npz", f"reports/static_vs_route_E3_{TAG}.json", "|logits"),
+    "E1": (f"reports/compiled_eval_E1_{TAG}_per_image.npz", f"reports/static_vs_route_E1_explicit_float32_{TAG}.json", ""),
 }
 SPLIT_KEY = {"cityscapes": "cityscapes", "acdc/fog": "acdc_fog", "acdc/night": "acdc_night",
              "acdc/rain": "acdc_rain", "acdc/snow": "acdc_snow"}
@@ -82,8 +82,8 @@ def main() -> None:
             print(f"{dev} {mode:15s} D mIoU {r['mean_D_miou_points']:.2f} | D-T {r['D_vs_T_hard']['mean_delta_points']:+.2f} "
                   f"| D-Ahard {r['D_vs_A_hard']['mean_delta_points']:+.2f} | D-static {r['D_vs_static']['mean_delta_points']:+.2f} "
                   f"| viol {r['D_violating_cells']} | mix {r['mixture_gain_points']:+.2f} ({r['mixture_share_above']:.0%})", flush=True)
-    Path("reports/router_ondevice_replay_20261003.json").write_text(json.dumps(out, indent=2))
-    print("wrote reports/router_ondevice_replay_20261003.json")
+    Path(f"reports/router_ondevice_replay_{TAG}.json").write_text(json.dumps(out, indent=2))
+    print(f"wrote reports/router_ondevice_replay_{TAG}.json")
 
 
 if __name__ == "__main__":

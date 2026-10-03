@@ -21,11 +21,13 @@ from __future__ import annotations
 import csv
 import itertools
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from router_review_analyses import (
+    TAG,
     BASE,
     LEVELS,
     RUNS,
@@ -44,7 +46,7 @@ LUT_BACKEND = {"E1": "hailo_hef", "E3": "tensorrt_gpu"}
 
 
 def load_static_costs(stat: str) -> dict[str, dict[str, float]]:
-    rows = [r for r in csv.DictReader(open("outputs/benchmark_lookup_table.csv")) if r["run_index"] == "-1"]
+    rows = [r for r in csv.DictReader(open(os.environ.get("PACE_LUT", "outputs/benchmark_lookup_table.csv"))) if r["run_index"] == "-1"]
     out: dict[str, dict[str, float]] = {}
     for dev, backend in LUT_BACKEND.items():
         out[dev] = {r["level"]: float(r[LUT_FIELD[stat]]) for r in rows
@@ -199,8 +201,8 @@ def main() -> None:
         out[stat] = block
         print(stat, json.dumps({k: v for k, v in block.items() if k != "static_S_level_by_dev_budget"}, indent=1))
         print(block["static_S_level_by_dev_budget"])
-    Path("reports/router_review_analyses_v2_20261003.json").write_text(json.dumps(out, indent=2))
-    print("wrote reports/router_review_analyses_v2_20261003.json")
+    Path(f"reports/router_review_analyses_v2_{TAG}.json").write_text(json.dumps(out, indent=2))
+    print(f"wrote reports/router_review_analyses_v2_{TAG}.json")
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ Analyses
 from __future__ import annotations
 
 import argparse
+import os
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -39,7 +40,11 @@ LEVELS = ("tiny", "small", "medium", "large")
 RUNS = ("a", "b", "c")
 BACKENDS = {"E3": ("reports/router_overhead_E3_20260922.json", "gpu"), "E1": ("reports/router_overhead_E1_20260928.json", "numpy")}
 STATS = {"median": "median_ms", "p95": "p95_ms", "p99": "p99_ms"}
-BASE = Path("reports/router_deployment_matched_20260929")
+# Re-targetable for the landscape rerun (2026-10-04): PACE_ROUTER_BASE points at the new
+# evaluate_router dumps, PACE_TAG is the date suffix of measurement/result files, and
+# PACE_ROUTE_COSTS=same_harness takes route costs from reports/static_vs_route_*_<TAG>.json.
+BASE = Path(os.environ.get("PACE_ROUTER_BASE", "reports/router_deployment_matched_20260929"))
+TAG = os.environ.get("PACE_TAG", "20261003")
 
 
 # --------------------------------------------------------------------------- data
@@ -78,6 +83,15 @@ def miou(total: np.ndarray) -> float:
 
 
 def load_costs(stat: str) -> dict[str, dict[str, float]]:
+    if os.environ.get("PACE_ROUTE_COSTS") == "same_harness":
+        key = {"median": "median_ms", "p95": "p95_ms", "p99": "p99_ms"}[stat]
+        files = {"E3": (f"reports/static_vs_route_E3_{TAG}.json", "|logits"),
+                 "E1": (f"reports/static_vs_route_E1_explicit_float32_{TAG}.json", "")}
+        out = {}
+        for backend, (path, suffix) in files.items():
+            res = json.loads(Path(path).read_text())["results"]
+            out[backend] = {lv: float(res[f"route_tiny->{lv}{suffix}"][key]) for lv in LEVELS}
+        return out
     out = {}
     for backend, (path, entropy) in BACKENDS.items():
         warm = json.loads(Path(path).read_text())["warm"][entropy]
@@ -375,7 +389,7 @@ def loco(splits: dict[str, dict[str, Split]], stat: str) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--bootstrap-reps", type=int, default=1000)
-    p.add_argument("--output-json", type=Path, default=Path("reports/router_review_analyses_20261003.json"))
+    p.add_argument("--output-json", type=Path, default=Path(f"reports/router_review_analyses_{TAG}.json"))
     args = p.parse_args()
 
     splits: dict[str, dict[str, Split]] = {}

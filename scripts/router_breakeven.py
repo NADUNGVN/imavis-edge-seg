@@ -16,13 +16,13 @@ import json
 from pathlib import Path
 
 import numpy as np
-from router_review_analyses import BASE, LEVELS, RUNS, Split, run_policy
+from router_review_analyses import TAG, BASE, LEVELS, RUNS, Split, run_policy
 from router_review_analyses_v2 import compare, mixture_gain, static_fair, threshold_policy
 from router_same_harness_analysis import tables_from
 
 CONFIGS = {
-    "E3": ("reports/static_vs_route_E3_20261003.json", "|logits"),
-    "E1": ("reports/static_vs_route_E1_explicit_float32_20261003.json", ""),
+    "E3": (f"reports/static_vs_route_E3_{TAG}.json", "|logits"),
+    "E1": (f"reports/static_vs_route_E1_explicit_float32_{TAG}.json", ""),
 }
 ALPHAS = [0.0, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0]
 
@@ -62,8 +62,8 @@ def main() -> None:
                   f"({res['D_vs_static']['wins']}/{res['D_vs_static']['ties']}/{res['D_vs_static']['losses']})  "
                   f"T-static {res['T_hard_vs_static']['mean_delta_points']:+.2f}  "
                   f"mean-cost gain {res['mixture_gain_points']:+.2f} (above {res['mixture_share_above']:.0%})", flush=True)
-    Path("reports/router_breakeven_20261003.json").write_text(json.dumps(out, indent=2))
-    print("wrote reports/router_breakeven_20261003.json")
+    Path(f"reports/router_breakeven_{TAG}.json").write_text(json.dumps(out, indent=2))
+    print(f"wrote reports/router_breakeven_{TAG}.json")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from router_review_analyses import BASE, LEVELS, RUNS, Split, run_policy
+from router_review_analyses import TAG, BASE, LEVELS, RUNS, Split, run_policy
 from router_review_analyses_v2 import bootstrap, compare, mixture_gain, static_fair, threshold_policy
 
 STAT_KEY = {"median": "median_ms", "p95": "p95_ms", "p99": "p99_ms"}
@@ -35,14 +35,14 @@ def tables_from(path: Path, stat: str, suffix: str = "") -> tuple[dict[str, floa
 
 def configurations(stat: str) -> dict[str, tuple[dict, dict]]:
     out = {}
-    e3 = Path("reports/static_vs_route_E3_20261003.json")
+    e3 = Path(f"reports/static_vs_route_E3_{TAG}.json")
     for mode in ("logits", "none"):
         t = tables_from(e3, stat, f"|{mode}")
         if t:
             out[f"E3_{mode}"] = t
     for path in ("explicit", "scheduler"):
         for fmt in ("float32", "uint8"):
-            p = Path(f"reports/static_vs_route_E1_{path}_{fmt}_20261003.json")
+            p = Path(f"reports/static_vs_route_E1_{path}_{fmt}_{TAG}.json")
             if p.exists():
                 t = tables_from(p, stat)
                 if t:
@@ -88,8 +88,8 @@ def main() -> None:
             print(stat, name, json.dumps({k: block[k] for k in ("D_vs_static", "T_hard_vs_static", "D_vs_T_hard")}),
                   "mix", round(block["mixture_vs_static"]["mean_gain_points"], 2),
                   round(block["mixture_vs_static"]["share_above"], 2), flush=True)
-    Path("reports/router_same_harness_analysis_20261003.json").write_text(json.dumps(out, indent=2))
-    print("wrote reports/router_same_harness_analysis_20261003.json")
+    Path(f"reports/router_same_harness_analysis_{TAG}.json").write_text(json.dumps(out, indent=2))
+    print(f"wrote reports/router_same_harness_analysis_{TAG}.json")
 
 
 if __name__ == "__main__":

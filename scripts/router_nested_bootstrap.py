@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-from router_review_analyses import BASE, LEVELS, RUNS, Split, load_costs, run_policy
+from router_review_analyses import TAG, BASE, LEVELS, RUNS, Split, load_costs, run_policy
 
 from imavis_edge_seg.router.calibrator import fit_risk_calibrator
 from imavis_edge_seg.router.grid import macro_quantile_grid
@@ -76,7 +76,7 @@ def main() -> None:
         "D_minus_A_hard_points": {"mean": float(np.mean(d_ah)), "ci95": [float(x) for x in np.percentile(d_ah, [2.5, 97.5])]},
         "note": "fit and held-out halves resampled; calibrators, risk grid, and operating points refit per replicate",
     }
-    Path("reports/router_nested_bootstrap_20261003.json").write_text(json.dumps(out, indent=2))
+    Path(f"reports/router_nested_bootstrap_{TAG}.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 
 

@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-from router_review_analyses import BASE, LEVELS, RUNS, Split, load_costs, miou, ordered_levels, scored
+from router_review_analyses import TAG, BASE, LEVELS, RUNS, Split, load_costs, miou, ordered_levels, scored
 
 
 def c_choice(per_level: dict[str, float], target: float, order: list[str]) -> str:
@@ -90,7 +90,7 @@ def main() -> None:
             for r in RUNS for b in costs for sp in sorted({x["split"] for x in rows})
         },
     }
-    Path("reports/router_mean_budget_frontier_20261003.json").write_text(json.dumps(out, indent=2))
+    Path(f"reports/router_mean_budget_frontier_{TAG}.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 
 
