@@ -1,0 +1,18 @@
+{
+  "reps": 200,
+  "D_minus_A_fair_points": {
+    "mean": 2.4960017492642685,
+    "ci95": [
+      1.8820814014675569,
+      3.0686262452376925
+    ]
+  },
+  "D_minus_A_hard_points": {
+    "mean": 1.3839464526992316,
+    "ci95": [
+      1.0638821318671938,
+      1.7648219766178599
+    ]
+  },
+  "note": "fit and held-out halves resampled; calibrators, risk grid, and operating points refit per replicate"
+}

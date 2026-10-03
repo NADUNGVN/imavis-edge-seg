@@ -1,0 +1,846 @@
+{
+  "median": {
+    "E3_logits": {
+      "route_ms": {
+        "tiny": 2.3308644886128604,
+        "small": 5.310181004460901,
+        "medium": 12.008538004010916,
+        "large": 26.719037996372208
+      },
+      "static_ms": {
+        "tiny": 1.6794624971225858,
+        "small": 3.132198500679806,
+        "medium": 9.033016482135281,
+        "large": 23.52738950867206
+      },
+      "budgets_ms": [
+        1.6794624971225858,
+        2.3308644886128604,
+        3.132198500679806,
+        5.310181004460901,
+        9.033016482135281,
+        12.008538004010916,
+        23.52738950867206,
+        26.719037996372208
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 59,
+        "losses": 61,
+        "mean_delta_points": -2.714905013711914,
+        "mean_cost_ratio_x_over_y": 1.076226048086969,
+        "ci95_points": [
+          -2.7676492899515033,
+          -2.4540512268119086
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 61,
+        "losses": 59,
+        "mean_delta_points": -2.68155107564436,
+        "mean_cost_ratio_x_over_y": 1.075977925870948
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 15,
+        "ties": 89,
+        "losses": 16,
+        "mean_delta_points": -0.033353938067554136,
+        "mean_cost_ratio_x_over_y": 1.0021816270517292
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 29,
+        "ties": 87,
+        "losses": 4,
+        "mean_delta_points": 0.8701993401412028,
+        "mean_cost_ratio_x_over_y": 1.157436816954632
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -0.5763221708877345,
+        "share_above": 0.3072100313479624,
+        "by_backend_split": {
+          "E3_logits|cityscapes": 0.48503360828519554,
+          "E3_logits|acdc/fog": -1.1975546754382786,
+          "E3_logits|acdc/night": -1.163882071237794,
+          "E3_logits|acdc/rain": -0.3283547611810626,
+          "E3_logits|acdc/snow": -0.9459614044916069
+        }
+      }
+    },
+    "E3_none": {
+      "route_ms": {
+        "tiny": 2.083102473989129,
+        "small": 4.9955495342146605,
+        "medium": 11.220382992178202,
+        "large": 25.566113996319473
+      },
+      "static_ms": {
+        "tiny": 1.4334764855448157,
+        "small": 2.8163584938738495,
+        "medium": 8.605718991020694,
+        "large": 22.464876004960388
+      },
+      "budgets_ms": [
+        1.4334764855448157,
+        2.083102473989129,
+        2.8163584938738495,
+        4.9955495342146605,
+        8.605718991020694,
+        11.220382992178202,
+        22.464876004960388,
+        25.566113996319473
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 59,
+        "losses": 61,
+        "mean_delta_points": -2.714905013711914,
+        "mean_cost_ratio_x_over_y": 1.0967309949951667,
+        "ci95_points": [
+          -2.7676492899515033,
+          -2.4540512268119086
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 61,
+        "losses": 59,
+        "mean_delta_points": -2.68155107564436,
+        "mean_cost_ratio_x_over_y": 1.0964543073701891
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 15,
+        "ties": 89,
+        "losses": 16,
+        "mean_delta_points": -0.033353938067554136,
+        "mean_cost_ratio_x_over_y": 1.0022392356994385
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 29,
+        "ties": 87,
+        "losses": 4,
+        "mean_delta_points": 0.8701993401412028,
+        "mean_cost_ratio_x_over_y": 1.1608048644981654
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -0.5682092451222758,
+        "share_above": 0.3103448275862069,
+        "by_backend_split": {
+          "E3_none|cityscapes": 0.49860503763993164,
+          "E3_none|acdc/fog": -1.1861004860289615,
+          "E3_none|acdc/night": -1.1695910444962907,
+          "E3_none|acdc/rain": -0.3128830104146557,
+          "E3_none|acdc/snow": -0.9417121885984734
+        }
+      }
+    },
+    "E1_explicit_float32": {
+      "route_ms": {
+        "tiny": 40.20718749961816,
+        "small": 51.5795719838934,
+        "medium": 68.8248650112655,
+        "large": 109.21259899623692
+      },
+      "static_ms": {
+        "tiny": 5.30139151669573,
+        "small": 9.969620499759912,
+        "medium": 29.543629003455862,
+        "large": 60.63422899751458
+      },
+      "budgets_ms": [
+        5.30139151669573,
+        9.969620499759912,
+        29.543629003455862,
+        40.20718749961816,
+        51.5795719838934,
+        60.63422899751458,
+        68.8248650112655,
+        109.21259899623692
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -7.631287712326601,
+        "mean_cost_ratio_x_over_y": 2.469944299724911,
+        "ci95_points": [
+          -7.8009994545789105,
+          -6.961495055545301
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -7.611289755299916,
+        "mean_cost_ratio_x_over_y": 2.468636597057561
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.0015246682042487
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.058022305050283
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -5.558316597477411,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_explicit_float32|cityscapes": -4.651965826503535,
+          "E1_explicit_float32|acdc/fog": -7.162778479795659,
+          "E1_explicit_float32|acdc/night": -4.625035215632082,
+          "E1_explicit_float32|acdc/rain": -5.593138432461843,
+          "E1_explicit_float32|acdc/snow": -5.967968230697779
+        }
+      }
+    },
+    "E1_explicit_uint8": {
+      "route_ms": {
+        "tiny": 44.2782924947096,
+        "small": 52.48791798658203,
+        "medium": 64.38642999273725,
+        "large": 84.8878565011546
+      },
+      "static_ms": {
+        "tiny": 3.5403115034569055,
+        "small": 6.5492519934196025,
+        "medium": 20.42083650303539,
+        "large": 41.72159649897367
+      },
+      "budgets_ms": [
+        3.5403115034569055,
+        6.5492519934196025,
+        20.42083650303539,
+        41.72159649897367,
+        44.2782924947096,
+        52.48791798658203,
+        64.38642999273725,
+        84.8878565011546
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -10.52039576992556,
+        "mean_cost_ratio_x_over_y": 3.537576991083347,
+        "ci95_points": [
+          -10.709653679248362,
+          -9.53006258159884
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -10.500397812898871,
+        "mean_cost_ratio_x_over_y": 3.535735932245451
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.001360119122904
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.0338870124764872
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -6.3376602654570835,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_explicit_uint8|cityscapes": -5.344371141994282,
+          "E1_explicit_uint8|acdc/fog": -8.128175465611251,
+          "E1_explicit_uint8|acdc/night": -5.263006751814611,
+          "E1_explicit_uint8|acdc/rain": -6.422092126800612,
+          "E1_explicit_uint8|acdc/snow": -6.759942599085543
+        }
+      }
+    },
+    "E1_scheduler_float32": {
+      "route_ms": {
+        "tiny": 39.04254001099616,
+        "small": 52.29538200364914,
+        "medium": 70.25312501355074,
+        "large": 108.10879401105922
+      },
+      "static_ms": {
+        "tiny": 5.283659003907815,
+        "small": 10.655480000423267,
+        "medium": 29.032826001639478,
+        "large": 60.38741399243008
+      },
+      "budgets_ms": [
+        5.283659003907815,
+        10.655480000423267,
+        29.032826001639478,
+        39.04254001099616,
+        52.29538200364914,
+        60.38741399243008,
+        70.25312501355074,
+        108.10879401105922
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -7.631287712326601,
+        "mean_cost_ratio_x_over_y": 2.40669891764,
+        "ci95_points": [
+          -7.8009994545789105,
+          -6.961495055545301
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -7.611289755299916,
+        "mean_cost_ratio_x_over_y": 2.404873908880879
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.0018802952504597
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.0550345989118954
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -5.544954220140889,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_scheduler_float32|cityscapes": -4.6247180624568704,
+          "E1_scheduler_float32|acdc/fog": -7.149013157013098,
+          "E1_scheduler_float32|acdc/night": -4.615356938274612,
+          "E1_scheduler_float32|acdc/rain": -5.581482580424165,
+          "E1_scheduler_float32|acdc/snow": -5.966199780193829
+        }
+      }
+    },
+    "E1_scheduler_uint8": {
+      "route_ms": {
+        "tiny": 42.85344602249097,
+        "small": 52.545562997693196,
+        "medium": 64.92276099743322,
+        "large": 84.70017499348614
+      },
+      "static_ms": {
+        "tiny": 3.521204009302892,
+        "small": 6.4444055169587955,
+        "medium": 20.465331501327455,
+        "large": 40.98570749920327
+      },
+      "budgets_ms": [
+        3.521204009302892,
+        6.4444055169587955,
+        20.465331501327455,
+        40.98570749920327,
+        42.85344602249097,
+        52.545562997693196,
+        64.92276099743322,
+        84.70017499348614
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -10.52039576992556,
+        "mean_cost_ratio_x_over_y": 3.480255216559798,
+        "ci95_points": [
+          -10.709653679248362,
+          -9.53006258159884
+        ]
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -10.500397812898871,
+        "mean_cost_ratio_x_over_y": 3.477864416971692
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.0016695014677888
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.0332978895279372
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -6.3376602654570835,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_scheduler_uint8|cityscapes": -5.344371141994282,
+          "E1_scheduler_uint8|acdc/fog": -8.128175465611251,
+          "E1_scheduler_uint8|acdc/night": -5.263006751814611,
+          "E1_scheduler_uint8|acdc/rain": -6.422092126800612,
+          "E1_scheduler_uint8|acdc/snow": -6.759942599085543
+        }
+      }
+    }
+  },
+  "p99": {
+    "E3_logits": {
+      "route_ms": {
+        "tiny": 2.721781932050362,
+        "small": 5.486417638021521,
+        "medium": 12.716158467228524,
+        "large": 26.879221277777106
+      },
+      "static_ms": {
+        "tiny": 1.7851350805722177,
+        "small": 3.3119143813382834,
+        "medium": 9.39664453966543,
+        "large": 23.986686103744432
+      },
+      "budgets_ms": [
+        1.7851350805722177,
+        2.721781932050362,
+        3.3119143813382834,
+        5.486417638021521,
+        9.39664453966543,
+        12.716158467228524,
+        23.986686103744432,
+        26.879221277777106
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 59,
+        "losses": 61,
+        "mean_delta_points": -2.714905013711914,
+        "mean_cost_ratio_x_over_y": 1.118292656730017
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 61,
+        "losses": 59,
+        "mean_delta_points": -2.68155107564436,
+        "mean_cost_ratio_x_over_y": 1.1181659706738705
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 15,
+        "ties": 89,
+        "losses": 16,
+        "mean_delta_points": -0.033353938067554136,
+        "mean_cost_ratio_x_over_y": 1.0019880122081557
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 29,
+        "ties": 87,
+        "losses": 4,
+        "mean_delta_points": 0.8701993401412028,
+        "mean_cost_ratio_x_over_y": 1.1511943719723297
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -0.6482025206585597,
+        "share_above": 0.30407523510971785,
+        "by_backend_split": {
+          "E3_logits|cityscapes": 0.42612934506228767,
+          "E3_logits|acdc/fog": -1.2728223584337321,
+          "E3_logits|acdc/night": -1.2354568329723046,
+          "E3_logits|acdc/rain": -0.3749555286704032,
+          "E3_logits|acdc/snow": -1.0546967171754833
+        }
+      }
+    },
+    "E3_none": {
+      "route_ms": {
+        "tiny": 2.1755213470896706,
+        "small": 5.13860609207768,
+        "medium": 11.560655679786578,
+        "large": 26.05397332517896
+      },
+      "static_ms": {
+        "tiny": 1.522314625326544,
+        "small": 2.9546275932807475,
+        "medium": 10.042549180798233,
+        "large": 22.80186772986781
+      },
+      "budgets_ms": [
+        1.522314625326544,
+        2.1755213470896706,
+        2.9546275932807475,
+        5.13860609207768,
+        10.042549180798233,
+        11.560655679786578,
+        22.80186772986781,
+        26.05397332517896
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 59,
+        "losses": 61,
+        "mean_delta_points": -2.714905013711914,
+        "mean_cost_ratio_x_over_y": 1.0606265545324853
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 61,
+        "losses": 59,
+        "mean_delta_points": -2.68155107564436,
+        "mean_cost_ratio_x_over_y": 1.0602954098241975
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 15,
+        "ties": 89,
+        "losses": 16,
+        "mean_delta_points": -0.033353938067554136,
+        "mean_cost_ratio_x_over_y": 1.0022356403270252
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 29,
+        "ties": 87,
+        "losses": 4,
+        "mean_delta_points": 0.8701993401412028,
+        "mean_cost_ratio_x_over_y": 1.159111788140223
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -0.23883277831979416,
+        "share_above": 0.4200626959247649,
+        "by_backend_split": {
+          "E3_none|cityscapes": 0.8683691621690707,
+          "E3_none|acdc/fog": -0.7479410506216785,
+          "E3_none|acdc/night": -1.0053666837996462,
+          "E3_none|acdc/rain": 0.036860964842274,
+          "E3_none|acdc/snow": -0.6274307333758982
+        }
+      }
+    },
+    "E1_explicit_float32": {
+      "route_ms": {
+        "tiny": 40.43431747879367,
+        "small": 53.223096768779214,
+        "medium": 77.95484979433239,
+        "large": 113.08092354185646
+      },
+      "static_ms": {
+        "tiny": 5.395508002839051,
+        "small": 10.117986621626187,
+        "medium": 30.17110420303652,
+        "large": 62.23698320420226
+      },
+      "budgets_ms": [
+        5.395508002839051,
+        10.117986621626187,
+        30.17110420303652,
+        40.43431747879367,
+        53.223096768779214,
+        62.23698320420226,
+        77.95484979433239,
+        113.08092354185646
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -7.631287712326601,
+        "mean_cost_ratio_x_over_y": 2.467740497931319
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -7.611289755299916,
+        "mean_cost_ratio_x_over_y": 2.465746231832128
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.0019387673033184
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.053913564961267
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -5.576154067811555,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_explicit_float32|cityscapes": -4.653891120327694,
+          "E1_explicit_float32|acdc/fog": -7.200752284615691,
+          "E1_explicit_float32|acdc/night": -4.622167636472924,
+          "E1_explicit_float32|acdc/rain": -5.620356064108626,
+          "E1_explicit_float32|acdc/snow": -5.995890035755407
+        }
+      }
+    },
+    "E1_explicit_uint8": {
+      "route_ms": {
+        "tiny": 45.72152441571234,
+        "small": 53.82864734594477,
+        "medium": 66.11136017250828,
+        "large": 93.99826149921864
+      },
+      "static_ms": {
+        "tiny": 3.635013497550972,
+        "small": 6.782568187336437,
+        "medium": 20.671928891097195,
+        "large": 42.16032671130961
+      },
+      "budgets_ms": [
+        3.635013497550972,
+        6.782568187336437,
+        20.671928891097195,
+        42.16032671130961,
+        45.72152441571234,
+        53.82864734594477,
+        66.11136017250828,
+        93.99826149921864
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -10.52039576992556,
+        "mean_cost_ratio_x_over_y": 3.5826685896831285
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -10.500397812898871,
+        "mean_cost_ratio_x_over_y": 3.581277195361749
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.001127097639882
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.041298837262933
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -6.3376602654570835,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_explicit_uint8|cityscapes": -5.344371141994282,
+          "E1_explicit_uint8|acdc/fog": -8.128175465611251,
+          "E1_explicit_uint8|acdc/night": -5.263006751814611,
+          "E1_explicit_uint8|acdc/rain": -6.422092126800612,
+          "E1_explicit_uint8|acdc/snow": -6.759942599085543
+        }
+      }
+    },
+    "E1_scheduler_float32": {
+      "route_ms": {
+        "tiny": 39.572375523566734,
+        "small": 52.9176869377261,
+        "medium": 79.04109518247424,
+        "large": 115.586846153019
+      },
+      "static_ms": {
+        "tiny": 5.3813557379180565,
+        "small": 11.010246822843328,
+        "medium": 29.92087271733908,
+        "large": 62.19652914616745
+      },
+      "budgets_ms": [
+        5.3813557379180565,
+        11.010246822843328,
+        29.92087271733908,
+        39.572375523566734,
+        52.9176869377261,
+        62.19652914616745,
+        79.04109518247424,
+        115.586846153019
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -7.631287712326601,
+        "mean_cost_ratio_x_over_y": 2.4022936257659704
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -7.611289755299916,
+        "mean_cost_ratio_x_over_y": 2.4001971666239448
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.002015130548125
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.055938707392113
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -5.550957050104023,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_scheduler_float32|cityscapes": -4.6316615682074405,
+          "E1_scheduler_float32|acdc/fog": -7.170713228911619,
+          "E1_scheduler_float32|acdc/night": -4.598339003866587,
+          "E1_scheduler_float32|acdc/rain": -5.595833361693474,
+          "E1_scheduler_float32|acdc/snow": -5.969764550136176
+        }
+      }
+    },
+    "E1_scheduler_uint8": {
+      "route_ms": {
+        "tiny": 44.42214992915979,
+        "small": 53.795433209161274,
+        "medium": 66.06656362011563,
+        "large": 93.4515118849231
+      },
+      "static_ms": {
+        "tiny": 3.610193207859993,
+        "small": 6.841558104788419,
+        "medium": 20.907149719132576,
+        "large": 41.21127918275306
+      },
+      "budgets_ms": [
+        3.610193207859993,
+        6.841558104788419,
+        20.907149719132576,
+        41.21127918275306,
+        44.42214992915979,
+        53.795433209161274,
+        66.06656362011563,
+        93.4515118849231
+      ],
+      "D_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 21,
+        "losses": 99,
+        "mean_delta_points": -10.52039576992556,
+        "mean_cost_ratio_x_over_y": 3.5174936036520656
+      },
+      "T_hard_vs_static": {
+        "cells": 120,
+        "wins": 0,
+        "ties": 22,
+        "losses": 98,
+        "mean_delta_points": -10.500397812898871,
+        "mean_cost_ratio_x_over_y": 3.515657903176012
+      },
+      "D_vs_T_hard": {
+        "cells": 120,
+        "wins": 11,
+        "ties": 98,
+        "losses": 11,
+        "mean_delta_points": -0.01999795702668644,
+        "mean_cost_ratio_x_over_y": 1.00136074331477
+      },
+      "D_vs_A_hard": {
+        "cells": 120,
+        "wins": 22,
+        "ties": 96,
+        "losses": 2,
+        "mean_delta_points": 0.7884263380695998,
+        "mean_cost_ratio_x_over_y": 1.0407633921596942
+      },
+      "mixture_vs_static": {
+        "points": 319,
+        "mean_gain_points": -6.3376602654570835,
+        "share_above": 0.0,
+        "by_backend_split": {
+          "E1_scheduler_uint8|cityscapes": -5.344371141994282,
+          "E1_scheduler_uint8|acdc/fog": -8.128175465611251,
+          "E1_scheduler_uint8|acdc/night": -5.263006751814611,
+          "E1_scheduler_uint8|acdc/rain": -6.422092126800612,
+          "E1_scheduler_uint8|acdc/snow": -6.759942599085543
+        }
+      }
+    }
+  }
+}
