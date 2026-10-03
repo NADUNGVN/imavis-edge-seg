@@ -103,13 +103,35 @@ def main() -> None:
         sub = extract_subnet(supernet, level).cpu().eval()
         path = export_subnet_onnx(sub, out / "onnx" / f"pace_seg_{level}.onnx", h, w)
         summary["files"][str(path.relative_to(out))] = sha256(path)
-        print(f"exported {path.name} input 1x3x{h}x{w}")
+        print(f"exported {path.name} input 1x3x{h}x{w}", flush=True)
 
     calib: dict[str, list[np.ndarray]] = {lv: [] for lv in levels}
     with torch.no_grad():
         for split in SPLITS:
             for level in levels:
                 h, w = config.supernet.input_resolutions[level]
+                fname = out / "eval" / f"{split.replace('/', '_')}__{level}.npz"
+                if fname.exists():
+                    # resume: reuse the finished file, recompute its summary entries, and
+                    # only rebuild this level's calibration images (cheap, fit half only)
+                    done = np.load(fname)
+                    lab, pred = done["labels"], done["torch_pred"]
+                    valid = lab != 255
+                    conf = np.bincount(lab[valid].astype(int) * 19 + pred[valid], minlength=361).reshape(19, 19)
+                    summary["torch_heldout_miou"][f"{split}|{level}"] = miou(conf)
+                    summary["files"][str(fname.relative_to(out))] = sha256(fname)
+                    root = roots["cityscapes"] if split == "cityscapes" else roots["acdc"]
+                    from imavis_edge_seg.data.manifest import discover_acdc_samples, discover_cityscapes_samples
+                    smp = (discover_cityscapes_samples(root, "val") if split == "cityscapes"
+                           else discover_acdc_samples(root, "val", (split.split("/")[1],)))
+                    taken = 0
+                    for index in range(0, len(smp), 2):
+                        if taken >= args.calib_per_split:
+                            break
+                        calib[level].append(resized_uint8(Path(smp[index][0]), h, w))
+                        taken += 1
+                    print(f"{split:12s} {level:6s} resumed from existing file, torch mIoU={miou(conf) * 100:.2f}", flush=True)
+                    continue
                 if split == "cityscapes":
                     loader = build_cityscapes_eval_loader(config, level, roots["cityscapes"], "val", batch_size=1)
                 else:
@@ -140,13 +162,14 @@ def main() -> None:
                     idxs.append(index)
                     if level == levels[0]:
                         ents.append(float(compute_deployment_risk_score(logits)))
-                fname = out / "eval" / f"{split.replace('/', '_')}__{level}.npz"
                 extra = {"torch_entropy": np.array(ents, np.float32)} if ents else {}
-                np.savez_compressed(fname, images=np.stack(imgs), labels=np.stack(labels),
+                tmp = fname.with_name(fname.stem + ".partial.npz")
+                np.savez_compressed(tmp, images=np.stack(imgs), labels=np.stack(labels),
                                     torch_pred=np.stack(preds), indices=np.array(idxs), **extra)
+                tmp.replace(fname)  # atomic: an interrupted write never looks finished
                 summary["torch_heldout_miou"][f"{split}|{level}"] = miou(conf)
                 summary["files"][str(fname.relative_to(out))] = sha256(fname)
-                print(f"{split:12s} {level:6s} held-out n={len(idxs)} torch mIoU={miou(conf) * 100:.2f}")
+                print(f"{split:12s} {level:6s} held-out n={len(idxs)} torch mIoU={miou(conf) * 100:.2f}", flush=True)
     for level, arr in calib.items():
         fname = out / "calib" / f"{level}.npz"
         np.savez_compressed(fname, images=np.stack(arr))
