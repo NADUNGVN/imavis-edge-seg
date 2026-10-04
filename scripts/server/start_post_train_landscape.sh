@@ -6,8 +6,8 @@
 set -euo pipefail
 cd "${IMAVIS_EDGE_SEG_REPO_DIR:-$HOME/Dung_TDTU/imavis-edge-seg}"
 STAGE="${STAGE:?STAGE=supernets or STAGE=baselines}"
-if pgrep -f "[p]ost_train_landscape.sh" >/dev/null; then
-  echo "a post-train pipeline is already running:"; pgrep -af "[p]ost_train_landscape.sh"; exit 1
+if pgrep -f "server/[p]ost_train_landscape.sh" >/dev/null; then
+  echo "a post-train pipeline is already running:"; pgrep -af "server/[p]ost_train_landscape.sh"; exit 1
 fi
 LOG="outputs/post_train_landscape_${STAGE}.log"
 nohup setsid env STAGE="$STAGE" bash scripts/server/post_train_landscape.sh >"$LOG" 2>&1 </dev/null &
