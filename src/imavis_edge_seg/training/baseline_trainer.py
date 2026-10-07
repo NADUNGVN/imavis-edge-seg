@@ -145,6 +145,10 @@ def run_baseline_training(
         )
         return model
 
+    # Train mode explicitly: models.subnet.StaticPaceSegSubnet (the pace_large baseline)
+    # calls self.eval() in __init__, which otherwise freezes BatchNorm at its init
+    # running stats for the whole run (2026-10-07 bug: PACE-Large ~0.33 mIoU).
+    model.train()
     batches = _infinite_batches(dataloader)
     running_loss = 0.0
 

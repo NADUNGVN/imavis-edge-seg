@@ -311,3 +311,13 @@ def test_exported_subnet_qat_checkpoint_reloads_into_a_fresh_skeleton(tmp_path: 
     trained_state = trained.state_dict()
     for key, value in skeleton.state_dict().items():
         assert torch.equal(value, trained_state[key])
+
+
+def test_run_baseline_training_pace_large_updates_batchnorm_running_stats(tmp_path: Path) -> None:
+    """StaticPaceSegSubnet starts in eval mode; training must still update BN stats."""
+    config = _tiny_config()
+    dataloader = torch.utils.data.DataLoader(_TinySegDataset(), batch_size=2, shuffle=True)
+    trained = run_baseline_training("pace_large", config, dataloader, output_dir=tmp_path, device="cpu")
+    bns = [m for m in trained.modules() if isinstance(m, torch.nn.BatchNorm2d)]
+    assert bns
+    assert all(int(m.num_batches_tracked) > 0 for m in bns)

@@ -1,0 +1,2 @@
+# kind  experiment_id  seed  [baseline_model]   retrain after frozen-BN fix (2026-10-07)
+baseline  pace_large_landscape_seed0  0  pace_large
