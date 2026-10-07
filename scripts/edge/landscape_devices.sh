@@ -36,7 +36,7 @@ trt)
     sed 's/^from measure_router_overhead import (/from measure_router_overhead_v2lib import (/' scripts/measure_static_vs_route_trt.py | ssh "$H" "cat > $R/measure_static_vs_route_trt.py"
     scp -q scripts/eval_compiled_engines.py "$H:$R/"
     ssh "$H" "mkdir -p $R/eval"; scp -q "$BUNDLE"/eval/*.npz "$H:$R/eval/"
-    ssh "$H" "cd $R && export PATH=/usr/local/cuda/bin:\$PATH && ~/imavis_overhead/venv/bin/python -u measure_static_vs_route_trt.py --engine-dir engines --device-label E3 --output-mode both --output-json static_vs_route_E3_$TAG.json > static_vs_route.log 2>&1 && ~/imavis_overhead/venv/bin/python -u eval_compiled_engines.py --backend trt --engine-dir engines --eval-dir eval --output-prefix compiled_eval_E3_$TAG > compiled_eval.log 2>&1; tail -3 static_vs_route.log compiled_eval.log"
+    ssh "$H" "cd $R && export PATH=/usr/local/cuda/bin:\$PATH && ~/imavis_overhead/venv/bin/python -u measure_static_vs_route_trt.py --engine-dir engines --device-label E3 --output-mode both --output-json static_vs_route_E3_$TAG.json > static_vs_route.log 2>&1 && ~/imavis_overhead/venv/bin/python -u eval_compiled_engines.py --backend trt --engine-dir engines --eval-dir eval --output-prefix compiled_eval_E3_$TAG > compiled_eval.log 2>&1; tail -n 3 static_vs_route.log compiled_eval.log"
     scp -q "$H:$R/static_vs_route_E3_$TAG.json" "$H:$R/compiled_eval_E3_$TAG.json" "$H:$R/compiled_eval_E3_${TAG}_per_image.npz" reports/
   fi ;;
 dfc)

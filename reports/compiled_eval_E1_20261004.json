@@ -1,0 +1,202 @@
+{
+  "backend": "hailo",
+  "results": {
+    "cityscapes|tiny": {
+      "n": 250,
+      "compiled_miou": 0.3274326189886223,
+      "torch_miou": 0.34380262610959333,
+      "delta_points": -1.637000712097103,
+      "pixel_agreement": 0.9687560221354167,
+      "seconds": 12.38621473312378
+    },
+    "acdc_fog|tiny": {
+      "n": 50,
+      "compiled_miou": 0.3083182028415218,
+      "torch_miou": 0.3179149721905626,
+      "delta_points": -0.9596769349040801,
+      "pixel_agreement": 0.9626600477430556,
+      "seconds": 2.3259897232055664
+    },
+    "acdc_night|tiny": {
+      "n": 53,
+      "compiled_miou": 0.19118091455683026,
+      "torch_miou": 0.20740449333300784,
+      "delta_points": -1.6223578776177583,
+      "pixel_agreement": 0.8725153445197851,
+      "seconds": 2.489696979522705
+    },
+    "acdc_rain|tiny": {
+      "n": 50,
+      "compiled_miou": 0.30488882618066154,
+      "torch_miou": 0.31079068703203927,
+      "delta_points": -0.5901860851377727,
+      "pixel_agreement": 0.9593495008680556,
+      "seconds": 2.283395290374756
+    },
+    "acdc_snow|tiny": {
+      "n": 50,
+      "compiled_miou": 0.28154468897279705,
+      "torch_miou": 0.2866029236362968,
+      "delta_points": -0.505823466349975,
+      "pixel_agreement": 0.9663623046875,
+      "seconds": 2.3496735095977783
+    },
+    "cityscapes|small": {
+      "n": 250,
+      "compiled_miou": 0.409084521109111,
+      "torch_miou": 0.4142535454304586,
+      "delta_points": -0.5169024321347637,
+      "pixel_agreement": 0.9804795837402344,
+      "seconds": 5.506302833557129
+    },
+    "acdc_fog|small": {
+      "n": 50,
+      "compiled_miou": 0.37749387013242935,
+      "torch_miou": 0.38065180920946257,
+      "delta_points": -0.31579390770332116,
+      "pixel_agreement": 0.976812744140625,
+      "seconds": 1.1215593814849854
+    },
+    "acdc_night|small": {
+      "n": 53,
+      "compiled_miou": 0.2638140685370492,
+      "torch_miou": 0.2671630890545804,
+      "delta_points": -0.33490205175312204,
+      "pixel_agreement": 0.9360334288399175,
+      "seconds": 1.1879217624664307
+    },
+    "acdc_rain|small": {
+      "n": 50,
+      "compiled_miou": 0.36276703452917325,
+      "torch_miou": 0.3658400416862982,
+      "delta_points": -0.30730071571249407,
+      "pixel_agreement": 0.9792237854003907,
+      "seconds": 1.1148884296417236
+    },
+    "acdc_snow|small": {
+      "n": 50,
+      "compiled_miou": 0.36793653940794013,
+      "torch_miou": 0.3492556392371689,
+      "delta_points": 1.868090017077123,
+      "pixel_agreement": 0.9776202392578125,
+      "seconds": 1.1062541007995605
+    },
+    "cityscapes|medium": {
+      "n": 250,
+      "compiled_miou": 0.48651316247856924,
+      "torch_miou": 0.49058583060748084,
+      "delta_points": -0.4072668128911605,
+      "pixel_agreement": 0.9842006971571181,
+      "seconds": 12.707349300384521
+    },
+    "acdc_fog|medium": {
+      "n": 50,
+      "compiled_miou": 0.46083778045089513,
+      "torch_miou": 0.4635888215246289,
+      "delta_points": -0.2751041073733751,
+      "pixel_agreement": 0.9826593017578125,
+      "seconds": 2.5752904415130615
+    },
+    "acdc_night|medium": {
+      "n": 53,
+      "compiled_miou": 0.30363024847667947,
+      "torch_miou": 0.3079776162420192,
+      "delta_points": -0.4347367765339727,
+      "pixel_agreement": 0.9573604175879521,
+      "seconds": 2.7488644123077393
+    },
+    "acdc_rain|medium": {
+      "n": 50,
+      "compiled_miou": 0.43041932698112173,
+      "torch_miou": 0.4283386811351465,
+      "delta_points": 0.20806458459752264,
+      "pixel_agreement": 0.982364976671007,
+      "seconds": 2.602182388305664
+    },
+    "acdc_snow|medium": {
+      "n": 50,
+      "compiled_miou": 0.4101153796459756,
+      "torch_miou": 0.41315335711056234,
+      "delta_points": -0.30379774645867275,
+      "pixel_agreement": 0.979234144422743,
+      "seconds": 2.5724925994873047
+    },
+    "cityscapes|large": {
+      "n": 250,
+      "compiled_miou": 0.5879914741195078,
+      "torch_miou": 0.5888556291113616,
+      "delta_points": -0.08641549918537716,
+      "pixel_agreement": 0.9827716522216797,
+      "seconds": 25.80361580848694
+    },
+    "acdc_fog|large": {
+      "n": 50,
+      "compiled_miou": 0.5355580975148518,
+      "torch_miou": 0.5391136741694169,
+      "delta_points": -0.35555766545650735,
+      "pixel_agreement": 0.9844925689697266,
+      "seconds": 5.413503408432007
+    },
+    "acdc_night|large": {
+      "n": 53,
+      "compiled_miou": 0.358499976542174,
+      "torch_miou": 0.3637011058769469,
+      "delta_points": -0.5201129334772847,
+      "pixel_agreement": 0.9584594222734559,
+      "seconds": 5.60691499710083
+    },
+    "acdc_rain|large": {
+      "n": 50,
+      "compiled_miou": 0.5047974799993957,
+      "torch_miou": 0.5049802098377852,
+      "delta_points": -0.018272983838951706,
+      "pixel_agreement": 0.9825040435791016,
+      "seconds": 5.2253453731536865
+    },
+    "acdc_snow|large": {
+      "n": 50,
+      "compiled_miou": 0.49499981060553505,
+      "torch_miou": 0.4962550637359843,
+      "delta_points": -0.12552531304492742,
+      "pixel_agreement": 0.9821101760864258,
+      "seconds": 5.363682508468628
+    }
+  },
+  "entropy": {
+    "cityscapes": {
+      "mae": 0.02439694106578827,
+      "max_abs": 0.17604252696037292,
+      "mean_torch": 0.4174343943595886,
+      "mean_compiled": 0.4408526122570038,
+      "spearman": 0.9864207747323956
+    },
+    "acdc_fog": {
+      "mae": 0.015641892328858376,
+      "max_abs": 0.06978923082351685,
+      "mean_torch": 0.464730829000473,
+      "mean_compiled": 0.47713249921798706,
+      "spearman": 0.9795438175270108
+    },
+    "acdc_night": {
+      "mae": 0.0353480726480484,
+      "max_abs": 0.13160783052444458,
+      "mean_torch": 0.6934142112731934,
+      "mean_compiled": 0.7082852721214294,
+      "spearman": 0.8816319948395419
+    },
+    "acdc_rain": {
+      "mae": 0.027243589982390404,
+      "max_abs": 0.16357392072677612,
+      "mean_torch": 0.5010321140289307,
+      "mean_compiled": 0.5273740291595459,
+      "spearman": 0.9499639855942377
+    },
+    "acdc_snow": {
+      "mae": 0.01177334226667881,
+      "max_abs": 0.053986966609954834,
+      "mean_torch": 0.5277029871940613,
+      "mean_compiled": 0.5350598692893982,
+      "spearman": 0.9847298919567826
+    }
+  }
+}

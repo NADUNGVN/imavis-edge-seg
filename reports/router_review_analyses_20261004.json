@@ -1,0 +1,634 @@
+{
+  "_definition": {
+    "A_hard": "policy A's rank-escalation choice; if its measured route cost exceeds the budget, replaced by the most expensive in-budget route",
+    "static": "largest static candidate whose measured route cost fits the budget",
+    "fair_cell": "policy A has zero held-out budget violations",
+    "delta_units": "mIoU percentage points",
+    "bootstrap": "held-out images resampled per split, shared across all cells of that split"
+  },
+  "median": {
+    "cells": 120,
+    "violating_cells": {
+      "A": 58,
+      "A_hard": 0,
+      "D": 0,
+      "D_pooled": 0,
+      "static": 0
+    },
+    "mean_miou_points": {
+      "A": 38.52435736836174,
+      "A_hard": 37.80250840837836,
+      "D": 39.2159999156455,
+      "D_pooled": 39.21827875202328,
+      "static": 39.37997424733028,
+      "oracle": 39.48711857669729
+    },
+    "D_vs_A_fair": {
+      "cells": 62,
+      "wins": 54,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.8672547845666982,
+      "ci95_points": [
+        2.521159370875182,
+        3.2602031471353037
+      ],
+      "reps": 1000
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 62,
+      "wins": 54,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.9032447700107267
+    },
+    "D_vs_A_hard": {
+      "cells": 120,
+      "wins": 48,
+      "ties": 72,
+      "losses": 0,
+      "mean_delta_points": 1.4134915072671443,
+      "ci95_points": [
+        1.1889035066890887,
+        1.6273652110034502
+      ],
+      "reps": 1000
+    },
+    "A_hard_vs_A_fair": {
+      "cells": 62,
+      "wins": 22,
+      "ties": 38,
+      "losses": 2,
+      "mean_delta_points": 0.4698803322368981
+    },
+    "D_vs_static": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 92,
+      "losses": 28,
+      "mean_delta_points": -0.16397433168477876,
+      "ci95_points": [
+        -0.21935972406313436,
+        -0.1040901291314437
+      ],
+      "reps": 1000
+    },
+    "D_cost_vs_static": {
+      "mean_cost_ratio": 0.9797516235023486,
+      "mean_cost_saving_pct": 2.0248376497651472,
+      "cells_with_saving": 28
+    },
+    "D_cost_vs_A_hard": {
+      "mean_cost_ratio": 1.1739491947652458,
+      "mean_cost_saving_pct": -17.394919476524578,
+      "cells_with_saving": 2
+    },
+    "oracle_minus_D_points": 0.2711186610517961
+  },
+  "p95": {
+    "cells": 120,
+    "violating_cells": {
+      "A": 58,
+      "A_hard": 0,
+      "D": 0,
+      "D_pooled": 0,
+      "static": 0
+    },
+    "mean_miou_points": {
+      "A": 38.52435736836174,
+      "A_hard": 37.80250840837836,
+      "D": 39.2159999156455,
+      "D_pooled": 39.21827875202328,
+      "static": 39.37997424733028,
+      "oracle": 39.48711857669729
+    },
+    "D_vs_A_fair": {
+      "cells": 62,
+      "wins": 54,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.8672547845666982,
+      "ci95_points": [
+        2.521159370875182,
+        3.2602031471353037
+      ],
+      "reps": 1000
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 62,
+      "wins": 54,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.9032447700107267
+    },
+    "D_vs_A_hard": {
+      "cells": 120,
+      "wins": 48,
+      "ties": 72,
+      "losses": 0,
+      "mean_delta_points": 1.4134915072671443,
+      "ci95_points": [
+        1.1889035066890887,
+        1.6273652110034502
+      ],
+      "reps": 1000
+    },
+    "A_hard_vs_A_fair": {
+      "cells": 62,
+      "wins": 22,
+      "ties": 38,
+      "losses": 2,
+      "mean_delta_points": 0.4698803322368981
+    },
+    "D_vs_static": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 92,
+      "losses": 28,
+      "mean_delta_points": -0.16397433168477876,
+      "ci95_points": [
+        -0.21935972406313436,
+        -0.1040901291314437
+      ],
+      "reps": 1000
+    },
+    "D_cost_vs_static": {
+      "mean_cost_ratio": 0.9800480841980738,
+      "mean_cost_saving_pct": 1.995191580192627,
+      "cells_with_saving": 28
+    },
+    "D_cost_vs_A_hard": {
+      "mean_cost_ratio": 1.1697086711760278,
+      "mean_cost_saving_pct": -16.970867117602786,
+      "cells_with_saving": 2
+    },
+    "oracle_minus_D_points": 0.2711186610517961
+  },
+  "p99": {
+    "cells": 120,
+    "violating_cells": {
+      "A": 59,
+      "A_hard": 0,
+      "D": 0,
+      "D_pooled": 0,
+      "static": 0
+    },
+    "mean_miou_points": {
+      "A": 38.57999559788528,
+      "A_hard": 37.80250840837836,
+      "D": 39.2159999156455,
+      "D_pooled": 39.21827875202328,
+      "static": 39.37997424733028,
+      "oracle": 39.48711857669729
+    },
+    "D_vs_A_fair": {
+      "cells": 61,
+      "wins": 53,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.830969398528305
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 61,
+      "wins": 53,
+      "ties": 6,
+      "losses": 2,
+      "mean_delta_points": 2.8675493837337105
+    },
+    "D_vs_A_hard": {
+      "cells": 120,
+      "wins": 48,
+      "ties": 72,
+      "losses": 0,
+      "mean_delta_points": 1.4134915072671443
+    },
+    "A_hard_vs_A_fair": {
+      "cells": 61,
+      "wins": 21,
+      "ties": 38,
+      "losses": 2,
+      "mean_delta_points": 0.40214553380325024
+    },
+    "D_vs_static": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 92,
+      "losses": 28,
+      "mean_delta_points": -0.16397433168477876
+    },
+    "D_cost_vs_static": {
+      "mean_cost_ratio": 0.9801771391704521,
+      "mean_cost_saving_pct": 1.982286082954786,
+      "cells_with_saving": 28
+    },
+    "D_cost_vs_A_hard": {
+      "mean_cost_ratio": 1.1682906483696496,
+      "mean_cost_saving_pct": -16.829064836964967,
+      "cells_with_saving": 2
+    },
+    "oracle_minus_D_points": 0.2711186610517961
+  },
+  "calibration": {
+    "configured_heldout": {
+      "cityscapes": {
+        "tiny": {
+          "mae": 0.027726803765425214,
+          "rmse": 0.037187263706515476,
+          "spearman_score_vs_error": 0.8115407926526824,
+          "mean_observed_error": 0.12401535627110055
+        },
+        "small": {
+          "mae": 0.02465875974891885,
+          "rmse": 0.03328051605960045,
+          "spearman_score_vs_error": 0.7767831165298643,
+          "mean_observed_error": 0.10185778239577027
+        },
+        "medium": {
+          "mae": 0.021307297439710177,
+          "rmse": 0.029124621492739505,
+          "spearman_score_vs_error": 0.7637286996591945,
+          "mean_observed_error": 0.08336636922700402
+        },
+        "large": {
+          "mae": 0.018560270482984132,
+          "rmse": 0.02634922481751219,
+          "spearman_score_vs_error": 0.7438374373989983,
+          "mean_observed_error": 0.06505155692898744
+        }
+      },
+      "acdc/fog": {
+        "tiny": {
+          "mae": 0.03123934063478796,
+          "rmse": 0.0428830378258524,
+          "spearman_score_vs_error": 0.6757422969187674,
+          "mean_observed_error": 0.13213508870224652
+        },
+        "small": {
+          "mae": 0.026798224513198483,
+          "rmse": 0.03855755722168543,
+          "spearman_score_vs_error": 0.57109243697479,
+          "mean_observed_error": 0.10138703145768035
+        },
+        "medium": {
+          "mae": 0.022104352973952458,
+          "rmse": 0.030806285995810756,
+          "spearman_score_vs_error": 0.5956142456982793,
+          "mean_observed_error": 0.07829715960871818
+        },
+        "large": {
+          "mae": 0.01915802051604994,
+          "rmse": 0.02446394996279785,
+          "spearman_score_vs_error": 0.6113965586234493,
+          "mean_observed_error": 0.06216846835971376
+        }
+      },
+      "acdc/night": {
+        "tiny": {
+          "mae": 0.051207255788789874,
+          "rmse": 0.07444127638790256,
+          "spearman_score_vs_error": 0.6717733698865774,
+          "mean_observed_error": 0.2583675693695613
+        },
+        "small": {
+          "mae": 0.05470103345667635,
+          "rmse": 0.07577307533837839,
+          "spearman_score_vs_error": 0.42256625275493204,
+          "mean_observed_error": 0.2199602856177131
+        },
+        "medium": {
+          "mae": 0.057115530023272666,
+          "rmse": 0.07823850944651313,
+          "spearman_score_vs_error": 0.3503735956566145,
+          "mean_observed_error": 0.19302135257695782
+        },
+        "large": {
+          "mae": 0.05385202303700448,
+          "rmse": 0.07265983392919288,
+          "spearman_score_vs_error": 0.3728968445949577,
+          "mean_observed_error": 0.17531917508017494
+        }
+      },
+      "acdc/rain": {
+        "tiny": {
+          "mae": 0.03203083450354016,
+          "rmse": 0.04741010606049279,
+          "spearman_score_vs_error": 0.6673549419767907,
+          "mean_observed_error": 0.13373715714336912
+        },
+        "small": {
+          "mae": 0.032251830371087926,
+          "rmse": 0.04718438507143008,
+          "spearman_score_vs_error": 0.630892356942777,
+          "mean_observed_error": 0.1128309236445551
+        },
+        "medium": {
+          "mae": 0.029938887985805417,
+          "rmse": 0.04420717419148703,
+          "spearman_score_vs_error": 0.5999359743897559,
+          "mean_observed_error": 0.09696203306144398
+        },
+        "large": {
+          "mae": 0.023879981678058382,
+          "rmse": 0.03216534080104391,
+          "spearman_score_vs_error": 0.60921968787515,
+          "mean_observed_error": 0.07671167821552709
+        }
+      },
+      "acdc/snow": {
+        "tiny": {
+          "mae": 0.04459441051965918,
+          "rmse": 0.060750880679777214,
+          "spearman_score_vs_error": 0.7111804721888756,
+          "mean_observed_error": 0.1793398962989361
+        },
+        "small": {
+          "mae": 0.03751089931561624,
+          "rmse": 0.0530915539010266,
+          "spearman_score_vs_error": 0.6905962384953982,
+          "mean_observed_error": 0.13771076604823834
+        },
+        "medium": {
+          "mae": 0.034474218832673216,
+          "rmse": 0.05010700603118635,
+          "spearman_score_vs_error": 0.6559263705482192,
+          "mean_observed_error": 0.11112511594218659
+        },
+        "large": {
+          "mae": 0.028664871814103755,
+          "rmse": 0.04216936995491416,
+          "spearman_score_vs_error": 0.5795758303321329,
+          "mean_observed_error": 0.09166802905059364
+        }
+      }
+    },
+    "bin_sensitivity_mae": {
+      "cityscapes": {
+        "bins5": 0.02320034441753373,
+        "bins10": 0.023063282867291743,
+        "bins20": 0.023302376785896996,
+        "isotonic": 0.022063197323555647
+      },
+      "acdc/fog": {
+        "bins5": 0.025500199407389474,
+        "bins10": 0.024824984714247027,
+        "bins20": 0.032659207311044346,
+        "isotonic": 0.02444969726235993
+      },
+      "acdc/night": {
+        "bins5": 0.054107547228940935,
+        "bins10": 0.054218960535027,
+        "bins20": 0.05860984955564035,
+        "isotonic": 0.053158870996304286
+      },
+      "acdc/rain": {
+        "bins5": 0.028581042742669035,
+        "bins10": 0.029525383589398074,
+        "bins20": 0.031817292353668196,
+        "isotonic": 0.028376707716187086
+      },
+      "acdc/snow": {
+        "bins5": 0.03474280336147249,
+        "bins10": 0.03631110011508817,
+        "bins20": 0.045704256634924105,
+        "isotonic": 0.03362395663290821
+      }
+    },
+    "risk_target_agreement": {
+      "cityscapes": {
+        "spearman_pixel_error_vs_image_1_minus_miou": 0.5019095345525528
+      },
+      "acdc/fog": {
+        "spearman_pixel_error_vs_image_1_minus_miou": 0.2337414965986395
+      },
+      "acdc/night": {
+        "spearman_pixel_error_vs_image_1_minus_miou": 0.5776017309036175
+      },
+      "acdc/rain": {
+        "spearman_pixel_error_vs_image_1_minus_miou": 0.3241936774709884
+      },
+      "acdc/snow": {
+        "spearman_pixel_error_vs_image_1_minus_miou": 0.47739895958383355
+      }
+    }
+  },
+  "reliability": {
+    "tiny": [
+      [
+        0.07283459593925405,
+        0.07062527547535753
+      ],
+      [
+        0.09241984222741687,
+        0.09101087714814751
+      ],
+      [
+        0.10690909917959394,
+        0.10186463005948433
+      ],
+      [
+        0.11978166091748899,
+        0.11316896717302775
+      ],
+      [
+        0.13203330996501095,
+        0.12917270205130954
+      ],
+      [
+        0.14423496595638638,
+        0.13570560831215975
+      ],
+      [
+        0.1687137804845092,
+        0.16316435833868986
+      ],
+      [
+        0.18549215151544882,
+        0.18378425821435262
+      ],
+      [
+        0.228148009025437,
+        0.22236327824659122
+      ],
+      [
+        0.2884656612424203,
+        0.2681246531271711
+      ]
+    ],
+    "small": [
+      [
+        0.059656004152972904,
+        0.0573531978398643
+      ],
+      [
+        0.07582776357365005,
+        0.07415798273638809
+      ],
+      [
+        0.08644221629399587,
+        0.08662811750279988
+      ],
+      [
+        0.09485187622554161,
+        0.09070213848225628
+      ],
+      [
+        0.10843629319439917,
+        0.10154990784396976
+      ],
+      [
+        0.11805635091574755,
+        0.1118549293258875
+      ],
+      [
+        0.13582995687994887,
+        0.13017195298118553
+      ],
+      [
+        0.1498708083414856,
+        0.15456940782829162
+      ],
+      [
+        0.1840111035524922,
+        0.17623387378101066
+      ],
+      [
+        0.23139624977332576,
+        0.22546818704348354
+      ]
+    ],
+    "medium": [
+      [
+        0.04752688464379924,
+        0.04637309614420474
+      ],
+      [
+        0.060180875036646334,
+        0.06003813552581863
+      ],
+      [
+        0.0696985365581863,
+        0.06883178381553398
+      ],
+      [
+        0.0765408573978964,
+        0.07502823122436061
+      ],
+      [
+        0.08878175659762587,
+        0.08176004126312124
+      ],
+      [
+        0.0962129090551068,
+        0.09215459673046356
+      ],
+      [
+        0.10944754441140914,
+        0.10900666329773545
+      ],
+      [
+        0.12487396433620768,
+        0.12438399510153107
+      ],
+      [
+        0.15149732205578512,
+        0.1482122563416215
+      ],
+      [
+        0.20220925938531206,
+        0.1969299373881813
+      ]
+    ],
+    "large": [
+      [
+        0.035465703090543255,
+        0.035743972584307095
+      ],
+      [
+        0.048222630885155764,
+        0.048241152531895225
+      ],
+      [
+        0.05749484766877311,
+        0.05374157817497852
+      ],
+      [
+        0.06382907675140922,
+        0.05980884846963613
+      ],
+      [
+        0.07222943428794251,
+        0.0640535380862118
+      ],
+      [
+        0.07859414594795776,
+        0.0697387083475251
+      ],
+      [
+        0.0861574902812786,
+        0.08885481780609272
+      ],
+      [
+        0.09687115233099343,
+        0.1014870372172914
+      ],
+      [
+        0.12377372442142051,
+        0.1210624070847423
+      ],
+      [
+        0.18019272757385985,
+        0.1765561679792522
+      ]
+    ]
+  },
+  "loco_median": {
+    "vs_A_fair": {
+      "cells": 41,
+      "wins": 29,
+      "ties": 12,
+      "losses": 0,
+      "mean_delta_points": 4.150775786217694
+    },
+    "vs_A_hard": {
+      "cells": 120,
+      "wins": 48,
+      "ties": 72,
+      "losses": 0,
+      "mean_delta_points": 1.591746319452482
+    },
+    "D_violating_cells": 0,
+    "total_cells": 120,
+    "per_condition_mean_D_miou": {
+      "cityscapes": 45.19929181349846,
+      "acdc/fog": 43.131468376769,
+      "acdc/night": 28.699814759956972,
+      "acdc/rain": 39.96426962125077,
+      "acdc/snow": 39.13858263934937
+    }
+  },
+  "loco_p95": {
+    "vs_A_fair": {
+      "cells": 41,
+      "wins": 29,
+      "ties": 12,
+      "losses": 0,
+      "mean_delta_points": 4.150775786217694
+    },
+    "vs_A_hard": {
+      "cells": 120,
+      "wins": 48,
+      "ties": 72,
+      "losses": 0,
+      "mean_delta_points": 1.591746319452482
+    },
+    "D_violating_cells": 0,
+    "total_cells": 120,
+    "per_condition_mean_D_miou": {
+      "cityscapes": 45.19929181349846,
+      "acdc/fog": 43.131468376769,
+      "acdc/night": 28.699814759956972,
+      "acdc/rain": 39.96426962125077,
+      "acdc/snow": 39.13858263934937
+    }
+  }
+}
