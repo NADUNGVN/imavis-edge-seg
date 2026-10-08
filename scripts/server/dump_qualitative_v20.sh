@@ -8,7 +8,7 @@ set -euo pipefail
 cd "${IMAVIS_EDGE_SEG_REPO_DIR:-$HOME/Dung_TDTU/imavis-edge-seg}"
 git pull --rebase -q
 PYTHONPATH=src python -u scripts/dump_qualitative_assets_v20.py
-git add reports/qualitative_assets_v20
+git add -f reports/qualitative_assets_v20
 git commit -q -m "report: V20 qualitative assets (landscape Run A, audited)"
 git pull --rebase -q && git push -q
 echo "DONE: pushed reports/qualitative_assets_v20 ($(ls reports/qualitative_assets_v20 | wc -l) files)"

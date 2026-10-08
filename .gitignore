@@ -116,3 +116,5 @@ paper/submission/**/main.pdf
 outputs/*
 !outputs/flops_by_level.json
 !outputs/benchmark_lookup_table.csv
+!reports/qualitative_assets_v20/*.png
+!reports/qualitative_assets_v20/*.jpg
