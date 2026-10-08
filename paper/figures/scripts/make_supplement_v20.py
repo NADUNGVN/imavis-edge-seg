@@ -17,7 +17,7 @@ from pace_style_v13 import CANDIDATE_COLORS, FULL_WIDTH_MM, INK, apply_style, mm
 
 ROOT = Path(__file__).parents[3]
 REP = ROOT / "reports"
-SUP = ROOT / "paper/submission/ivc_2026-10-08_v20_from_v19"
+SUP = ROOT / "paper/submission/ivc_2026-10-09_v21_revision"
 LEVELS = ("tiny", "small", "medium", "large")
 SPLITS = [("cityscapes", "Cityscapes"), ("acdc_fog", "Fog"), ("acdc_night", "Night"), ("acdc_rain", "Rain"),
           ("acdc_snow", "Snow")]
@@ -42,16 +42,20 @@ def compiled_table() -> None:
 
 def e1_table() -> None:
     sh = json.loads((REP / "router_same_harness_analysis_20261004.json").read_text())["median"]
+    pa = json.loads((REP / "phaseA_static_feasibility_20261004.json").read_text())
     names = {"E3_logits": "AGX Xavier (logits)", "E1_explicit_float32": "Hailo-8 explicit, FLOAT32 (primary)",
              "E1_explicit_uint8": "Hailo-8 explicit, UINT8", "E1_scheduler_float32": "Hailo-8 scheduler, FLOAT32",
              "E1_scheduler_uint8": "Hailo-8 scheduler, UINT8"}
-    out = [r"\begin{tabular}{@{}lrrrr@{}}", r"\toprule",
-           r"Configuration & Overhead $C-S$ (ms) & D $-$ static & D $-$ T-hard & Mixture gain \\", r"\midrule"]
+    out = [r"\begin{tabular}{@{}lrrrrr@{}}", r"\toprule",
+           r"Configuration & Overhead $C-S$ (ms) & D $-$ static, feasible [95\% CI] (n) & D $-$ static, all (diag.) & Route-infeasible cells & Mixture gain \\",
+           r"\midrule"]
     for k, n in names.items():
-        v = sh[k]
+        v, a = sh[k], pa[k]
         ov = [v["route_ms"][lv] - v["static_ms"][lv] for lv in LEVELS]
-        out.append(f"{n} & {min(ov):.1f}--{max(ov):.1f} & {v['D_vs_static']['mean_delta_points']:+.2f} & "
-                   f"{v['D_vs_T_hard']['mean_delta_points']:+.2f} & {v['mixture_vs_static']['mean_gain_points']:+.2f} \\\\")
+        f, al = a["D_vs_static_route_feasible"], a["D_vs_static_all"]
+        out.append(f"{n} & {min(ov):.1f}--{max(ov):.1f} & {f['mean_delta_points']:+.2f} [{f['ci95_points'][0]:+.2f}, {f['ci95_points'][1]:+.2f}] ({f['cells']}) & "
+                   f"{al['mean_delta_points']:+.2f} & {a['cells_static_feasible_route_infeasible']}/120 & "
+                   f"{v['mixture_vs_static']['mean_gain_points']:+.2f} \\\\")
     out += [r"\bottomrule", r"\end{tabular}", ""]
     (SUP / "tables/e1_sensitivity_table.tex").write_text("\n".join(out), encoding="utf-8")
 

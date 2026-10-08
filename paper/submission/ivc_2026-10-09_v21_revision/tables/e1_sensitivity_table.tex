@@ -1,0 +1,11 @@
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Configuration & Overhead $C-S$ (ms) & D $-$ static, feasible [95\% CI] (n) & D $-$ static, all (diag.) & Route-infeasible cells & Mixture gain \\
+\midrule
+AGX Xavier (logits) & 0.7--2.7 & -3.00 [-3.07, -2.72] (105) & -2.62 & 15/120 & -0.52 \\
+Hailo-8 explicit, FLOAT32 (primary) & 38.0--46.9 & -8.18 [-8.42, -7.40] (75) & -7.41 & 45/120 & -5.52 \\
+Hailo-8 explicit, UINT8 & 42.6--49.7 & -10.97 [-11.26, -9.94] (75) & -9.15 & 45/120 & -6.33 \\
+Hailo-8 scheduler, FLOAT32 & 36.4--49.3 & -8.18 [-8.42, -7.40] (75) & -7.41 & 45/120 & -5.50 \\
+Hailo-8 scheduler, UINT8 & 41.2--50.0 & -10.97 [-11.26, -9.94] (75) & -9.15 & 45/120 & -6.33 \\
+\bottomrule
+\end{tabular}

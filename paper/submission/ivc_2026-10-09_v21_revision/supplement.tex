@@ -1,0 +1,197 @@
+\documentclass[a4paper,review,12pt]{elsarticle}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\method}{PACE-Seg}
+\newcommand{\miou}{mIoU}
+\setlength{\emergencystretch}{2em}
+\hfuzz=3pt
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\theHfigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theHtable}{S\arabic{table}}
+
+\begin{document}
+
+\begin{frontmatter}
+\title{Supplementary Material for PACE-Seg: When Does Input-Adaptive Semantic Segmentation Pay Off on Edge Accelerators?}
+\author{D\~ung Nguy\~{\^e}n}
+\begin{abstract}
+This supplement records checkpoint provenance, the measurement protocol, Hailo-8 sensitivity configurations, compiled-engine accuracy, calibration quality, condition-level routing results, and additional qualitative examples for the main manuscript. All numbers come from the same landscape-input training runs (seeds 0--2) and measurements as the manuscript; no new claims or evaluation samples are introduced.
+\end{abstract}
+\end{frontmatter}
+
+\section{Evidence scope}
+
+The main manuscript reports three findings: a FLOPs-proportional proxy does not reproduce measured feasibility; weight sharing costs the largest capacity 0.9--2.8 \miou{} points relative to training it alone; and, once routes and static deployments are timed in the same harness on the two primary backends, routing under a hard budget beats rank escalation but not static deployment; in a counterfactual overhead-scaling analysis, the static advantage would vanish under mean-cost budgets only below about 1.3~ms (AGX Xavier) and 4.3~ms (Hailo-8) of overhead. This supplement contains the material needed to reproduce and audit these results. Operating cells are correlated evaluations, and the two devices share segmentation predictions. Two budget grids are used: the route-budget grid (3 runs $\times$ 2 backends $\times$ 5 splits $\times$ 4 budgets) and, for the comparison with static deployment, a static-own-cost grid per backend (3 runs $\times$ 5 splits $\times$ 8 budgets), part of which lies below the cheapest route.
+
+\section{Training and checkpoint provenance}
+
+All models are trained at the native 2:1 aspect ratio of Cityscapes and ACDC, with input sizes $384\times192$, $512\times256$, $768\times384$, and $1024\times512$ (width$\times$height) for tiny to large. Elastic training uses the sandwich rule with boundary-aware cross-entropy and in-place distillation from the largest level ($\alpha=0.5$, $T=1$); 100,000 steps, batch size 8, AdamW (learning rate $3\times10^{-4}$, weight decay $10^{-4}$), 500 warm-up steps with cosine decay, gradient clipping at 5.0, and FP16 mixed precision. The references for RQ2, Fast-SCNN and the large architecture trained alone (PACE-Large), use the same recipe and three seeds each. Table~\ref{tab:provenance} lists the supernet checkpoints used by every router analysis.
+
+\begin{table}[H]
+\centering
+\caption{Supernet checkpoints used by the router analyses (Runs A--C = seeds 0--2). Hashes are abbreviated; full SHA-256 values are stored in the per-image result files.}
+\label{tab:provenance}
+\small
+\begin{tabular}{@{}llrll@{}}
+\toprule
+Run & Seed & Step & Checkpoint SHA-256 & Config hash \\
+\midrule
+A & 0 & 100,000 & \texttt{f19833d5} & \texttt{7d6c05422dbe} \\
+B & 1 & 100,000 & \texttt{90978478} & \texttt{a7946574eb05} \\
+C & 2 & 100,000 & \texttt{53516de6} & \texttt{e26a2c8985bc} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Hardware and latency protocol}
+
+Table~\ref{tab:hardware} lists the toolchains. TensorRT engines are FP16. Hailo-8 HEFs are INT8, compiled from the same fixed-shape ONNX graphs with the Dataflow Compiler and quantized with 200 real fit-half images. The Jetson DLA is excluded because decoder layers fall back to the GPU.
+
+\begin{table}[H]
+\centering
+\caption{Hardware and compiler stacks.}
+\label{tab:hardware}
+\small
+\begin{tabularx}{\textwidth}{@{}ll>{\raggedright\arraybackslash}X@{}}
+\toprule
+Name & Hardware & Runtime and system versions \\
+\midrule
+Hailo-8 & Raspberry Pi 5 + Hailo-8 M.2 & HailoRT 4.23.0; Dataflow Compiler 3.34.0; Model Zoo 2.19.0 \\
+Xavier NX & Jetson Xavier NX & L4T R35.4.1; CUDA 11.4.19; cuDNN 8.6.0.166; TensorRT 8.5.2.2 \\
+AGX Xavier & Jetson AGX Xavier & L4T R35.6.4; CUDA 11.4.19; TensorRT 8.5.2.2 \\
+Orin Nano & Jetson Orin Nano Super & L4T R36.5.0; CUDA 12.6.68; cuDNN 9.3.0; TensorRT 10.3.0.30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Candidate-only latency (RQ1) uses the trtexec/hailortcli protocol at batch size one on all four devices. Complete-route cost $C_h(\ell)$ and static cost $S_h(\ell)$ are measured on AGX Xavier and Hailo-8 in one process, with the same engines, inputs, and timer boundary: the timer starts when a preprocessed host tensor is handed to the runtime and stops when the returned prediction is synchronized; decoding, resizing, and normalization are excluded. A route runs the tiny engine, entropy, and the policy decision and, unless tiny is selected, one further engine. Each configuration uses 50 warm-up and 500 timed iterations; the median, p95, and p99 are recorded. Cold-start costs are excluded.
+
+Figure~\ref{fig:route-cost-expansion} compares candidate-only p95 latency with the complete-route median. On Hailo-8 the short tiny route expands by $11.0\times$ because network-group activation and host-side entropy dominate it.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/figS2_route_cost_expansion_v20.pdf}
+\caption{Candidate-only p95 latency (left bars) versus complete-route median (right bars); ratios above the bars give the expansion. Bars compare two measured totals and are not a component decomposition.}
+\label{fig:route-cost-expansion}
+\end{figure}
+
+\paragraph{Hailo-8 configuration sensitivity} The primary Hailo-8 path uses explicit network-group activation with FLOAT32 output streams. Table~\ref{tab:e1} repeats the same-harness comparison with the HailoRT model scheduler and with UINT8 output streams. The routing overhead stays between 36 and 50~ms in every configuration. In each configuration 45 of the 120 static-own-cost cells lie below the cheapest route, where only static deployment can meet the budget; on the remaining route-feasible cells static deployment beats routing in every configuration.
+
+\begin{table}[H]
+\centering
+\caption{Same-harness routing overhead and policy-D comparisons per device configuration (median costs, \miou{} points). Feasible: route-feasible cells of the static-own-cost grid, with paired image-level 95\% bootstrap CI (1,000 replicates, image sampling only) and cell count; all (diag.): all 120 cells, including route-infeasible budgets where D violates; route-infeasible cells: cells where only static deployment fits. Mixture gain: candidate-specific routing without a per-frame cap minus the static mixture at equal mean cost.}
+\label{tab:e1}
+\small
+\resizebox{\textwidth}{!}{\input{tables/e1_sensitivity_table.tex}}
+\end{table}
+
+\section{Compiled-engine accuracy}
+
+Table~\ref{tab:compiled} compares compiled engines of Run A with the PyTorch predictions used in the replay, on the held-out halves. TensorRT FP16 is within 0.02 points everywhere. Hailo-8 INT8 loses up to 1.6 points on tiny and at most 0.5 points on large; the probe entropy keeps a rank correlation of at least 0.88 with the PyTorch probe.
+
+\begin{table}[H]
+\centering
+\caption{Compiled minus PyTorch \miou{} (points) per capacity and split, and the minimum pixel agreement over splits (Run A, held-out halves).}
+\label{tab:compiled}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\input{tables/compiled_engine_table.tex}
+\end{table}
+
+\section{Router protocol and leakage safeguards}
+
+Segmentation quality is dataset-level \miou{}, computed once from the accumulated confusion matrices of the selected candidates. Each validation split is divided by alternating index into fit and held-out halves. Calibrators, risk targets, T-hard thresholds, and operating points use only fit halves; held-out labels are read only after selection. Five risk targets are the 10th--90th percentiles of fit-half observed error, macro-aggregated across splits, with one grid per run shared by both devices. A cell is violating if at least one held-out image is routed to a candidate whose tabulated cost exceeds the budget; fair cells for comparisons with policy A are those in which A has no violation.
+
+\section{Calibration quality}
+
+Table~\ref{tab:calibration} reports held-out calibration quality per split. Figure~\ref{fig:reliability} shows reliability pooled over all splits. All four calibrators lie close to the diagonal; replacing ten equal-count bins by five bins or isotonic regression changes the held-out error by at most 0.003, whereas twenty bins overfit the small ACDC fit halves. Calibration quality is therefore not the reason that candidate-specific calibration adds nothing over T-hard in the manuscript.
+
+\begin{table}[H]
+\centering
+\caption{Held-out calibration quality. MAE of the configured calibrators (tiny/small/medium/large); $\rho_s$: Spearman correlation between probe score and observed error (tiny/large); MAE averaged over candidates for 5/10/20 equal-count bins and isotonic regression; Spearman correlation between per-image pixel error and per-image $1-$\miou{}.}
+\label{tab:calibration}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Split & MAE (T/S/M/L) & $\rho_s$ (T/L) & 5 / 10 / 20 bins & Isotonic & Error vs $1-$\miou{} \\
+\midrule
+Cityscapes & .028/.025/.021/.019 & .81/.74 & .023/.023/.023 & .022 & .50 \\
+ACDC fog & .031/.027/.022/.019 & .68/.61 & .026/.025/.033 & .024 & .23 \\
+ACDC night & .051/.055/.057/.054 & .67/.37 & .054/.054/.059 & .053 & .58 \\
+ACDC rain & .032/.032/.030/.024 & .67/.61 & .029/.030/.032 & .028 & .32 \\
+ACDC snow & .045/.038/.034/.029 & .71/.58 & .035/.036/.046 & .034 & .48 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\linewidth]{figures/figS5_calibration_reliability_v20.pdf}
+\caption{Held-out reliability of the four candidate-specific calibrators, pooled over Runs A--C and the five splits.}
+\label{fig:reliability}
+\end{figure}
+
+\section{Condition-level routing and LOCO}
+
+Table~\ref{tab:router-condition} disaggregates the comparison with policy A by condition (24 cells per row). In the leave-one-condition-out analysis, calibrators, risk-target grid, and operating points are refitted without the evaluated condition; D then has no violating cell, beats A in all 29 decided fair cells (12 ties, +4.15 points), and beats A-hard by +1.59 points over all cells (48/72/0). Mean LOCO D quality is 45.2, 43.1, 28.7, 40.0, and 39.1 \miou{} on Cityscapes, fog, night, rain, and snow.
+
+\begin{table}[H]
+\centering
+\caption{Condition-level configured and pooled D against policy A (median costs). W/T/L and mean $\Delta$ use fair cells; violation counts use all 24 cells per condition.}
+\label{tab:router-condition}
+\scriptsize
+\setlength{\tabcolsep}{3.0pt}
+\resizebox{\textwidth}{!}{%
+\input{tables/router_by_condition_table_points.tex}%
+}
+\end{table}
+
+\section{Additional qualitative examples}
+
+All examples are held-out images of Run A, fixed by rules applied to the recorded per-image errors before visual inspection: per split, the image with the largest tiny-minus-large pixel error (Fig.~\ref{fig:s-gain}), the image nearest the median large-candidate error (Fig.~\ref{fig:s-median}), the image with the largest large-candidate error (Fig.~\ref{fig:s-hard}), and, among images with below-median tiny error, the one with the smallest tiny-minus-large difference (Fig.~\ref{fig:s-easy}). The routed output is policy D on AGX Xavier at the budget of the large route. Dashed boxes mark the window where tiny and large disagree most; insets enlarge it; orange in the error column marks disagreement with ground truth.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/figS1_conditions_zoom_v20.pdf}
+\caption{Largest tiny-minus-large error per condition: where capacity matters most.}
+\label{fig:s-gain}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/figS4_median_error_v20.pdf}
+\caption{Median-error examples per condition, with the routed output and its error map.}
+\label{fig:s-median}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/figS3_hard_cases_v20.pdf}
+\caption{Hardest example per condition (largest large-candidate pixel error), illustrating remaining failure modes; not an estimate of a failure rate.}
+\label{fig:s-hard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/figS6_easy_cases_v20.pdf}
+\caption{Examples on which tiny is already close to large.}
+\label{fig:s-easy}
+\end{figure}
+
+\section{Evidence locations}
+
+Per-image router dumps are in \path{reports/landscape_20261004/}; same-harness latency in \path{reports/static_vs_route_*_20261004.json}; router analyses in \path{reports/router_review_analyses_20261004.json}, \path{router_same_harness_analysis_20261004.json}, \path{router_breakeven_20261004.json}, \path{router_nested_bootstrap_20261004.json}, and \path{router_by_condition_20261004.json}; compiled-engine accuracy in \path{reports/compiled_eval_E*_20261004.json}; qualitative assets with their selection rules in \path{reports/qualitative_assets_v20*/}. Cityscapes and ACDC data and training checkpoints are not redistributed.
+
+\end{document}

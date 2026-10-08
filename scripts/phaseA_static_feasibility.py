@@ -74,7 +74,8 @@ def main() -> None:
               "| all", round(block["D_vs_static_all"]["mean_delta_points"], 2), block["D_vs_static_all"]["ci95_points"],
               "| feasible", block["D_vs_static_route_feasible"]["cells"], round(block["D_vs_static_route_feasible"]["mean_delta_points"], 2),
               block["D_vs_static_route_feasible"]["ci95_points"], flush=True)
-    Path("reports/phaseA_static_feasibility_20261004.json").write_text(json.dumps(out, indent=2, default=float))
+    import os
+    Path(os.environ.get("PHASEA_OUT", "reports/phaseA_static_feasibility_20261004.json")).write_text(json.dumps(out, indent=2, default=float))
 
 
 if __name__ == "__main__":

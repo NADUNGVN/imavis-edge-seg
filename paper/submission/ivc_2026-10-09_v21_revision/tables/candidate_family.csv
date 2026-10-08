@@ -1,0 +1,5 @@
+candidate,resolution_hxw,width_multiplier,depth_blocks,gflops,trainable_params,e1_candidate_p95_ms,e3_candidate_p95_ms
+tiny,384x192,0.25,2,0.2060,32723,3.720021,0.941406
+small,512x256,0.50,3,1.1678,152035,6.631906,1.795900
+medium,768x384,0.75,4,6.1712,420219,20.472930,4.607420
+large,1024x512,1.00,6,22.6992,1020739,41.180710,9.414060
