@@ -1,0 +1,16 @@
+{
+  "claim": "One shared elastic encoder-decoder varies resolution, active channel prefixes, and stage-prefix depth, then exports four independent compiler-safe subnet graphs.",
+  "architecture_ir": "paper\\figures\\v13\\architecture\\pace_seg_exact.yaml",
+  "candidate_table": "paper\\tables\\candidate_family_landscape.csv",
+  "source_hashes": {
+    "src\\imavis_edge_seg\\models\\supernet.py": "0c01283026a77b7c43de1a3e7645b81b2373ad36fc37ecf4b2ad77e882bd99e3",
+    "src\\imavis_edge_seg\\models\\blocks.py": "6b4a7e1a115b809430be191c3afc3cf754e4aff2f918be90f3c70d7a1ce10d0a",
+    "src\\imavis_edge_seg\\models\\subnet.py": "b6eef6afb18d3c826c327419ac717f4e862d98f6c084b49662788ec1e76fbfae",
+    "src\\imavis_edge_seg\\config.py": "6fcc700201bb05ebcd2b143e2123cf33f3a4562df26f989c6d6f93a9e6ef0fb8"
+  },
+  "artifact_hashes": {
+    ".pdf": "0b8ae9424b8504874367407c6b9dd9858a063f46040d875dfa6c4f43b9f4d505",
+    ".svg": "6ed7929c8b885765a9428db45f831f4d01b172253364a0bf70e1b92272cc92d3",
+    ".png": "0d228ac03aa95610d8a56689f54b013b04fb8c6608e22e656ab649baf8fffd39"
+  }
+}

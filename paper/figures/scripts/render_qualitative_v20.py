@@ -219,10 +219,15 @@ def sample_decision(dec, name: str):
     # column 1: input and entropy
     show(fig.add_axes([0.0, 0.52, pw, ph]), load(aid, "rgb"), "(a) Input, ACDC rain")
     ax = fig.add_axes([0.0, 0.02, pw, ph])
-    ax.imshow(ent, cmap="magma", interpolation="bilinear"); ax.set_xticks([]); ax.set_yticks([])
+    im = ax.imshow(ent, cmap="magma", interpolation="bilinear", vmin=0, vmax=float(np.log(19)))
+    ax.set_xticks([]); ax.set_yticks([])
     ax.set_title(f"(b) Tiny-probe entropy, $s(x)$={d['score']:.3f}", fontsize=7, pad=2)
+    cax = fig.add_axes([pw + 0.005, 0.02, 0.007, ph])
+    cb = fig.colorbar(im, cax=cax)
+    cb.set_label("nats (max ln 19)", fontsize=5.5, labelpad=1)
+    cb.ax.tick_params(labelsize=5.5, width=0.4, length=1.5)
     # column 2: risk vector
-    ax = fig.add_axes([0.29, 0.14, 0.17, 0.70])
+    ax = fig.add_axes([0.32, 0.14, 0.15, 0.70])
     xs = np.arange(4)
     ax.bar(xs, [d["risk"][lv] for lv in LEVELS], color=[CAP_COLOR[lv] for lv in LEVELS], width=0.65)
     ax.axhline(d["target"], color="k", lw=0.7, ls="--")
@@ -294,3 +299,85 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def sample_teaser(name: str = "F_teaser"):
+    """Thesis figure: (a) input-dependent choice on one device, (b) device-dependent choice for one
+    image, (c) the routing overhead that erases the adaptive gain. Images are the frozen
+    ACDC-rain 'easy' and 'gain' selections of selection_v20.json; decisions are policy D of Run A."""
+    m = manifest()
+    easy = next(x for x in m if x["split"] == "acdc/rain" and x["kind"] == "easy")
+    hard = next(x for x in m if x["split"] == "acdc/rain" and x["kind"] == "gain")
+    costs = load_costs("median")
+    dE3 = d_decisions("large", "E3")
+    de, dh = dE3[(easy["split"], easy["heldout_position"])], dE3[(hard["split"], hard["heldout_position"])]
+    b1 = costs["E1"]["medium"]
+    ch1 = d_choice_for(dh, costs["E1"], b1)
+    fig = plt.figure(figsize=(FULL, FULL * 0.30))
+    pw = 0.125
+    ph = pw * 0.5 / 0.30
+
+    def panel(x, y, img, title, badge=None):
+        show(fig.add_axes([x, y, pw, ph]), img, title, badge=badge)
+
+    fig.text(0.0, 0.98, "(a) Same device (E3), different inputs", fontsize=7, fontweight="bold", va="top")
+    panel(0.0, 0.48, load(easy["asset_id"], "rgb"), f"easier: $s(x)$={de['score']:.2f}")
+    panel(0.135, 0.48, colorize(load(easy["asset_id"], de["choice"])), "routed", de["choice"].capitalize())
+    panel(0.0, 0.05, load(hard["asset_id"], "rgb"), f"harder: $s(x)$={dh['score']:.2f}")
+    panel(0.135, 0.05, colorize(load(hard["asset_id"], dh["choice"])), "routed", dh["choice"].capitalize())
+
+    fig.text(0.295, 0.98, "(b) Same image, other hardware", fontsize=7, fontweight="bold", va="top")
+    panel(0.295, 0.48, colorize(load(hard["asset_id"], dh["choice"])),
+          f"E3, budget {costs['E3']['large']:.1f} ms", dh["choice"].capitalize())
+    panel(0.295, 0.05, colorize(load(hard["asset_id"], ch1)), f"E1, budget {b1:.1f} ms", ch1.capitalize())
+    fig.text(0.425, 0.12, f"E1 large route\n{costs['E1']['large']:.1f} ms:\ninfeasible", fontsize=5.8,
+             color="#B4442C", va="bottom")
+
+    fig.text(0.575, 0.98, "(c) ...but routing costs time (E1, large)", fontsize=7, fontweight="bold", va="top")
+    sh = json.loads(Path("reports/router_same_harness_analysis_20261004.json").read_text())["median"]["E1_explicit_float32"]
+    S, C = sh["static_ms"]["large"], sh["route_ms"]["large"]
+    ax = fig.add_axes([0.63, 0.36, 0.36, 0.42])
+    ax.barh([1], [S], color=CAP_COLOR["large"], height=0.5)
+    ax.barh([0], [S], color=CAP_COLOR["large"], alpha=0.45, height=0.5)
+    ax.barh([0], [C - S], left=[S], color="white", ec="k", hatch="////", lw=0.5, height=0.5)
+    ax.set_yticks([1, 0], ["static $S$", "routed $C$"])
+    ax.text(S + 1.5, 1, f"{S:.1f} ms", va="center", fontsize=6)
+    ax.text(C + 1.5, 0, f"{C:.1f} ms", va="center", fontsize=6)
+    ax.text(S + (C - S) / 2, 0.36, f"+{C - S:.1f} ms probe + decision + switch", ha="center", va="bottom",
+            fontsize=5.8, color="#B4442C")
+    ax.set_xlim(0, C * 1.18)
+    ax.set_xlabel("median latency (ms)", fontsize=6.5, labelpad=1)
+    ax.tick_params(labelsize=6, width=0.5, length=2)
+    for s_ in ("top", "right"):
+        ax.spines[s_].set_visible(False)
+    fig.text(0.575, 0.06, "Under mean-cost budgets routing pays off only if this overhead falls below\n"
+             "about 4.3 ms on E1 and 1.3 ms on E3 (measured: 44 ms and 1.9 ms);\n"
+             "under per-frame budgets static deployment wins at any overhead.",
+             fontsize=6, va="bottom", color="#1F2937", linespacing=1.3)
+    save(fig, name)
+
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "teaser":
+    sample_teaser()
+
+
+def sample_stratified(name: str = "G_stratified"):
+    """Route-class stratified grid (selection_v20_stratified.json; rule in that file)."""
+    global ASSETS
+    ASSETS = Path("reports/qualitative_assets_v20_stratified")
+    rows = manifest()
+    cols = ["Image", "Ground truth", "Tiny", "Medium", "Large", "Routed (D)"]
+    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FULL, FULL * 0.105 * len(rows) + 0.25),
+                             gridspec_kw=dict(wspace=0.02, hspace=0.06, bottom=0.12))
+    for r, e in enumerate(rows):
+        aid, ch = e["asset_id"], e["routed_to"]
+        imgs = [load(aid, "rgb"), colorize(load(aid, "gt")), colorize(load(aid, "tiny")),
+                colorize(load(aid, "medium")), colorize(load(aid, "large")), colorize(load(aid, ch))]
+        for c, img in enumerate(imgs):
+            show(axes[r, c], img, cols[c] if r == 0 else None)
+        axes[r, 0].text(-0.06, 0.5, f"routed to\n{ch}", transform=axes[r, 0].transAxes, rotation=90,
+                        va="center", ha="center", fontsize=6.5)
+        axes[r, 0].text(0.02, 0.04, COND[e["split"]], transform=axes[r, 0].transAxes, fontsize=5.5, color="white",
+                        bbox=dict(boxstyle="round,pad=0.15", fc="black", alpha=0.6, ec="none"))
+    legend_strip(fig, [0.125, 0.0, 0.78, 0.07])
+    save(fig, name)

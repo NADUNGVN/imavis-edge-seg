@@ -478,6 +478,8 @@ def draw_static_candidates(ax: Axes, candidates: dict[str, dict[str, str]]) -> N
         transform=ax.transAxes,
     )
     arrow(ax, (0.190, 0.392), (0.224, 0.392), color="#64748B", linewidth=1.0)
+    ax.text(0.055, 0.243, "last card line:\ncandidate-only\np95 latency", ha="left", va="center",
+            fontsize=6.0, color=HARDWARE, linespacing=1.2, transform=ax.transAxes)
 
     x_positions = (0.230, 0.415, 0.600, 0.785)
     for x, level in zip(x_positions, LEVELS, strict=True):
