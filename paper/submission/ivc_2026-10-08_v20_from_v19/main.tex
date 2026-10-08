@@ -75,8 +75,8 @@ Section~\ref{sec:related} positions the work. Section~\ref{sec:method} follows o
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig1_data_gt_routed.png}
-\caption{\pending{re-render with landscape models; image is from V19.} Visual domains and routed outputs. Columns show clean Cityscapes and ACDC fog, night, rain, and snow; rows show the input, 19-class ground truth, and configured policy-D output. Each image is the deterministic held-out median-error representative for its split.}
+\includegraphics[width=\textwidth]{figures/fig1_overview_v20.pdf}
+\caption{Visual domains and routed outputs. Columns show clean Cityscapes and ACDC fog, night, rain, and snow; rows show the input, 19-class ground truth (void in black), and the policy-D output on E3 at the budget of the large route, with the selected capacity tagged. Each image is the held-out image of Run A whose large-candidate pixel error is closest to the split median.}
 \label{fig:dataset-overview}
 \end{figure*}
 
@@ -234,12 +234,12 @@ Oracle & GT error & Yes & None & No & Upper bound only \\
 \subsection{A worked decision}
 \label{sec:example}
 
-\pending{numbers below are from V19 (portrait models); recompute risk vector and route costs for a landscape held-out rain image.} Figure~\ref{fig:input-output-pipeline} follows one held-out ACDC rain image through policy D on E3. The tiny probe yields $s(x)=0.461$~nats. The four calibrators turn this score into expected errors of 0.106, 0.080, 0.068, and 0.058 for tiny, small, medium, and large, so only large would meet the risk target $\tau=0.066$. On E3, however, the large route is infeasible at the evaluated budget. Because no feasible candidate meets $\tau$, D falls back to the feasible candidate with the lowest predicted error and runs medium. The example shows the property that distinguishes D from rank escalation: the decision uses the full risk vector, and infeasible candidates are removed before risk is consulted.
+Figure~\ref{fig:input-output-pipeline} follows one held-out ACDC rain image of Run A through policy D. The tiny probe yields $s(x)=0.704$~nats. The four calibrators turn this score into expected errors of 0.189, 0.155, 0.130, and 0.110 for tiny, small, medium, and large; none meets the risk target $\tau=0.062$ chosen on the fit half, so D falls back to the feasible candidate with the lowest predicted error. On E3, with a budget equal to the large route (19.5~ms), every route is feasible and D runs large. On E1, with a budget equal to the medium route (76.2~ms), the large route (116.3~ms) is infeasible and D runs medium. The image and the risk vector are identical; only the measured cost table changes the action. The example shows the property that distinguishes D from rank escalation: the decision uses the full risk vector, and infeasible candidates are removed before risk is consulted.
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig4_input_output_pipeline.pdf}
-\caption{\pending{re-render with landscape models; figure is from V19.} One complete policy-D decision on a held-out rain image, read left to right. (1) The tiny engine produces a segmentation and its mean entropy. (2) Candidate-specific calibrators map that score to four expected errors. (3) Measured E3 complete-route costs are compared with the budget; infeasible candidates are grey and hatched. (4) No feasible candidate meets $\tau$, so the lowest-risk feasible candidate is run; orange in the bottom image marks disagreement with ground truth. The case illustrates the policy and is not an additional evaluation trial.}
+\includegraphics[width=\textwidth]{figures/fig7_routing_decision_v20.pdf}
+\caption{One complete policy-D decision on a held-out ACDC rain image. (a) Input. (b) Per-pixel entropy of the tiny probe and its mean $s(x)$. (c) Candidate-specific calibrators map $s(x)$ to four predicted errors; the dashed line is the risk target $\tau$. (d) Measured median route costs on E3 and E1 under the stated budgets; infeasible routes are grey and hatched, and the selected route is outlined. (e, f) The capacity run on each device. The example illustrates the policy and is not an additional evaluation trial.}
 \label{fig:input-output-pipeline}
 \end{figure*}
 
@@ -372,7 +372,7 @@ We answer RQ3 against five references: rank escalation (A), rank escalation with
 
 \begin{table*}[!t]
 \centering
-\caption{Routing comparisons in held-out replay with measured costs (three runs $\times$ two backends $\times$ five splits $\times$ four budgets = 120 cells). $\Delta$ is the macro-averaged \miou{} difference in percentage points; the 95\% interval is an image-level bootstrap, and the nested interval also refits calibrators, risk grid, and operating points on resampled fit halves (Section~\ref{sec:split}). Comparisons with A use fair cells, in which A has no violation; all other comparisons use the full grid. LOCO refits calibrators, risk targets, and operating points without the evaluated condition. ``Static, route cost'' charges the static candidate the cost of the route that ends in it; ``static, own cost'' charges it its measured static latency (Table~\ref{tab:routes}). Cells are correlated and E1/E3 share predictions.}
+\caption{Routing comparisons in held-out replay with measured costs (three runs $\times$ two backends $\times$ five splits $\times$ four budgets = 120 cells). $\Delta$ is the macro-averaged \miou{} difference in percentage points; the 95\% interval is an image-level bootstrap, and the nested interval also refits calibrators, risk grid, and operating points on resampled fit halves (Section~\ref{sec:split}). Comparisons with A use fair cells, in which A has no violation; all other comparisons use the full grid. LOCO refits calibrators, risk targets, and operating points without the evaluated condition. ``Static, route cost'' charges the static candidate the cost of the route that ends in it; ``static, own cost'' charges it its measured static latency (Table~\ref{tab:routes}). Cells are correlated and E1/E3 share predictions. Violating cells (median / p95 / p99 tables): A 58 / 58 / 59 of 120; A-hard, T-hard, D, pooled D, static, and LOCO D 0 of 120 in every table.}
 \label{tab:routerfinal}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -396,8 +396,6 @@ p99 & D $-$ A & 61 & 53/6/2 & +2.83 & -- & -- \\
 \midrule
 Median, LOCO & D $-$ A & 41 & 29/12/0 & +4.15 & -- & -- \\
 Median, LOCO & D $-$ A-hard & 120 & 48/72/0 & +1.59 & -- & -- \\
-\midrule
-\multicolumn{7}{@{}l}{Violating cells (median / p95 / p99 tables): A 58 / 58 / 59 of 120; A-hard, T-hard, D, pooled D, static, and LOCO D 0 of 120 in every table.} \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -433,15 +431,6 @@ Median, LOCO & D $-$ A-hard & 120 & 48/72/0 & +1.59 & -- & -- \\
 \label{fig:breakeven}
 \end{figure*}
 
-Figure~\ref{fig:routing-decision-example} isolates the role of the cost table. It applies the risk vector of the worked example in Section~\ref{sec:example} to both backends under one illustrative budget. Because the two devices have different route costs, the same image and risk estimate lead to different feasible sets and therefore different actions.
-
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig7_routing_decision_example.pdf}
-\caption{\pending{re-render with landscape models and the landscape cost table; figure is from V19.} Same image and risk vector, different measured hardware. (1) The risk vector of Fig.~\ref{fig:input-output-pipeline}. (2) Under an illustrative budget, the feasible E3 routes and the selected candidate. (3) The feasible E1 routes and the selected candidate; infeasible routes are grey and hatched. Bottom row: the input and each backend's selected output. The example illustrates the policy and is not an evaluation cell.}
-\label{fig:routing-decision-example}
-\end{figure*}
-
 Table~\ref{tab:router-condition} breaks the comparison with A down by condition, with 24 cells per row from three runs and two cost tables. The gain over A is largest on clean Cityscapes (+8.81 points), although only 6 of its 24 cells are fair because A violates the budget in the other 18. Rain is the opposite case: A violates a budget in only 3 cells, and configured D records 15 wins, 6 ties, and no losses over 21 fair cells with a +2.09-point gain. Night has the smallest gain, +1.05 points, despite winning all 14 fair cells. The only two losses occur on snow, for both configured and pooled D. No single condition drives the aggregate result, and fair-cell counts and violation counts must be read together.
 
 \begin{table}[!t]
@@ -455,12 +444,12 @@ Table~\ref{tab:router-condition} breaks the comparison with A down by condition,
 }
 \end{table}
 
-The small night gain is consistent with the probe. The large candidate reaches 59.0 \miou{} on Cityscapes but only 38.2 on ACDC night, and the night calibrators have the largest held-out errors (0.051--0.057) and the weakest score--error rank correlation (Spearman 0.35--0.67, against 0.74--0.81 on Cityscapes). The entropy score thus ranks errors least reliably exactly where errors are most frequent. Figure~\ref{fig:qualitative} shows the five deterministic median-error examples, placing tiny, medium, and large side by side with the routed output and its error map.
+The small night gain is consistent with the probe. The large candidate reaches 59.0 \miou{} on Cityscapes but only 38.2 on ACDC night, and the night calibrators have the largest held-out errors (0.051--0.057) and the weakest score--error rank correlation (Spearman 0.35--0.67, against 0.74--0.81 on Cityscapes). The entropy score thus ranks errors least reliably exactly where errors are most frequent. Figure~\ref{fig:qualitative} shows the five median-error examples, placing tiny, medium, and large side by side with the routed output.
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig9_qualitative_grid.png}
-\caption{\pending{re-render with landscape models; image is from V19.} Qualitative capacity comparison on the five held-out examples from Fig.~\ref{fig:dataset-overview}; rows are clean, fog, night, rain, and snow, as tagged on each input. The first five columns compare input, ground truth, tiny, medium, and large predictions; the last two show the configured policy-D output and its error overlay, where orange marks disagreement with ground truth. Image selection was fixed by median large-candidate pixel error before visual inspection.}
+\includegraphics[width=\textwidth]{figures/fig9_qualitative_v20.pdf}
+\caption{Qualitative capacity comparison on held-out images of Run A; rows are clean, fog, night, rain, and snow. Columns show the input, ground truth (void in black), the tiny, medium, and large candidates, and the policy-D output on E3 at the budget of the medium route; the selected capacity is noted at the right. Images were fixed by median large-candidate pixel error before visual inspection.}
 \label{fig:qualitative}
 \end{figure*}
 
