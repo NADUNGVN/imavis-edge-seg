@@ -375,7 +375,7 @@ def sample_stratified(name: str = "G_stratified"):
                 colorize(load(aid, "medium")), colorize(load(aid, "large")), colorize(load(aid, ch))]
         for c, img in enumerate(imgs):
             show(axes[r, c], img, cols[c] if r == 0 else None)
-        axes[r, 0].text(-0.06, 0.5, f"routed: {ch}", transform=axes[r, 0].transAxes, rotation=90,
+        axes[r, 0].text(-0.06, 0.5, f"→ {ch.capitalize()}", transform=axes[r, 0].transAxes, rotation=90,
                         va="center", ha="center", fontsize=6.5)
         axes[r, 0].text(0.02, 0.04, COND[e["split"]], transform=axes[r, 0].transAxes, fontsize=5.5, color="white",
                         bbox=dict(boxstyle="round,pad=0.15", fc="black", alpha=0.6, ec="none"))
