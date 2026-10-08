@@ -129,19 +129,19 @@ Table~\ref{tab:related-positioning} compares the closest methods by how they con
 \caption{Mechanism-level positioning relative to representative primary work. Entries summarize the stated operating mechanism rather than rank methods or claim exhaustive coverage. ``Complete route'' includes the probe, risk computation, policy decision, backend dispatch or activation, and any additional candidate inference.}
 \label{tab:related-positioning}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{@{}lllll>{\raggedright\arraybackslash}X@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllllll@{}}
 \toprule
-Method & Candidates & Selection & Cost & Risk & Budget; deployed form \\
+Method & Candidates & Selection & Cost model & Risk signal & Budget & Deployed form \\
 \midrule
-Once-for-All~\cite{cai2020ofa} & Elastic subnetworks & Design & Latency predictor & None & Design constraint; static subnet \\
-SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setting & None & No hard measured budget; static width \\
-MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & No complete-route constraint; multi-exit graph \\
-Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & No measured accelerator constraint; dynamic paths \\
-AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs + device latency & None & Search constraint; static architecture \\
-\method{} & Four elastic capacities & Per image & Measured complete route & Entropy probe; calibration evaluated & Hard measured budget; static compiled engines \\
+Once-for-All~\cite{cai2020ofa} & Elastic subnetworks & Design time & Latency predictor & None & Design constraint & Static subnet \\
+SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setting & None & None & Static width \\
+MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & Soft, per exit & Multi-exit graph \\
+Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & Soft penalty & Dynamic graph \\
+AutoSegEdge~\cite{dou2023autosegedge} & Searched network & Design time & FLOPs + latency & None & Search constraint & Static network \\
+\method{} & Four capacities & Per image & Measured route & Entropy probe & Hard, measured & Static engines \\
 \bottomrule
-\end{tabularx}
+\end{tabular*}
 \end{table*}
 
 %======================================================================
