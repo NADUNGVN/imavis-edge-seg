@@ -1,0 +1,15 @@
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Backend & Capacity & Cityscapes & Fog & Night & Rain & Snow & Min.\ agreement (\%) \\
+\midrule
+AGX Xavier, TensorRT FP16 & tiny & -0.01 & -0.00 & -0.01 & -0.01 & -0.00 & 99.9 \\
+AGX Xavier, TensorRT FP16 & small & -0.00 & +0.01 & +0.01 & -0.01 & +0.00 & 99.7 \\
+AGX Xavier, TensorRT FP16 & medium & -0.01 & +0.00 & -0.01 & +0.00 & +0.00 & 99.8 \\
+AGX Xavier, TensorRT FP16 & large & -0.02 & -0.01 & +0.01 & -0.01 & -0.01 & 99.8 \\
+\midrule
+Hailo-8, INT8 & tiny & -1.64 & -0.96 & -1.62 & -0.59 & -0.51 & 87.3 \\
+Hailo-8, INT8 & small & -0.52 & -0.32 & -0.33 & -0.31 & +1.87 & 93.6 \\
+Hailo-8, INT8 & medium & -0.41 & -0.28 & -0.43 & +0.21 & -0.30 & 95.7 \\
+Hailo-8, INT8 & large & -0.09 & -0.36 & -0.52 & -0.02 & -0.13 & 95.8 \\
+\bottomrule
+\end{tabular}

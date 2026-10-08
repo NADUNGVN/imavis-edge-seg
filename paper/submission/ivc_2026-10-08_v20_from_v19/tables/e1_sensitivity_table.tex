@@ -1,0 +1,11 @@
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Configuration & Overhead $C-S$ (ms) & D $-$ static & D $-$ T-hard & Mixture gain \\
+\midrule
+AGX Xavier (logits) & 0.7--2.7 & -2.62 & -0.00 & -0.52 \\
+Hailo-8 explicit, FLOAT32 (primary) & 38.0--46.9 & -7.41 & -0.01 & -5.52 \\
+Hailo-8 explicit, UINT8 & 42.6--49.7 & -9.15 & -0.01 & -6.33 \\
+Hailo-8 scheduler, FLOAT32 & 36.4--49.3 & -7.41 & -0.01 & -5.50 \\
+Hailo-8 scheduler, UINT8 & 41.2--50.0 & -9.15 & -0.01 & -6.33 \\
+\bottomrule
+\end{tabular}
