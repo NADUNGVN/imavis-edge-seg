@@ -1,0 +1,184 @@
+{
+  "E3_logits": {
+    "per_budget": [
+      {
+        "budget_ms": 1.18,
+        "no_feasible_route": true,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 15,
+        "mean_delta_points": 0.0
+      },
+      {
+        "budget_ms": 1.84,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": 0.0
+      },
+      {
+        "budget_ms": 2.56,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -6.089788921700621
+      },
+      {
+        "budget_ms": 4.24,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": 0.0
+      },
+      {
+        "budget_ms": 7.11,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -6.149573184140683
+      },
+      {
+        "budget_ms": 9.44,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -0.21912316244579602
+      },
+      {
+        "budget_ms": 16.76,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -8.082670723001762
+      },
+      {
+        "budget_ms": 19.5,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -0.4367741642933191
+      }
+    ],
+    "feasible_only": {
+      "cells": 105,
+      "mean_delta_points": -2.9968471650831683,
+      "wins": 0,
+      "ties": 46,
+      "losses": 59
+    }
+  },
+  "E1_explicit_float32": {
+    "per_budget": [
+      {
+        "budget_ms": 6.27,
+        "no_feasible_route": true,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 15,
+        "mean_delta_points": 0.0
+      },
+      {
+        "budget_ms": 12.07,
+        "no_feasible_route": true,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 15,
+        "mean_delta_points": -6.089788921700621
+      },
+      {
+        "budget_ms": 30.91,
+        "no_feasible_route": true,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 15,
+        "mean_delta_points": -12.239362105841307
+      },
+      {
+        "budget_ms": 44.26,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -12.239362105841307
+      },
+      {
+        "budget_ms": 58.11,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -6.149573184140683
+      },
+      {
+        "budget_ms": 69.39,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -14.013120744696646
+      },
+      {
+        "budget_ms": 76.18,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -8.082670723001762
+      },
+      {
+        "budget_ms": 116.26,
+        "no_feasible_route": false,
+        "cells": 15,
+        "wins": 0,
+        "ties": 0,
+        "losses": 15,
+        "D_violating_cells": 0,
+        "mean_delta_points": -0.4367741642933191
+      }
+    ],
+    "feasible_only": {
+      "cells": 75,
+      "mean_delta_points": -8.184300184394742,
+      "wins": 0,
+      "ties": 6,
+      "losses": 69
+    }
+  }
+}

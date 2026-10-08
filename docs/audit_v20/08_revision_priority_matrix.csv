@@ -1,0 +1,17 @@
+issue_id,severity,location,problem,evidence,impact,proposed_fix,new_experiment_required,confidence,status
+I01,CRITICAL,Front matter / declarations,"placeholders: affiliation, e-mail, funding, repository/DOI, acknowledgements",main.tex lines 33-41 and declarations,desk rejection,author supplies data,No,high,open (author input)
+I02,MAJOR,Table 7 own-cost rows; caption; Fig. 7; 5.3,static comparison includes 15/45 cells with no feasible route where D violates; caption says 0 violations; 120-cell description wrong for these rows,audit_static_cells_20261004.json,reporting error; conclusion unchanged (stronger),report feasible-cell results (-3.00 / -8.18) and violations; fix caption; recompute CIs,No (re-run analysis),high,open
+I03,MAJOR,5.3 / Table 7 / Limitations,intervals exclude seed variance,router scripts,overstated precision,add per-run deltas (3 seeds) table/text,No,high,open
+I04,MAJOR,4.1 / Limitations,alternating-index split correlates neighbouring frames,manifests (sequence ids),optimistic transfer,optional sequence-grouped re-split replay; otherwise keep limitation,No (replay only),medium,open
+I05,MAJOR,5.2,1.5-point band sentence ambiguous vs PACE-Large focus,eval_*.json,reader-perceived contradiction,name Fast-SCNN; add PACE-Large statement,No,high,open
+I06,MINOR,Abstract,"same-harness scope overstated (""every candidate... same harness on edge devices"")",static_vs_route only AGX/Hailo,accuracy,reword,No,high,open
+I07,MINOR,Abstract / 5.3 / Conclusion,"""adds nothing"" / ""matches"" with CI containing 0",router_review_analyses_v2,equivalence overclaim,"""no detectable gain; 95% CI excludes gains above 0.09 points""",No,high,open
+I08,MINOR,5.1 / Fig. 8 text,Hailo overhead attributed to activation and host entropy without component timing,measure_static_vs_route_hailo.py,unsupported attribution,"reword; optional component timing on device",Optional (device),high,open
+I09,MINOR,Fig. 10,no Small prediction column; route-class frequencies only in caption,fig10 / selection_v20_stratified.json,adaptivity less visible,add Small column and frequency inset,No,high,open
+I10,MINOR,Fig. 7,mixes router ablation and static comparisons,plot_v20_final.py,interpretation,split into two panels,No,high,open
+I11,MINOR,Fig. 9 / Abstract,break-even is counterfactual,router_breakeven,clarity,"label ""counterfactual"" in axis/caption/abstract",No,high,open
+I12,MINOR,Fig. 5,candidate-only latency not on axis label,plot_flops_latency_v20.py,clarity,axis label,No,high,open
+I13,MINOR,references.bib,inconsistent author formats; 6 key refs not verified online,references.bib,bibliographic quality,normalize; verify against publisher pages,No,medium,open
+I14,MINOR,Declarations,AI-use statement lists only Claude,main.tex,compliance,author lists all tools actually used,No,medium,open (author input)
+I15,MINOR,S-7 analysis,risk target pixel error vs mIoU,per-image dumps,explanatory,optional class-balanced risk replay,No (replay),medium,optional
+I16,MINOR,Fig. 3,schematic block sizes not to scale,fig3_architecture.html,possible misreading,"caption ""schematic""",No,high,open

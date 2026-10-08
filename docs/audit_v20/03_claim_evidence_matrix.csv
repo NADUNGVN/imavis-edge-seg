@@ -1,0 +1,26 @@
+claim_id,location,claim,value_in_text,artifact,value_in_artifact,status
+C01,Abstract/5.1,FLOPs range tiny to large,110.2x,reports/landscape_20261004/flops_landscape.json,110.2x,verified
+C02,Abstract/5.1,measured mean latency range,12.3-18.1x,outputs/benchmark_lookup_table_landscape.csv,12.3/17.2/17.5/18.1x,verified
+C03,Abstract,"every candidate, route and static deployment timed in the same harness",all devices,static_vs_route_* (AGX Xavier and Hailo-8 only),2 devices,VERIFIED ERROR (wording)
+C04,Abstract/5.2,shared minus alone Cityscapes,-0.9,eval_supernet/eval_pace_large,-0.94,verified
+C05,Abstract/5.2,shared minus alone ACDC conditions,1.6-2.8,eval_supernet/eval_pace_large,"1.61-2.75",verified
+C06,5.2,within 1.5 band on Cityscapes night snow (vs Fast-SCNN),Cityscapes/night/snow,eval_fast_scnn,"+0.75/-0.77/-1.38",verified (ambiguous referent)
+C07,Abstract/T7,D minus A fair cells,+2.87 [2.52 3.26],router_review_analyses_20261004.json,2.867 [2.521 3.260],verified
+C08,T7,nested CI D minus A,[1.85 3.28],router_nested_bootstrap_20261004.json,[1.847 3.284],verified
+C09,T7,D minus A-hard,+1.41 [1.19 1.63],router_review_analyses_20261004.json,1.413 [1.189 1.627],verified
+C10,T7,D minus T-hard,-0.03 [-0.11 0.09],router_review_analyses_v2_20261004.json,-0.027 [-0.110 0.087],verified
+C11,Abstract,candidate-specific calibration adds nothing,adds nothing,same,CI contains 0,SUSPECTED (equivalence wording)
+C12,T7/5.3,D minus static own cost AGX,-2.62 (0/61/59),router_same_harness_analysis_20261004.json,-2.622 incl. 15 infeasible cells,VERIFIED ERROR (denominator)
+C13,T7/5.3,D minus static own cost Hailo-8,-7.41 (0/21/99),same,-7.406 incl. 45 infeasible cells,VERIFIED ERROR (denominator)
+C14,T7 caption,D violating 0 of 120 in every table,0,audit_static_cells_20261004.json,15 (AGX) and 45 (Hailo-8) in own-cost grids,VERIFIED ERROR
+C15,Abstract/5.3,overhead AGX,0.7-2.7 ms,static_vs_route_E3,0.67-2.73,verified
+C16,Abstract/5.3,overhead Hailo-8,38-47 ms,static_vs_route_E1_explicit_float32,38.0-46.9,verified
+C17,Abstract/5.3,break-even AGX/Hailo,1.3 / 4.3 ms,router_breakeven_20261004.json + plot script,1.3/4.3 (counterfactual),verified (label counterfactual)
+C18,5.3,oracle minus static,0.11,router_review_analyses_20261004.json,0.107,verified
+C19,5.3,mixture loss AGX / Hailo,0.3-0.5 / 5.5-6.3,router_same_harness_analysis,0.33-0.52 / 5.50-6.33,verified
+C20,5.4,TRT within 0.02,±0.02,compiled_eval_E3,max |0.02|,verified
+C21,5.4,Hailo loss tiny/large,1.6 / 0.5,compiled_eval_E1,1.64 / 0.52,verified
+C22,5.4,on-device replay Hailo D minus static,-7.9,router_ondevice_replay,-7.90,verified
+C23,5.1,Hailo activation and host entropy dominate tiny route,dominate,no component timing,not measured,MISSING EVIDENCE
+C24,5.3,LOCO D minus A-hard,+1.59 (48/72/0),router_review_analyses loco_median,1.592,verified
+C25,T8,condition-level gains,see table,router_by_condition_20261004.json,match,verified
