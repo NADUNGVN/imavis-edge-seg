@@ -1,0 +1,106 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="fig" style="height:560px">
+
+  <!-- lanes -->
+  <div class="box" style="left:0;top:0;width:1200px;height:340px;background:#FDF7FB"></div>
+  <div class="box" style="left:0;top:352px;width:690px;height:200px;background:#F1F5F9"></div>
+  <div class="t b s" style="left:12px;top:8px;text-align:left;color:#B0478A">PER IMAGE · always executed</div>
+  <div class="t b s" style="left:12px;top:360px;text-align:left;color:#475569">PER DEVICE · measured once</div>
+
+  <!-- input -->
+  <div class="plane" style="left:14px;top:120px;width:150px;height:75px"><img src="img/rgb.jpg"></div>
+  <div class="t s" style="left:0;top:206px;width:170px">input <i>x</i><br><span class="m xs">pre-processed tensor</span></div>
+
+  <!-- tiny probe network -->
+  <div class="t b" style="left:186px;top:46px;width:170px">(1) Tiny engine (probe)</div>
+  <div class="layer" style="--w:10px;--h:110px;--d:16px;--c:var(--tiny);left:205px;top:104px"></div>
+  <div class="layer" style="--w:10px;--h:90px;--d:16px;--c:var(--tiny);left:232px;top:114px"></div>
+  <div class="layer" style="--w:10px;--h:70px;--d:16px;--c:var(--tiny);left:259px;top:124px"></div>
+  <div class="layer" style="--w:10px;--h:90px;--d:16px;--c:var(--tiny);left:286px;top:114px"></div>
+  <div class="layer" style="--w:10px;--h:110px;--d:16px;--c:var(--tiny);left:313px;top:104px"></div>
+
+  <!-- tiny outputs -->
+  <div class="plane" style="left:380px;top:62px;width:130px;height:65px"><img src="img/tiny.png"></div>
+  <div class="t xs" style="left:370px;top:38px;width:150px">tiny segmentation</div>
+  <div class="plane" style="left:380px;top:180px;width:130px;height:65px"><img src="img/entropy.png"></div>
+  <div class="t xs" style="left:370px;top:252px;width:150px">per-pixel entropy</div>
+
+  <!-- s(x) -->
+  <div class="chip" style="left:548px;top:190px;width:52px;height:52px;border-radius:50%;background:#3B5BA9">s(x)</div>
+  <div class="t xs" style="left:520px;top:248px;width:110px">(2) mean entropy</div>
+
+  <!-- risk -->
+  <div class="box" style="left:646px;top:120px;width:170px;height:150px;background:#FFF;border:1.6px solid #CC79A7"></div>
+  <div class="t b" style="left:626px;top:82px;width:210px">(3) calibrated risk <i>r̂</i><sub>ℓ</sub></div>
+  <div class="layer" style="--w:22px;--h:96px;--d:10px;--c:var(--tiny);left:668px;top:150px"></div>
+  <div class="layer" style="--w:22px;--h:79px;--d:10px;--c:var(--small);left:704px;top:167px"></div>
+  <div class="layer" style="--w:22px;--h:66px;--d:10px;--c:var(--medium);left:740px;top:180px"></div>
+  <div class="layer" style="--w:22px;--h:56px;--d:10px;--c:var(--large);left:776px;top:190px"></div>
+  <div class="abs" style="left:656px;top:214px;width:152px;border-top:1.6px dashed #1F2937"></div>
+  <div class="t" style="left:808px;top:204px">τ</div>
+  <div class="t xs" style="left:668px;top:250px;width:140px;letter-spacing:22px">TSML</div>
+
+  <!-- policy -->
+  <div class="box" style="left:860px;top:96px;width:150px;height:200px;background:#F0FDF4;border:1.8px solid #16A34A"></div>
+  <div class="t b" style="left:860px;top:106px;width:150px;font-size:17px">(4) Policy D</div>
+  <div class="t s" style="left:872px;top:142px;text-align:left;line-height:1.55">
+    1. keep <i>C<sub>h</sub></i>(ℓ) ≤ <i>B<sub>h</sub></i><br>2. cheapest with <i>r̂</i><sub>ℓ</sub> ≤ τ<br>3. else lowest <i>r̂</i><sub>ℓ</sub></div>
+  <div class="t xs m" style="left:862px;top:248px;width:146px">T-hard: three thresholds<br>on <i>s(x)</i> instead</div>
+
+  <!-- outcomes -->
+  <div class="plane" style="left:1062px;top:30px;width:120px;height:60px"><img src="img/tiny.png"></div>
+  <div class="t xs" style="left:1036px;top:96px;width:164px"><b>Tiny:</b> reuse probe output,<br>no further inference</div>
+  <div class="t b s" style="left:1040px;top:146px;width:160px">(5) S / M / L: one more<br>static engine</div>
+  <div class="layer" style="--w:12px;--h:120px;--d:18px;--c:var(--large);left:1046px;top:200px"></div>
+  <div class="layer" style="--w:12px;--h:96px;--d:18px;--c:var(--large);left:1074px;top:212px"></div>
+  <div class="layer" style="--w:12px;--h:120px;--d:18px;--c:var(--large);left:1102px;top:200px"></div>
+  <div class="plane" style="left:1140px;top:236px;width:56px;height:28px;display:none"></div>
+
+  <!-- device lane -->
+  <div class="chip" style="left:22px;top:398px;width:120px;height:46px;background:#4C72B0;font-size:13px">AGX Xavier<br>TensorRT FP16</div>
+  <div class="chip" style="left:22px;top:462px;width:120px;height:46px;background:#C44E52;font-size:13px">Hailo-8<br>INT8 HEF</div>
+  <div class="t b s" style="left:176px;top:378px;width:300px">complete route cost <i>C<sub>h</sub></i>(ℓ), ms</div>
+  <div class="chip" style="left:176px;top:404px;width:66px;height:34px;background:var(--tiny)">1.8</div>
+  <div class="chip" style="left:246px;top:404px;width:66px;height:34px;background:var(--small)">4.2</div>
+  <div class="chip" style="left:316px;top:404px;width:66px;height:34px;background:var(--medium)">9.4</div>
+  <div class="chip" style="left:386px;top:404px;width:66px;height:34px;background:var(--large)">19.5</div>
+  <div class="chip" style="left:176px;top:468px;width:66px;height:34px;background:var(--tiny)">44.3</div>
+  <div class="chip" style="left:246px;top:468px;width:66px;height:34px;background:var(--small)">58.1</div>
+  <div class="chip" style="left:316px;top:468px;width:66px;height:34px;background:var(--medium)">76.2</div>
+  <div class="chip" style="left:386px;top:468px;width:66px;height:34px;background:var(--large)">116.3</div>
+  <div class="t xs m" style="left:160px;top:514px;width:310px">probe + decision + switch + engine,<br>pre-processed tensor → synchronized output</div>
+  <div class="t s" style="left:480px;top:406px;width:190px;text-align:left">- - - budget <i>B<sub>h</sub></i></div>
+  <div class="t xs m" style="left:480px;top:448px;width:200px;text-align:left">static deployment cost <i>S<sub>h</sub></i>(ℓ):<br>engine only, no probe</div>
+
+  <!-- legend -->
+  <div class="legend" style="left:720px;top:376px;width:468px">
+    <div class="row"><span class="sw" style="background:var(--tiny)"></span><span class="sw" style="background:var(--small)"></span><span class="sw" style="background:var(--medium)"></span><span class="sw" style="background:var(--large)"></span> compiled static engine (Tiny / Small / Medium / Large)</div>
+    <div class="row"><span class="sw" style="background:#BFC5CD;transform:skewY(-15deg)"></span> image, segmentation or entropy map</div>
+    <div class="row"><svg width="40" height="12"><line x1="0" y1="6" x2="30" y2="6" stroke="#D62728" stroke-width="3"/><polygon points="30,0 40,6 30,12" fill="#D62728"/></svg> data path at inference</div>
+    <div class="row"><svg width="40" height="12"><line x1="0" y1="6" x2="30" y2="6" stroke="#1F2937" stroke-width="2"/><polygon points="30,0 40,6 30,12" fill="#1F2937"/></svg> score and decision flow</div>
+  </div>
+
+  <!-- wires -->
+  <svg class="wires" width="1200" height="560">
+    <defs>
+      <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#D62728"/></marker>
+      <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#1F2937"/></marker>
+    </defs>
+    <g fill="none" stroke-width="3" stroke="#D62728">
+      <path d="M168 158 L198 158" marker-end="url(#r)"/>
+      <path d="M340 140 C360 120 360 100 376 96" marker-end="url(#r)"/>
+      <path d="M1012 140 C1030 110 1030 70 1056 62" marker-end="url(#r)"/>
+      <path d="M1012 240 L1040 252" marker-end="url(#r)"/>
+    </g>
+    <g fill="none" stroke-width="2" stroke="#1F2937">
+      <path d="M340 180 C360 200 360 210 376 212" marker-end="url(#k)"/>
+      <path d="M514 214 L544 216" marker-end="url(#k)"/>
+      <path d="M602 216 L642 200" marker-end="url(#k)"/>
+      <path d="M820 196 L856 196" marker-end="url(#k)"/>
+      <path d="M680 372 C780 360 880 340 920 300" marker-end="url(#k)"/>
+    </g>
+  </svg>
+</div>
+</body></html>

@@ -1,0 +1,43 @@
+@page { margin: 0; }
+html, body { margin: 0; padding: 0; background: #fff; }
+* { box-sizing: border-box; }
+#fig {
+  position: relative; width: 1200px; background: #fff;
+  font-family: Arial, Helvetica, sans-serif; color: #1F2937; font-size: 15px;
+}
+:root {
+  --tiny: #E69F00; --small: #56B4E9; --medium: #009E73; --large: #0072B2;
+  --enc: #8FB8DE; --dec: #A8D5A2; --head: #F2C14E;
+  --red: #D62728; --ink: #1F2937; --muted: #64748B;
+}
+.abs { position: absolute; }
+.t { position: absolute; text-align: center; line-height: 1.2; }
+.b { font-weight: 700; }
+.m { color: var(--muted); }
+.s { font-size: 13px; }
+.xs { font-size: 12px; }
+
+/* extruded 3-D layer: --w width, --h height, --d depth (px), --c colour */
+.layer { position: absolute; width: var(--w); height: var(--h); background: var(--c);
+  border: 1px solid #1F2937; }
+.layer::before { /* top face */
+  content: ""; position: absolute; left: -1px; bottom: 100%; width: var(--w); height: calc(var(--d) * .62);
+  background: var(--c); filter: brightness(1.25); border: 1px solid #1F2937;
+  transform-origin: bottom left; transform: skewX(-58deg); }
+.layer::after { /* side face */
+  content: ""; position: absolute; left: 100%; bottom: -1px; width: var(--d); height: var(--h);
+  background: var(--c); filter: brightness(.72); border: 1px solid #1F2937;
+  transform-origin: bottom left; transform: skewY(-32deg); }
+
+/* tilted image plane */
+.plane { position: absolute; border: 1.2px solid #1F2937; transform: perspective(700px) rotateY(-28deg);
+  transform-origin: left center; box-shadow: 3px 3px 0 rgba(0,0,0,.12); }
+.plane img { display: block; width: 100%; height: 100%; }
+
+.box { position: absolute; border-radius: 10px; }
+.chip { position: absolute; border-radius: 6px; color: #fff; font-weight: 700; text-align: center;
+  display: flex; align-items: center; justify-content: center; line-height: 1.15; }
+svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.legend { position: absolute; border: 1.6px solid #1F2937; border-radius: 16px; background: #fff; padding: 10px 16px; }
+.legend .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
+.sw { display: inline-block; width: 14px; height: 18px; border: 1px solid #1F2937; }
