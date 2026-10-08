@@ -19,10 +19,6 @@
 \newcommand{\method}{PACE-Seg}
 \newcommand{\miou}{mIoU}
 \newcommand{\etal}{et al.}
-% V20 SKELETON (2026-10-04): every \tbd{...} is a value that comes from the landscape
-% rerun (reports/*_20261004.json). Remove the macro once all values are filled.
-\newcommand{\tbd}[1]{\textcolor{red}{[#1]}}
-\newcommand{\figplaceholder}[1]{\fbox{\parbox{0.95\linewidth}{\centering\vspace{2em}\textcolor{red}{FIGURE: #1}\vspace{2em}}}}
 \setlength{\emergencystretch}{2em}
 \hfuzz=3pt
 
@@ -56,6 +52,26 @@ semantic segmentation \sep dynamic inference \sep edge acceleration \sep hardwar
 \section{Introduction}
 \label{sec:introduction}
 
+\begin{table*}[!t]
+\centering
+\caption{Mechanism-level positioning relative to representative primary work. Entries summarize the stated operating mechanism rather than rank methods or claim exhaustive coverage. ``Complete route'' includes the probe, risk computation, policy decision, backend dispatch or activation, and any additional candidate inference.}
+\label{tab:related-positioning}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{@{}lllll>{\raggedright\arraybackslash}X@{}}
+\toprule
+Method & Candidates & Selection & Cost & Risk & Budget; deployed form \\
+\midrule
+Once-for-All~\cite{cai2020ofa} & Elastic subnetworks & Design & Latency predictor & None & Design constraint; static subnet \\
+SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setting & None & No hard measured budget; static width \\
+MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & No complete-route constraint; multi-exit graph \\
+Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & No measured accelerator constraint; dynamic paths \\
+AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs + device latency & None & Search constraint; static architecture \\
+\method{} & Four elastic capacities & Per image & Measured complete route & Candidate-specific error & Hard measured budget; static compiled engines \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
 A vehicle or mobile robot that segments its surroundings on an embedded accelerator must return a label map within a latency budget, while its input varies from clear daylight to fog, rain, snow, and night. Input-adaptive inference offers an appealing answer: run a small model on easy frames and a large one only when needed. Elastic networks make the candidate models cheap to obtain from one set of weights~\cite{yu2019usnet,cai2020ofa}, and many dynamic-inference methods report substantial compute savings~\cite{han2022dynamic}.
 
 Whether these savings survive deployment on an edge accelerator is less clear. Compute counts such as FLOPs do not translate proportionally into latency~\cite{li2021hwnasbench}, and an adaptive pipeline adds work a static deployment never pays: a probe to estimate difficulty, a decision, and on some accelerators a switch between compiled engines. Most dynamic-inference studies compare against static baselines in FLOPs or with idealized costs, so the question of when routing actually beats simply running the best static model that fits the budget is rarely answered with measurements.
@@ -75,6 +91,13 @@ The contributions are:
 %======================================================================
 \section{Related work}
 \label{sec:related}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_architecture_v20.pdf}
+\caption{(a) The shared elastic encoder--decoder. (b) The four static candidates exported from one trained supernet, with input size (width$\times$height), parameters, compute, and measured p95 latency on E3 and E1.}
+\label{fig:arch}
+\end{figure*}
 
 \subsection{Efficient semantic segmentation}
 
@@ -98,28 +121,7 @@ Monte Carlo dropout, deep ensembles, and aleatoric--epistemic decompositions est
 
 \subsection{Positioning}
 
-Table~\ref{tab:related-positioning} compares the closest methods by how they construct candidates, when they select, and how they represent cost and risk. The combination that \method{} targets is per-image selection with candidate-specific error estimates under a budget defined by the measured complete accelerator route. Its contribution is this integration on static compiled engines, rather than any single new component.
-
-\begin{table*}[!t]
-\centering
-\caption{Mechanism-level positioning relative to representative primary work. Entries summarize the stated operating mechanism rather than rank methods or claim exhaustive coverage. ``Complete route'' includes the probe, risk computation, policy decision, backend dispatch or activation, and any additional candidate inference.}
-\label{tab:related-positioning}
-\scriptsize
-\setlength{\tabcolsep}{1.4pt}
-\renewcommand{\arraystretch}{1.08}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{1.45cm}>{\raggedright\arraybackslash}p{2.1cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
-\toprule
-Method & Candidates & Selection & Cost & Risk & Budget; deployed form \\
-\midrule
-Once-for-All~\cite{cai2020ofa} & Elastic subnetworks & Design & Latency predictor & None & Design constraint; static subnet \\
-SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setting & None & No hard measured budget; static width \\
-MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & No complete-route constraint; multi-exit graph \\
-Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & No measured accelerator constraint; dynamic paths \\
-AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs + device latency & None & Search constraint; static architecture \\
-\method{} & Four elastic capacities & Per image & Measured complete route & Candidate-specific error & Hard measured budget; static compiled engines \\
-\bottomrule
-\end{tabular}
-\end{table*}
+Table~\ref{tab:related-positioning} compares the closest methods by how they construct candidates, when they select, and how they represent cost and risk. \method{} combines per-image selection, candidate-specific error estimates, and a budget defined by the measured complete accelerator route on static compiled engines. We use this combination as a test bed rather than as a proposed method: because every ingredient can be switched off and every cost is measured, it lets us ask which ingredients matter and whether the whole pipeline beats a static deployment timed in the same harness.
 
 %======================================================================
 \section{System under study}
@@ -128,13 +130,6 @@ AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs +
 \subsection{Elastic candidate family}
 
 \method{} is an encoder--decoder whose four capacities jointly vary width multiplier (0.25, 0.50, 0.75, 1.00), repeated-block depth (2, 3, 4, 6), and input resolution (384$\times$192, 512$\times$256, 768$\times$384, 1024$\times$512, width$\times$height, matching the 2:1 aspect of Cityscapes and ACDC). Capacities share convolutional weights through active-channel slicing and keep level-specific batch normalization~\cite{yu2019slimmable}; each exports as a fixed-shape ONNX graph and compiles to a static TensorRT or Hailo-8 engine.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig2_architecture_v20.pdf}
-\caption{(a) The shared elastic encoder--decoder. (b) The four static candidates exported from one trained supernet, with input size (width$\times$height), parameters, compute, and measured p95 latency on E3 and E1.}
-\label{fig:arch}
-\end{figure*}
 
 \subsection{Training}
 
@@ -155,26 +150,41 @@ The static references run one capacity alone: the best feasible static candidate
 \section{Measurement methodology}
 \label{sec:protocol}
 
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figures/fig5_flops_latency_v20.pdf}
+\caption{Measured mean latency of the four capacities on four devices (solid) against the latency a FLOPs-proportional proxy anchored at tiny would predict (dashed). Filled markers: largest capacity within a 10~ms budget.}
+\label{fig:flops}
+\end{figure}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.82\textwidth]{figures/fig6_rq2_shared_vs_alone_v20.pdf}
+\caption{Absolute \miou{} of the largest elastic capacity (shared training), the same architecture trained alone (PACE-Large), and Fast-SCNN, mean $\pm$ standard deviation over three seeds. Short ticks on the elastic bars mark the tiny (orange), small (light blue), and medium (green) capacities of the same supernets.}
+\label{fig:rq2}
+\end{figure*}
+
 \subsection{Devices and compiled engines}
 
-Table~\ref{tab:devices} lists the four devices.
+Table~\ref{tab:devices} lists the four devices. TensorRT engines are FP16; Hailo-8 HEFs are INT8, quantized with 200 real fit-half images. Accuracy of every compiled engine is measured on the held-out images (Section~\ref{sec:compiled}).
 
 \begin{table}[t]
 \centering
 \caption{Edge devices and toolchains. E1 and E3 carry the routing measurements; all four carry the candidate-only latency table of RQ1.}
 \label{tab:devices}
 \small
-\begin{tabularx}{\linewidth}{@{}lXl@{}}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}Xl@{}}
 \toprule
-ID & Device & Runtime \\
+ID & Device & Runtime, precision \\
 \midrule
-E1 & Raspberry Pi 5 + Hailo-8 (M.2) & HailoRT 4.23, DFC 3.34, INT8 \\
-E2 & Jetson Xavier NX & TensorRT (JetPack R35.4.1), FP16 \\
-E3 & Jetson AGX Xavier, MAXN & TensorRT 8.5.2, FP16 \\
+E1 & Raspberry Pi 5 + Hailo-8 & HailoRT 4.23, INT8 \\
+E2 & Jetson Xavier NX & TensorRT (R35.4.1), FP16 \\
+E3 & Jetson AGX Xavier (MAXN) & TensorRT 8.5.2, FP16 \\
 E5 & Jetson Orin Nano & TensorRT, FP16 \\
 \bottomrule
 \end{tabularx}
-\end{table} TensorRT engines are FP16; Hailo-8 HEFs are INT8, quantized with 200 real fit-half images. Accuracy of every compiled engine is measured on the held-out images (Section~\ref{sec:compiled}).
+\end{table}
 
 \subsection{One harness for routes and static deployments}
 
@@ -182,60 +192,11 @@ Route cost $C_h(\ell)$ and static cost $S_h(\ell)$ are measured in the same proc
 
 \subsection{Data, splits, and statistics}
 
-Cityscapes and ACDC validation images are split by alternating index into fit and held-out halves; calibrators, thresholds, risk targets, and operating points use only the fit half. Budgets are the union of the measured route and static costs of a device. An operating cell is (run, device, split, budget). Intervals are image-level bootstrap and nested bootstrap (refitting on resampled fit halves); a leave-one-condition-out analysis withholds each condition from calibration.
+Cityscapes provides 2,975 training and 500 validation images~\cite{cordts2016cityscapes}, and ACDC provides 1,600 training and 406 validation images across fog, night, rain, and snow~\cite{sakaridis2021acdc}; both use the 19 Cityscapes training classes, and all models are trained on the training sets. Validation images are split by alternating index into fit and held-out halves; calibrators, thresholds, risk targets, and operating points use only the fit half. Budgets are the union of the measured route and static costs of a device. An operating cell is (run, device, split, budget). Intervals are image-level bootstrap and nested bootstrap (refitting on resampled fit halves); a leave-one-condition-out analysis withholds each condition from calibration.
 
 %======================================================================
 \section{Results}
 \label{sec:results}
-
-\subsection{RQ1: FLOPs versus measured feasibility}
-
-The four capacities span 0.21 to 22.70 GFLOPs, a $110.2\times$ range. Measured mean latency spans only $12.3\times$ on the Hailo-8 (4.0 to 49.3~ms), $17.2\times$ on E3 (1.0 to 17.2~ms), $17.5\times$ on E5 (1.0 to 18.0~ms), and $18.1\times$ on E2 (1.6 to 29.5~ms) (Fig.~\ref{fig:flops}). A proxy anchored at tiny therefore predicts 110~ms for large on E3 and 441~ms on E1, overstating the measured value by $6$--$9\times$, and under a 10~ms budget it would rule out medium on E3 and E5 and small on E1, all of which measurement shows to fit. The small candidates are memory- and launch-bound, so their latency falls far less than their compute; feasibility must come from measured tables.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig5_flops_latency_v20.pdf}
-\caption{Measured mean latency of the four capacities on four devices (solid) against the latency a FLOPs-proportional proxy anchored at tiny would predict (dashed). Filled markers: largest capacity within a 10~ms budget.}
-\label{fig:flops}
-\end{figure}
-
-\subsection{RQ2: shared training versus standalone training}
-
-Fig.~\ref{fig:rq2} compares the largest elastic capacity with the same architecture trained alone (PACE-Large) and with Fast-SCNN, each over three seeds. Shared training costs the large capacity 1.0 \miou{} points on Cityscapes ($59.0\pm0.3$ vs $60.0\pm0.5$) and 2.0 points on the ACDC mean ($49.8\pm0.1$ vs $51.8\pm0.7$); the gap is largest at night ($-2.8$) and 1.6--1.7 points under fog, rain, and snow. Against Fast-SCNN, the elastic large capacity is 0.7 points better on Cityscapes and 2.0 points worse on the ACDC mean, so it sits within the accuracy range of real-time single-capacity models while also providing tiny, small, and medium capacities (33.8, 40.8, and 49.3 \miou{} on Cityscapes) from the same weights. The cost of weight sharing therefore grows under adverse conditions, which is where the routers of RQ3 would most want the large capacity.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig6_rq2_shared_vs_alone_v20.pdf}
-\caption{Absolute \miou{} of the largest elastic capacity (shared training), the same architecture trained alone (PACE-Large), and Fast-SCNN, mean $\pm$ standard deviation over three seeds. Short ticks on the elastic bars mark the tiny (orange), small (light blue), and medium (green) capacities of the same supernets.}
-\label{fig:rq2}
-\end{figure}
-
-\subsection{RQ3a: which routing ingredients matter}
-\label{sec:rq3}
-
-Table~\ref{tab:ablation} separates the routing ingredients, pooled over three supernets, two devices, five splits, and the budget grid. Adding a hard budget to rank escalation already gains 0.5 points; candidate-specific risk (D) adds 1.4 points over A-hard (nested CI 1.0--1.7) and never loses a cell. The same gain is obtained without candidate-specific calibration: the three-threshold scalar router T-hard is statistically indistinguishable from D ($-0.03$ points, CI $-0.11$ to $+0.09$) at 1\% lower cost, and pooling the four calibrators changes nothing. The ordering is unchanged at p95 and p99 costs and under leave-one-condition-out calibration (D beats A-hard by 1.6 points with no losing cell). Per-candidate calibrators are well calibrated (Fig.~S5; mean absolute error 0.02--0.03 in pixel error), so the absence of a gain is not caused by poor calibration: with one scalar probe, a monotone threshold rule already captures the information the calibrators add.
-
-\begin{table}[t]
-\centering
-\caption{Routing ablation (median costs, \miou{} points). Fair cells: budgets where both policies are feasible. Nested intervals refit calibrators, risk grid, and operating points on resampled fit halves.}
-\label{tab:ablation}
-\small
-\begin{tabularx}{\linewidth}{@{}Xrccc@{}}
-\toprule
-Comparison & $\Delta$ & 95\% CI & nested CI & W/T/L \\
-\midrule
-D $-$ A (fair cells) & $+2.87$ & 2.52, 3.26 & 1.85, 3.28 & 54/6/2 \\
-A-hard $-$ A (fair) & $+0.47$ & -- & -- & 22/38/2 \\
-D $-$ A-hard & $+1.41$ & 1.19, 1.63 & 0.99, 1.70 & 48/72/0 \\
-T-hard $-$ A-hard & $+1.44$ & -- & -- & 46/68/6 \\
-D $-$ T-hard & $-0.03$ & $-0.11$, 0.09 & -- & 16/80/24 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{RQ3b: routing versus static deployment}
-
-Fig.~\ref{fig:routestatic} shows why routing loses once static deployment is charged its own latency. On E3 a route costs 0.7~ms more than the static engine it ends in for tiny and 2.7~ms more for large; on E1 the overhead is 38--47~ms, almost the full latency of the large engine, and it does not shrink with the HailoRT scheduler or UINT8 vstreams. Under per-frame budgets the best feasible static model beats D by 2.6 points on E3 (CI $-2.7$ to $-2.4$; 0 wins, 61 ties, 59 losses) and by 7.4 (FLOAT32) to 9.2 (UINT8) points on E1 (0 wins); T-hard behaves identically. Under mean-cost budgets the fairer reference is a random mixture of two adjacent static models with the same mean cost; candidate-specific routing still loses by 0.3--0.5 points on E3 and 5.5--6.3 points on E1. At the lowest budgets of each device no route is feasible at all, because the cheapest route (tiny plus probe) already exceeds the static tiny engine.
 
 \begin{figure*}[t]
 \centering
@@ -244,18 +205,53 @@ Fig.~\ref{fig:routestatic} shows why routing loses once static deployment is cha
 \label{fig:routestatic}
 \end{figure*}
 
-
-
-\subsection{Break-even overhead}
-
-To ask how much the overhead would have to shrink, we scale the measured per-capacity overhead by $\alpha\in[0,1]$ and repeat the comparison (Fig.~\ref{fig:breakeven}). With zero overhead, routing would gain 1.3--1.4 points over static mixing under mean-cost budgets on both devices. The gain vanishes at 1.3~ms on E3 (measured: 1.9~ms) and 4.3~ms on E1 (measured: 44~ms). Under per-frame budgets routing never wins, even at zero overhead ($-0.16$ points): any per-frame cap forces the router to stay at or below the capacity that the static model already uses, so it can only lose.
-
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig12_breakeven_v20.pdf}
 \caption{Routing minus static \miou{} as the measured routing overhead is scaled from zero to its measured value (circle). Blue: mean-cost budgets against static mixing; orange: per-frame budgets against the best feasible static model. Dotted: break-even overhead.}
 \label{fig:breakeven}
 \end{figure*}
+
+\subsection{RQ1: FLOPs versus measured feasibility}
+
+The four capacities span 0.21 to 22.70 GFLOPs, a $110.2\times$ range. Measured mean latency spans only $12.3\times$ on the Hailo-8 (4.0 to 49.3~ms), $17.2\times$ on E3 (1.0 to 17.2~ms), $17.5\times$ on E5 (1.0 to 18.0~ms), and $18.1\times$ on E2 (1.6 to 29.5~ms) (Fig.~\ref{fig:flops}). A proxy anchored at tiny therefore predicts 110~ms for large on E3 and 441~ms on E1, overstating the measured value by $6$--$9\times$, and under a 10~ms budget it would rule out medium on E3 and E5 and small on E1, all of which measurement shows to fit. The small candidates are memory- and launch-bound, so their latency falls far less than their compute; feasibility must come from measured tables.
+
+
+\subsection{RQ2: shared training versus standalone training}
+
+Fig.~\ref{fig:rq2} compares the largest elastic capacity with the same architecture trained alone (PACE-Large) and with Fast-SCNN, each over three seeds. Shared training costs the large capacity 1.0 \miou{} points on Cityscapes ($59.0\pm0.3$ vs $60.0\pm0.5$) and 2.0 points on the ACDC mean ($49.8\pm0.1$ vs $51.8\pm0.7$); the gap is largest at night ($-2.8$) and 1.6--1.7 points under fog, rain, and snow. Against Fast-SCNN, the elastic large capacity is 0.7 points better on Cityscapes and 2.0 points worse on the ACDC mean, so it sits within the accuracy range of real-time single-capacity models while also providing tiny, small, and medium capacities (33.8, 40.8, and 49.3 \miou{} on Cityscapes) from the same weights. The cost of weight sharing therefore grows under adverse conditions, which is where the routers of RQ3 would most want the large capacity.
+
+\subsection{RQ3a: which routing ingredients matter}
+\label{sec:rq3}
+
+Table~\ref{tab:ablation} separates the routing ingredients, pooled over three supernets, two devices, five splits, and the budget grid. Adding a hard budget to rank escalation already gains 0.5 points; candidate-specific risk (D) adds 1.4 points over A-hard (nested CI 1.0--1.7) and never loses a cell. The same gain is obtained without candidate-specific calibration: the three-threshold scalar router T-hard is statistically indistinguishable from D ($-0.03$ points, CI $-0.11$ to $+0.09$) at 1\% lower cost, and pooling the four calibrators changes nothing. The ordering is unchanged at p95 and p99 costs and under leave-one-condition-out calibration (D beats A-hard by 1.6 points with no losing cell). Per-candidate calibrators are well calibrated (Fig.~S5; mean absolute error 0.02--0.03 in pixel error), so the absence of a gain is not caused by poor calibration: with one scalar probe, a monotone threshold rule already captures the information the calibrators add.
+
+\begin{table}[t]
+\centering
+\caption{Routing ablation (median costs, \miou{} points). $^{\dagger}$Fair cells only: budgets where both policies are feasible. W/T/L: operating cells won, tied, and lost. Nested intervals refit calibrators, risk grid, and operating points on resampled fit halves.}
+\label{tab:ablation}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lrccc@{}}
+\toprule
+Comparison & $\Delta$ & 95\% CI & Nested CI & W/T/L \\
+\midrule
+D $-$ A$^{\dagger}$ & $+2.87$ & 2.52, 3.26 & 1.85, 3.28 & 54/6/2 \\
+A-hard $-$ A$^{\dagger}$ & $+0.47$ & -- & -- & 22/38/2 \\
+D $-$ A-hard & $+1.41$ & 1.19, 1.63 & 0.99, 1.70 & 48/72/0 \\
+T-hard $-$ A-hard & $+1.44$ & -- & -- & 46/68/6 \\
+D $-$ T-hard & $-0.03$ & $-0.11$, 0.09 & -- & 16/80/24 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{RQ3b: routing versus static deployment}
+
+Fig.~\ref{fig:routestatic} shows why routing loses once static deployment is charged its own latency. On E3 a route costs 0.7~ms more than the static engine it ends in for tiny and 2.7~ms more for large; on E1 the overhead is 38--47~ms, almost the full latency of the large engine, and it does not shrink with the HailoRT scheduler or UINT8 vstreams. Under per-frame budgets the best feasible static model beats D by 2.6 points on E3 (CI $-2.7$ to $-2.4$; 0 wins, 61 ties, 59 losses) and by 7.4 (FLOAT32) to 9.2 (UINT8) points on E1 (0 wins); T-hard behaves identically. Under mean-cost budgets the fairer reference is a random mixture of two adjacent static models with the same mean cost; candidate-specific routing still loses by 0.3--0.5 points on E3 and 5.5--6.3 points on E1. At the lowest budgets of each device no route is feasible at all, because the cheapest route (tiny plus probe) already exceeds the static tiny engine.
+
+\subsection{Break-even overhead}
+
+To ask how much the overhead would have to shrink, we scale the measured per-capacity overhead by $\alpha\in[0,1]$ and repeat the comparison (Fig.~\ref{fig:breakeven}). With zero overhead, routing would gain 1.3--1.4 points over static mixing under mean-cost budgets on both devices. The gain vanishes at 1.3~ms on E3 (measured: 1.9~ms) and 4.3~ms on E1 (measured: 44~ms). Under per-frame budgets routing never wins, even at zero overhead ($-0.16$ points): any per-frame cap forces the router to stay at or below the capacity that the static model already uses, so it can only lose.
 
 \subsection{Compiled-engine accuracy and on-device replay}
 \label{sec:compiled}
