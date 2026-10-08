@@ -1,0 +1,68 @@
+{
+  "checkpoint": "outputs/pace_seg_landscape_supernet_seed0/checkpoints/step_00100000.pt",
+  "checkpoint_sha256": "f19833d5e4fa2a325335dd7a068ef58ace6805984535ab8a8d316910c065a2de",
+  "panel_size_wh": [
+    1024,
+    512
+  ],
+  "audit": "all predictions match the canonical per-image confusion matrices",
+  "entries": [
+    {
+      "split": "cityscapes",
+      "kind": "routed_small",
+      "heldout_position": 64,
+      "dataset_index": 129,
+      "image_path": "leftImg8bit/val/frankfurt/frankfurt_000001_031266_leftImg8bit.png",
+      "label_path": "gtFine/val/frankfurt/frankfurt_000001_031266_gtFine_labelIds.png",
+      "image_sha256": "03fdcbde9701348d140d41f9c45333203c25fd55e155f2844374a21d96d4ba40",
+      "label_sha256": "d045074c8aa8e40a0573003869cd5c12ffebc294ae974a164bd03a434861fbc0",
+      "pixel_error": {
+        "tiny": 0.05926953451346961,
+        "small": 0.049505125798969485,
+        "medium": 0.04451411399110661,
+        "large": 0.029831491308569102
+      },
+      "routed_to": "small",
+      "asset_id": "cityscapes_frankfurt_000001_031266_leftImg8bit",
+      "probe_score": 0.28436383605003357
+    },
+    {
+      "split": "cityscapes",
+      "kind": "routed_medium",
+      "heldout_position": 178,
+      "dataset_index": 357,
+      "image_path": "leftImg8bit/val/munster/munster_000031_000019_leftImg8bit.png",
+      "label_path": "gtFine/val/munster/munster_000031_000019_gtFine_labelIds.png",
+      "image_sha256": "b8e205c69e06a89e6c6a9fe6228a8962c406c866e75941c05db5bcc21897442e",
+      "label_sha256": "573f1df71074403ed0c87131e73404a44542d5b1aa8d7a6746ac17c887fc1b94",
+      "pixel_error": {
+        "tiny": 0.07923886498430055,
+        "small": 0.06676776818400476,
+        "medium": 0.055316783590250385,
+        "large": 0.042021495092178784
+      },
+      "routed_to": "medium",
+      "asset_id": "cityscapes_munster_000031_000019_leftImg8bit",
+      "probe_score": 0.2990090548992157
+    },
+    {
+      "split": "acdc/snow",
+      "kind": "routed_large",
+      "heldout_position": 22,
+      "dataset_index": 45,
+      "image_path": "rgb_anon/snow/val/GOPR0604/GOPR0604_frame_000393_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0604/GOPR0604_frame_000393_gt_labelTrainIds.png",
+      "image_sha256": "9adb2966afd64e040c16246bcdc1cb1d8b20f47412deacde93b6b41a2f928940",
+      "label_sha256": "6f2a3fe7dc76f427f7e998e2c030072ea8c80f3ffbe203954f4d44aab58615c0",
+      "pixel_error": {
+        "tiny": 0.17598410321713942,
+        "small": 0.12770915503491498,
+        "medium": 0.10137603762755998,
+        "large": 0.07471048285338022
+      },
+      "routed_to": "large",
+      "asset_id": "acdc-snow_GOPR0604_frame_000393_rgb_anon",
+      "probe_score": 0.515496551990509
+    }
+  ]
+}
