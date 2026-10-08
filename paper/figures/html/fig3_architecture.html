@@ -1,0 +1,140 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="fig" style="height:640px">
+
+  <!-- (a) shared supernet -->
+  <div class="t b" style="left:8px;top:6px;text-align:left;font-size:17px">(a) One shared elastic encoder–decoder</div>
+
+  <div class="plane" style="left:14px;top:150px;width:140px;height:70px"><img src="img/rgb.jpg"></div>
+  <div class="t s" style="left:0;top:234px;width:170px">input, resolution <i>R</i><sub>ℓ</sub></div>
+
+  <div class="layer" style="--w:12px;--h:150px;--d:18px;--c:var(--enc);left:200px;top:110px"></div>
+  <div class="layer" style="--w:16px;--h:126px;--d:24px;--c:var(--enc);left:262px;top:122px"></div>
+  <div class="layer" style="--w:20px;--h:102px;--d:32px;--c:var(--enc);left:330px;top:134px"></div>
+  <div class="layer" style="--w:26px;--h:80px;--d:42px;--c:var(--enc);left:408px;top:145px"></div>
+  <div class="layer" style="--w:20px;--h:102px;--d:32px;--c:var(--dec);left:500px;top:134px"></div>
+  <div class="layer" style="--w:16px;--h:126px;--d:24px;--c:var(--dec);left:578px;top:122px"></div>
+  <div class="layer" style="--w:12px;--h:150px;--d:18px;--c:var(--dec);left:646px;top:110px"></div>
+  <div class="layer" style="--w:10px;--h:150px;--d:12px;--c:var(--head);left:704px;top:110px"></div>
+
+  <div class="plane" style="left:760px;top:150px;width:140px;height:70px"><img src="img/large.png"></div>
+  <div class="t s" style="left:750px;top:234px;width:160px">19-class map</div>
+
+  <div class="t xs" style="left:180px;top:272px;width:60px">Stem</div>
+  <div class="t xs" style="left:246px;top:258px;width:60px">Stage 1</div>
+  <div class="t xs" style="left:320px;top:246px;width:60px">Stage 2</div>
+  <div class="t xs" style="left:404px;top:236px;width:60px">Stage 3</div>
+  <div class="t xs" style="left:494px;top:246px;width:60px">Decode 2</div>
+  <div class="t xs" style="left:566px;top:258px;width:60px">Decode 1</div>
+  <div class="t xs" style="left:630px;top:272px;width:60px">Decode 0</div>
+  <div class="t xs" style="left:690px;top:272px;width:44px">Head</div>
+  <div class="t xs m" style="left:330px;top:46px;width:260px">additive encoder skips</div>
+
+  <!-- elastic axes card -->
+  <div class="box" style="left:936px;top:60px;width:256px;height:206px;background:#F8FAFC;border:1px solid #CBD5E1"></div>
+  <div class="t b s" style="left:950px;top:72px;text-align:left">Three elastic axes</div>
+  <div class="t s" style="left:950px;top:102px;text-align:left;line-height:1.7">
+    <b><i>R</i><sub>ℓ</sub></b> input resolution<br>
+    <b><i>w</i><sub>ℓ</sub></b> active channel prefix (width)<br>
+    <b><i>d</i><sub>ℓ</sub></b> active block prefix (depth)</div>
+  <div class="t xs m" style="left:950px;top:194px;width:230px;text-align:left">weights shared by slicing;<br>batch-norm statistics kept per capacity</div>
+
+  <!-- (b) candidates -->
+  <div class="t b" style="left:8px;top:300px;text-align:left;font-size:17px">(b) Four static candidates extracted from the same weights</div>
+
+  <!-- card template x4 -->
+  <div class="box" style="left:10px;top:336px;width:220px;height:212px;border:2.4px solid var(--tiny)"></div>
+  <div class="abs" style="left:10px;top:336px;width:220px;height:30px;background:var(--tiny);border-radius:9px 9px 0 0"></div>
+  <div class="t b" style="left:20px;top:341px;color:#fff;font-size:16px">Tiny</div>
+  <div class="t s" style="left:140px;top:343px;width:82px;color:#fff;text-align:right">384×192</div>
+  <div class="plane" style="left:24px;top:400px;width:56px;height:28px"><img src="img/rgb.jpg"></div>
+  <div class="layer" style="--w:6px;--h:60px;--d:8px;--c:var(--tiny);left:110px;top:384px"></div>
+  <div class="layer" style="--w:6px;--h:60px;--d:8px;--c:var(--tiny);left:130px;top:384px"></div>
+
+  <div class="box" style="left:248px;top:336px;width:220px;height:212px;border:2.4px solid var(--small)"></div>
+  <div class="abs" style="left:248px;top:336px;width:220px;height:30px;background:var(--small);border-radius:9px 9px 0 0"></div>
+  <div class="t b" style="left:258px;top:341px;color:#fff;font-size:16px">Small</div>
+  <div class="t s" style="left:378px;top:343px;width:82px;color:#fff;text-align:right">512×256</div>
+  <div class="plane" style="left:262px;top:394px;width:72px;height:36px"><img src="img/rgb.jpg"></div>
+  <div class="layer" style="--w:8px;--h:64px;--d:12px;--c:var(--small);left:360px;top:382px"></div>
+  <div class="layer" style="--w:8px;--h:64px;--d:12px;--c:var(--small);left:384px;top:382px"></div>
+  <div class="layer" style="--w:8px;--h:64px;--d:12px;--c:var(--small);left:408px;top:382px"></div>
+
+  <div class="box" style="left:486px;top:336px;width:220px;height:212px;border:2.4px solid var(--medium)"></div>
+  <div class="abs" style="left:486px;top:336px;width:220px;height:30px;background:var(--medium);border-radius:9px 9px 0 0"></div>
+  <div class="t b" style="left:496px;top:341px;color:#fff;font-size:16px">Medium</div>
+  <div class="t s" style="left:616px;top:343px;width:82px;color:#fff;text-align:right">768×384</div>
+  <div class="plane" style="left:498px;top:390px;width:84px;height:42px"><img src="img/rgb.jpg"></div>
+  <div class="layer" style="--w:10px;--h:68px;--d:16px;--c:var(--medium);left:598px;top:380px"></div>
+  <div class="layer" style="--w:10px;--h:68px;--d:16px;--c:var(--medium);left:620px;top:380px"></div>
+  <div class="layer" style="--w:10px;--h:68px;--d:16px;--c:var(--medium);left:642px;top:380px"></div>
+  <div class="layer" style="--w:10px;--h:68px;--d:16px;--c:var(--medium);left:664px;top:380px"></div>
+
+  <div class="box" style="left:724px;top:336px;width:220px;height:212px;border:2.4px solid var(--large)"></div>
+  <div class="abs" style="left:724px;top:336px;width:220px;height:30px;background:var(--large);border-radius:9px 9px 0 0"></div>
+  <div class="t b" style="left:734px;top:341px;color:#fff;font-size:16px">Large</div>
+  <div class="t s" style="left:846px;top:343px;width:90px;color:#fff;text-align:right">1024×512</div>
+  <div class="plane" style="left:734px;top:386px;width:96px;height:48px"><img src="img/rgb.jpg"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:824px;top:378px"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:840px;top:378px"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:856px;top:378px"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:872px;top:378px"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:888px;top:378px"></div>
+  <div class="layer" style="--w:10px;--h:72px;--d:18px;--c:var(--large);left:904px;top:378px"></div>
+
+  <!-- card numbers -->
+  <div class="t s" style="left:10px;top:462px;width:220px;line-height:1.45"><i>w</i> = 0.25 · <i>d</i> = 2<br>0.033 M params · 0.206 GFLOPs</div>
+  <div class="t s" style="left:248px;top:462px;width:220px;line-height:1.45"><i>w</i> = 0.50 · <i>d</i> = 3<br>0.152 M params · 1.168 GFLOPs</div>
+  <div class="t s" style="left:486px;top:462px;width:220px;line-height:1.45"><i>w</i> = 0.75 · <i>d</i> = 4<br>0.420 M params · 6.171 GFLOPs</div>
+  <div class="t s" style="left:724px;top:462px;width:220px;line-height:1.45"><i>w</i> = 1.00 · <i>d</i> = 6<br>1.021 M params · 22.699 GFLOPs</div>
+  <div class="t xs m" style="left:10px;top:508px;width:220px">candidate-only p95 (ms)<br>AGX 1.03 · Hailo-8 4.01</div>
+  <div class="t xs m" style="left:248px;top:508px;width:220px">candidate-only p95 (ms)<br>AGX 2.29 · Hailo-8 8.18</div>
+  <div class="t xs m" style="left:486px;top:508px;width:220px">candidate-only p95 (ms)<br>AGX 6.86 · Hailo-8 20.93</div>
+  <div class="t xs m" style="left:724px;top:508px;width:220px">candidate-only p95 (ms)<br>AGX 18.13 · Hailo-8 49.41</div>
+
+  <!-- export row -->
+  <div class="box" style="left:10px;top:566px;width:934px;height:60px;background:#F8FAFC;border:1px solid #CBD5E1"></div>
+  <div class="t s" style="left:24px;top:586px;text-align:left">each candidate</div>
+  <div class="chip" style="left:190px;top:580px;width:170px;height:34px;background:#6B7280">fixed-shape ONNX</div>
+  <div class="chip" style="left:430px;top:580px;width:250px;height:34px;background:#4C72B0">TensorRT FP16 (AGX / NX / Orin)</div>
+  <div class="chip" style="left:720px;top:580px;width:200px;height:34px;background:#C44E52">Hailo-8 INT8 HEF</div>
+
+  <!-- legend -->
+  <div class="legend" style="left:960px;top:336px;width:232px">
+    <div class="row"><span class="sw" style="background:var(--enc)"></span> encoder stage</div>
+    <div class="row"><span class="sw" style="background:var(--dec)"></span> decoder stage</div>
+    <div class="row"><span class="sw" style="background:var(--head)"></span> 19-class head</div>
+    <div class="row"><span class="sw" style="background:#BFC5CD;transform:skewY(-15deg)"></span> image / output map</div>
+    <div class="row"><svg width="40" height="12"><line x1="0" y1="6" x2="30" y2="6" stroke="#64748B" stroke-width="2" stroke-dasharray="5 3"/><polygon points="30,0 40,6 30,12" fill="#64748B"/></svg> skip connection</div>
+    <div class="row"><svg width="40" height="12"><line x1="0" y1="6" x2="30" y2="6" stroke="#1F2937" stroke-width="2"/><polygon points="30,0 40,6 30,12" fill="#1F2937"/></svg> feature flow</div>
+  </div>
+
+  <svg class="wires" width="1200" height="640">
+    <defs>
+      <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#1F2937"/></marker>
+      <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#64748B"/></marker>
+    </defs>
+    <g fill="none" stroke="#1F2937" stroke-width="1.8">
+      <path d="M158 185 L196 185" marker-end="url(#k)"/>
+      <path d="M236 185 L258 185" marker-end="url(#k)"/>
+      <path d="M302 185 L326 185" marker-end="url(#k)"/>
+      <path d="M372 185 L404 185" marker-end="url(#k)"/>
+      <path d="M468 185 L496 185" marker-end="url(#k)"/>
+      <path d="M542 185 L574 185" marker-end="url(#k)"/>
+      <path d="M612 185 L642 185" marker-end="url(#k)"/>
+      <path d="M672 185 L700 185" marker-end="url(#k)"/>
+      <path d="M722 185 L756 185" marker-end="url(#k)"/>
+      <path d="M236 600 L188 600" stroke="none"/>
+      <path d="M120 597 L186 597" marker-end="url(#k)"/>
+      <path d="M362 597 L426 597" marker-end="url(#k)"/>
+      <path d="M362 597 C420 640 660 640 716 606" marker-end="url(#k)"/>
+    </g>
+    <g fill="none" stroke="#64748B" stroke-width="1.6" stroke-dasharray="6 4">
+      <path d="M206 104 L206 64 L652 64 L652 102" marker-end="url(#g)"/>
+      <path d="M272 116 L272 80 L586 80 L586 114" marker-end="url(#g)"/>
+      <path d="M342 128 L342 96 L512 96 L512 126" marker-end="url(#g)"/>
+    </g>
+  </svg>
+</div>
+</body></html>

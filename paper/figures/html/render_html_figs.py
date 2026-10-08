@@ -24,7 +24,7 @@ from render_palette import colorize  # noqa: E402
 GEN = HERE.parent / "generated"
 ASSETS = ROOT / "reports/qualitative_assets_v20"
 AID = "acdc-rain_GP020402_frame_000863_rgb_anon"
-FIGS = {"fig2_pipeline_html_v20": "fig2_pipeline.html"}
+FIGS = {"fig2_pipeline_html_v20": "fig2_pipeline.html", "fig3_architecture_html_v20": "fig3_architecture.html"}
 WIDTH_MM = 178
 
 
@@ -48,7 +48,12 @@ def render() -> None:
             pg.goto((HERE / html).resolve().as_uri())
             pg.wait_for_load_state("networkidle")
             box = pg.locator("#fig").bounding_box()
-            pg.locator("#fig").screenshot(path=str(GEN / f"{stem}.png"))
+            tmp = GEN / f"{stem}.tmp.png"
+            pg.locator("#fig").screenshot(path=str(tmp))
+            try:
+                tmp.replace(GEN / f"{stem}.png")
+            except OSError:
+                print("PNG locked (file open?), kept", tmp)
             # vector PDF at final print width: scale the CSS-pixel figure to WIDTH_MM
             w_in = WIDTH_MM / 25.4
             h_in = w_in * box["height"] / box["width"]

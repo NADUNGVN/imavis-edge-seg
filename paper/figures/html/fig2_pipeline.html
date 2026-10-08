@@ -52,11 +52,12 @@
   <!-- outcomes -->
   <div class="plane" style="left:1062px;top:30px;width:120px;height:60px"><img src="img/tiny.png"></div>
   <div class="t xs" style="left:1036px;top:96px;width:164px"><b>Tiny:</b> reuse probe output,<br>no further inference</div>
-  <div class="t b s" style="left:1040px;top:146px;width:160px">(5) S / M / L: one more<br>static engine</div>
-  <div class="layer" style="--w:12px;--h:120px;--d:18px;--c:var(--large);left:1046px;top:200px"></div>
-  <div class="layer" style="--w:12px;--h:96px;--d:18px;--c:var(--large);left:1074px;top:212px"></div>
-  <div class="layer" style="--w:12px;--h:120px;--d:18px;--c:var(--large);left:1102px;top:200px"></div>
-  <div class="plane" style="left:1140px;top:236px;width:56px;height:28px;display:none"></div>
+  <div class="t b s" style="left:1030px;top:150px;width:170px">(5) S / M / L: one more<br>static engine</div>
+  <div class="layer" style="--w:12px;--h:110px;--d:16px;--c:var(--large);left:1040px;top:205px"></div>
+  <div class="layer" style="--w:12px;--h:88px;--d:16px;--c:var(--large);left:1064px;top:216px"></div>
+  <div class="layer" style="--w:12px;--h:110px;--d:16px;--c:var(--large);left:1088px;top:205px"></div>
+  <div class="plane" style="left:1136px;top:243px;width:60px;height:30px"><img src="img/large.png"></div>
+  <div class="t xs" style="left:1110px;top:282px;width:90px">routed output</div>
 
   <!-- device lane -->
   <div class="chip" style="left:22px;top:398px;width:120px;height:46px;background:#4C72B0;font-size:13px">AGX Xavier<br>TensorRT FP16</div>
@@ -85,21 +86,22 @@
   <!-- wires -->
   <svg class="wires" width="1200" height="560">
     <defs>
-      <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#D62728"/></marker>
-      <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#1F2937"/></marker>
+      <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#D62728"/></marker>
+      <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#1F2937"/></marker>
     </defs>
-    <g fill="none" stroke-width="3" stroke="#D62728">
-      <path d="M168 158 L198 158" marker-end="url(#r)"/>
-      <path d="M340 140 C360 120 360 100 376 96" marker-end="url(#r)"/>
-      <path d="M1012 140 C1030 110 1030 70 1056 62" marker-end="url(#r)"/>
-      <path d="M1012 240 L1040 252" marker-end="url(#r)"/>
+    <g fill="none" stroke-width="2.6" stroke="#D62728" stroke-linejoin="round">
+      <path d="M166 159 L198 159" marker-end="url(#r)"/>
+      <path d="M346 140 L360 140 L360 95 L374 95" marker-end="url(#r)"/>
+      <path d="M1012 130 L1032 130 L1032 60 L1056 60" marker-end="url(#r)"/>
+      <path d="M1012 260 L1034 260" marker-end="url(#r)"/>
+      <path d="M1124 258 L1132 258" marker-end="url(#r)"/>
     </g>
-    <g fill="none" stroke-width="2" stroke="#1F2937">
-      <path d="M340 180 C360 200 360 210 376 212" marker-end="url(#k)"/>
-      <path d="M514 214 L544 216" marker-end="url(#k)"/>
-      <path d="M602 216 L642 200" marker-end="url(#k)"/>
-      <path d="M820 196 L856 196" marker-end="url(#k)"/>
-      <path d="M680 372 C780 360 880 340 920 300" marker-end="url(#k)"/>
+    <g fill="none" stroke-width="1.8" stroke="#1F2937" stroke-linejoin="round">
+      <path d="M346 180 L360 180 L360 212 L374 212" marker-end="url(#k)"/>
+      <path d="M514 216 L542 216" marker-end="url(#k)"/>
+      <path d="M602 216 L640 216" marker-end="url(#k)"/>
+      <path d="M818 196 L854 196" marker-end="url(#k)"/>
+      <path d="M690 366 L935 366 L935 302" marker-end="url(#k)"/>
     </g>
   </svg>
 </div>
