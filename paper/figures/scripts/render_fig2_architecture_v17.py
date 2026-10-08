@@ -439,7 +439,7 @@ def draw_candidate_card(
     ax.text(
         x + 0.015,
         y + 0.012,
-        f"E3 {float(row['e3_candidate_p95_ms']):.2f} | E1 {float(row['e1_candidate_p95_ms']):.2f} ms",
+        f"AGX {float(row['e3_candidate_p95_ms']):.2f} | Hailo {float(row['e1_candidate_p95_ms']):.2f} ms",
         fontsize=6.0,
         color=HARDWARE,
         transform=ax.transAxes,
@@ -496,8 +496,8 @@ def draw_static_candidates(ax: Axes, candidates: dict[str, dict[str, str]]) -> N
         va="center",
     )
     label_box(ax, 0.530, 0.050, 0.105, 0.054, "ONNX", "fixed shape", face="white", edge="#94A3B8", title_size=7.0)
-    label_box(ax, 0.705, 0.082, 0.140, 0.038, "TensorRT GPU", "E3 / E2 / E5", face="#EFF6FF", edge="#3B82F6", title_size=6.5, subtitle_size=5.2)
-    label_box(ax, 0.705, 0.024, 0.140, 0.038, "Hailo-8", "E1 HEF", face="#FFF7ED", edge="#D97706", title_size=6.5, subtitle_size=5.2)
+    label_box(ax, 0.705, 0.082, 0.140, 0.038, "TensorRT GPU", "AGX / NX / Orin", face="#EFF6FF", edge="#3B82F6", title_size=6.5, subtitle_size=5.2)
+    label_box(ax, 0.705, 0.024, 0.140, 0.038, "Hailo-8", "HEF", face="#FFF7ED", edge="#D97706", title_size=6.5, subtitle_size=5.2)
     arrow(ax, (0.638, 0.083), (0.702, 0.101), color=HARDWARE, linewidth=0.9)
     arrow(ax, (0.638, 0.072), (0.702, 0.043), color=HARDWARE, linewidth=0.9)
 

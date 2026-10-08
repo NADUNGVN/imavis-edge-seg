@@ -247,7 +247,7 @@ def sample_decision(dec, name: str):
         ch = d_choice_for(d, costs[be], b)
         rows.append((be, ch))
         y = 0.62 - k * 0.52
-        ax.text(0.0, y + 0.27, f"{be} ({'TensorRT' if be == 'E3' else 'Hailo-8'}), budget {b:.1f}", transform=ax.transAxes, fontsize=6.5)
+        ax.text(0.0, y + 0.27, f"{'AGX Xavier (TensorRT)' if be == 'E3' else 'Hailo-8'}, budget {b:.1f}", transform=ax.transAxes, fontsize=6.5)
         for j, lv in enumerate(LEVELS):
             feas = costs[be][lv] <= b + 1e-9
             ax.add_patch(Rectangle((j * 0.25, y), 0.23, 0.22, transform=ax.transAxes,
@@ -258,7 +258,7 @@ def sample_decision(dec, name: str):
     # column 4: outputs
     for k, (be, ch) in enumerate(rows):
         show(fig.add_axes([0.785, 0.52 - k * 0.50, pw, ph]), colorize(load(aid, ch)),
-             f"({'ef'[k]}) {be} runs {ch}", badge=ch.capitalize())
+             f"({'ef'[k]}) {'AGX Xavier' if be == 'E3' else 'Hailo-8'} runs {ch}", badge=ch.capitalize())
     save(fig, name)
 
 
@@ -320,7 +320,7 @@ def sample_teaser(name: str = "F_teaser"):
     def panel(x, y, img, title, badge=None):
         show(fig.add_axes([x, y, pw, ph]), img, title, badge=badge)
 
-    fig.text(0.0, 0.98, "(a) Same device (E3), different inputs", fontsize=7, fontweight="bold", va="top")
+    fig.text(0.0, 0.98, "(a) Same device, different inputs", fontsize=7, fontweight="bold", va="top")
     panel(0.0, 0.48, load(easy["asset_id"], "rgb"), f"easier: $s(x)$={de['score']:.2f}")
     panel(0.135, 0.48, colorize(load(easy["asset_id"], de["choice"])), "routed", de["choice"].capitalize())
     panel(0.0, 0.05, load(hard["asset_id"], "rgb"), f"harder: $s(x)$={dh['score']:.2f}")
@@ -328,12 +328,12 @@ def sample_teaser(name: str = "F_teaser"):
 
     fig.text(0.295, 0.98, "(b) Same image, other hardware", fontsize=7, fontweight="bold", va="top")
     panel(0.295, 0.48, colorize(load(hard["asset_id"], dh["choice"])),
-          f"E3, budget {costs['E3']['large']:.1f} ms", dh["choice"].capitalize())
-    panel(0.295, 0.05, colorize(load(hard["asset_id"], ch1)), f"E1, budget {b1:.1f} ms", ch1.capitalize())
-    fig.text(0.425, 0.12, f"E1 large route\n{costs['E1']['large']:.1f} ms:\ninfeasible", fontsize=5.8,
+          f"AGX Xavier, budget {costs['E3']['large']:.1f} ms", dh["choice"].capitalize())
+    panel(0.295, 0.05, colorize(load(hard["asset_id"], ch1)), f"Hailo-8, budget {b1:.1f} ms", ch1.capitalize())
+    fig.text(0.425, 0.12, f"Hailo-8 large\nroute {costs['E1']['large']:.1f} ms:\ninfeasible", fontsize=5.8,
              color="#B4442C", va="bottom")
 
-    fig.text(0.575, 0.98, "(c) ...but routing costs time (E1, large)", fontsize=7, fontweight="bold", va="top")
+    fig.text(0.575, 0.98, "(c) ...but routing costs time (Hailo-8, large)", fontsize=7, fontweight="bold", va="top")
     sh = json.loads(Path("reports/router_same_harness_analysis_20261004.json").read_text())["median"]["E1_explicit_float32"]
     S, C = sh["static_ms"]["large"], sh["route_ms"]["large"]
     ax = fig.add_axes([0.63, 0.36, 0.36, 0.42])
@@ -351,7 +351,7 @@ def sample_teaser(name: str = "F_teaser"):
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     fig.text(0.575, 0.06, "Under mean-cost budgets routing pays off only if this overhead falls below\n"
-             "about 4.3 ms on E1 and 1.3 ms on E3 (measured: 44 ms and 1.9 ms);\n"
+             "about 4.3 ms on Hailo-8 and 1.3 ms on AGX Xavier (measured: 44 and 1.9 ms);\n"
              "under per-frame budgets static deployment wins at any overhead.",
              fontsize=6, va="bottom", color="#1F2937", linespacing=1.3)
     save(fig, name)

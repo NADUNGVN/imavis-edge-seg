@@ -9,8 +9,8 @@
     "src\\imavis_edge_seg\\config.py": "6fcc700201bb05ebcd2b143e2123cf33f3a4562df26f989c6d6f93a9e6ef0fb8"
   },
   "artifact_hashes": {
-    ".pdf": "0b8ae9424b8504874367407c6b9dd9858a063f46040d875dfa6c4f43b9f4d505",
-    ".svg": "6ed7929c8b885765a9428db45f831f4d01b172253364a0bf70e1b92272cc92d3",
-    ".png": "0d228ac03aa95610d8a56689f54b013b04fb8c6608e22e656ab649baf8fffd39"
+    ".pdf": "8e3d87fe3f47a048aab4db91f89fa7f5697b594d4ce7b2d50ec63b8be861ef1f",
+    ".svg": "0a07d1ce77e020e2b4b91997ae43232e7cec75b70280430a74eedf4aad198bcc",
+    ".png": "1dbdf97f487cf86f5348a87a1f7addd2726b2994675e14ff9a93e3ff9048608e"
   }
 }

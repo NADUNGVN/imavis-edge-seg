@@ -73,7 +73,7 @@ Section~\ref{sec:related} positions the work. Section~\ref{sec:method} follows o
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig1_teaser_v20.pdf}
-\caption{Adaptive capacity selection on an edge accelerator, and its price. (a) On one device (E3, budget of the large route), an easier and a harder held-out ACDC rain image receive different capacities from policy D. (b) The same harder image receives large on E3 but medium on the Hailo-8 E1, where the large route exceeds the budget. (c) On E1 the route to large costs 46.9~ms more than deploying large statically, because the probe, decision, and engine switch must run first; overheads of this size erase the adaptive gain (Section~\ref{sec:rq3}). Images are the frozen `easier' and `harder' rain selections of Section~\ref{sec:rq3}; decisions are those of Run A.}
+\caption{Adaptive capacity selection on an edge accelerator, and its price. (a) On one device (AGX Xavier, budget of the large route), an easier and a harder held-out ACDC rain image receive different capacities from policy D. (b) The same harder image receives large on AGX Xavier but medium on the Hailo-8, where the large route exceeds the budget. (c) On Hailo-8 the route to large costs 46.9~ms more than deploying large statically, because the probe, decision, and engine switch must run first; overheads of this size erase the adaptive gain (Section~\ref{sec:rq3}). Images are the frozen `easier' and `harder' rain selections of Section~\ref{sec:rq3}; decisions are those of Run A.}
 \label{fig:teaser}
 \end{figure*}
 
@@ -89,8 +89,8 @@ Component & Evaluated setting \\
 Visual domains & Cityscapes clean and ACDC fog, night, rain, and snow \\
 Prediction task & Semantic segmentation over the 19 Cityscapes train classes \\
 Elastic choices & Tiny, small, medium, and large static capacities \\
-Candidate-cost devices & E1, E2, E3, and E5 \\
-Complete-route backends & E1 Hailo-8 and E3 TensorRT/CUDA \\
+Candidate-cost devices & Hailo-8, Xavier NX, AGX Xavier, Orin Nano \\
+Complete-route backends & Hailo-8 and AGX Xavier (TensorRT) \\
 Router protocol & Alternating fit/held-out validation halves; three training seeds \\
 \bottomrule
 \end{tabularx}
@@ -165,7 +165,7 @@ The four candidates, tiny, small, medium, and large, are extracted from one shar
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig2_architecture_v20.pdf}
-\caption{Elastic architecture and static extraction. (a) One shared encoder--decoder: a stem, three downsampling depthwise-separable encoder stages, three top-down decoder stages with additive encoder skips, and a 19-class head; input resolution $R_\ell$, active channel prefix $w_\ell$, and active block prefix $d_\ell$ define elasticity. (b) Tiny through large freeze those axes into four static graphs, exported through fixed-shape ONNX to TensorRT GPU or Hailo-8. Card values are input size (width$\times$height), parameters, GFLOPs, and candidate-only p95 latency on E3 and E1; complete route costs are measured separately (Table~\ref{tab:routes}).}
+\caption{Elastic architecture and static extraction. (a) One shared encoder--decoder: a stem, three downsampling depthwise-separable encoder stages, three top-down decoder stages with additive encoder skips, and a 19-class head; input resolution $R_\ell$, active channel prefix $w_\ell$, and active block prefix $d_\ell$ define elasticity. (b) Tiny through large freeze those axes into four static graphs, exported through fixed-shape ONNX to TensorRT GPU or Hailo-8. Card values are input size (width$\times$height), parameters, GFLOPs, and candidate-only p95 latency on AGX Xavier and Hailo-8; complete route costs are measured separately (Table~\ref{tab:routes}).}
 \label{fig:candidate-family}
 \end{figure*}
 
@@ -231,12 +231,12 @@ GT pixel-error oracle & GT error & Yes & None & No & Reference only \\
 \subsection{A worked decision}
 \label{sec:example}
 
-Figure~\ref{fig:input-output-pipeline} follows one held-out ACDC rain image of Run A through policy D. The tiny probe yields $s(x)=0.704$~nats. The four calibrators turn this score into expected errors of 0.189, 0.155, 0.130, and 0.110 for tiny, small, medium, and large; none meets the risk target $\tau=0.062$ chosen on the fit half, so D falls back to the feasible candidate with the lowest predicted error. On E3, with a budget equal to the large route (19.5~ms), every route is feasible and D runs large. On E1, with a budget equal to the medium route (76.2~ms), the large route (116.3~ms) is infeasible and D runs medium. The image and the risk vector are identical; only the measured cost table changes the action. The example shows the property that distinguishes D from rank escalation: the decision uses the full risk vector, and infeasible candidates are removed before risk is consulted.
+Figure~\ref{fig:input-output-pipeline} follows one held-out ACDC rain image of Run A through policy D. The tiny probe yields $s(x)=0.704$~nats. The four calibrators turn this score into expected errors of 0.189, 0.155, 0.130, and 0.110 for tiny, small, medium, and large; none meets the risk target $\tau=0.062$ chosen on the fit half, so D falls back to the feasible candidate with the lowest predicted error. On AGX Xavier, with a budget equal to the large route (19.5~ms), every route is feasible and D runs large. On Hailo-8, with a budget equal to the medium route (76.2~ms), the large route (116.3~ms) is infeasible and D runs medium. The image and the risk vector are identical; only the measured cost table changes the action. The example shows the property that distinguishes D from rank escalation: the decision uses the full risk vector, and infeasible candidates are removed before risk is consulted.
 
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig7_routing_decision_v20.pdf}
-\caption{One complete policy-D decision on a held-out ACDC rain image. (a) Input. (b) Per-pixel entropy of the tiny probe and its mean $s(x)$. (c) Candidate-specific calibrators map $s(x)$ to four predicted errors; the dashed line is the risk target $\tau$. (d) Measured median route costs on E3 and E1 under the stated budgets; infeasible routes are grey and hatched, and the selected route is outlined. (e, f) The capacity run on each device. The example illustrates the policy and is not an additional evaluation trial.}
+\caption{One complete policy-D decision on a held-out ACDC rain image. (a) Input. (b) Per-pixel entropy of the tiny probe and its mean $s(x)$. (c) Candidate-specific calibrators map $s(x)$ to four predicted errors; the dashed line is the risk target $\tau$. (d) Measured median route costs on AGX Xavier and Hailo-8 under the stated budgets; infeasible routes are grey and hatched, and the selected route is outlined. (e, f) The capacity run on each device. The example illustrates the policy and is not an additional evaluation trial.}
 \label{fig:input-output-pipeline}
 \end{figure*}
 
@@ -272,7 +272,7 @@ Three elastic supernets are trained with seeds 0--2 (Runs A--C) under the recipe
 
 \subsection{Hardware and latency measurement}
 
-Table~\ref{tab:hardware} lists the four devices. NVIDIA devices run TensorRT FP16 engines built from the fixed-shape ONNX graphs, and E1 runs INT8 HEF files compiled from the same graphs with the Hailo Dataflow Compiler and quantized with 200 real fit-half images. All four candidates execute on both primary paths. The Jetson DLA is excluded because decoder layers fall back to the GPU, which would make the measured route a mixed-device path.
+Table~\ref{tab:hardware} lists the four devices. NVIDIA devices run TensorRT FP16 engines built from the fixed-shape ONNX graphs, and Hailo-8 runs INT8 HEF files compiled from the same graphs with the Hailo Dataflow Compiler and quantized with 200 real fit-half images. All four candidates execute on both primary paths. The Jetson DLA is excluded because decoder layers fall back to the GPU, which would make the measured route a mixed-device path.
 
 \begin{table}[!t]
 \centering
@@ -281,17 +281,17 @@ Table~\ref{tab:hardware} lists the four devices. NVIDIA devices run TensorRT FP1
 \scriptsize
 \begin{tabularx}{\columnwidth}{@{}l>{\raggedright\arraybackslash}p{2.1cm}>{\raggedright\arraybackslash}X@{}}
 \toprule
-ID & Hardware & Runtime and system versions \\
+Name & Hardware & Runtime and system versions \\
 \midrule
-E1 & Raspberry Pi 5 + Hailo-8 M.2 & HailoRT 4.23.0; Dataflow Compiler 3.34.0; Model Zoo 2.19.0 \\
-E2 & Jetson Xavier NX & L4T R35.4.1; CUDA 11.4.19; cuDNN 8.6.0.166; TensorRT 8.5.2.2 \\
-E3 & Jetson AGX Xavier & L4T R35.6.4; CUDA 11.4.19; TensorRT 8.5.2.2 \\
-E5 & Jetson Orin Nano Super & L4T R36.5.0; CUDA 12.6.68; cuDNN 9.3.0; TensorRT 10.3.0.30 \\
+Hailo-8 & Raspberry Pi 5 + Hailo-8 M.2 & HailoRT 4.23.0; Dataflow Compiler 3.34.0; Model Zoo 2.19.0 \\
+Xavier NX & Jetson Xavier NX & L4T R35.4.1; CUDA 11.4.19; cuDNN 8.6.0.166; TensorRT 8.5.2.2 \\
+AGX Xavier & Jetson AGX Xavier & L4T R35.6.4; CUDA 11.4.19; TensorRT 8.5.2.2 \\
+Orin Nano & Jetson Orin Nano Super & L4T R36.5.0; CUDA 12.6.68; cuDNN 9.3.0; TensorRT 10.3.0.30 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Three kinds of latency are measured. Candidate-only latency, used for RQ1, times each candidate in isolation at batch size one on all four devices with the trtexec/hailortcli protocol; RQ1 uses the mean, and the cards of Fig.~\ref{fig:candidate-family} report p95. Complete route cost $C_h(\ell)$, used by the router, and static cost $S_h(\ell)$, used for the static references, are measured on E1 and E3 in the same process, with the same engines, inputs, and timer boundary. The timer starts when a preprocessed host tensor is handed to the runtime and stops after the returned prediction is synchronized; image decoding, resizing, and normalization are outside the timer. On E3 all four TensorRT execution contexts stay resident and the route covers tiny inference, entropy, policy evaluation, dispatch, and any additional inference. The primary E1 path uses explicit Hailo network-group activation with FLOAT32 output streams, and its route includes the activation of the selected engine; the HailoRT model scheduler and UINT8 output streams are reported as sensitivity results. Each configuration uses 50 warm-up and 500 timed iterations, with Jetson power mode recorded and temperatures logged before and after each run. Table~\ref{tab:routes} reports the medians, p95, and p99 used in replay. Cold-start costs are excluded because the two runtimes have different reload semantics.
+Three kinds of latency are measured. Candidate-only latency, used for RQ1, times each candidate in isolation at batch size one on all four devices with the trtexec/hailortcli protocol; RQ1 uses the mean, and the cards of Fig.~\ref{fig:candidate-family} report p95. Complete route cost $C_h(\ell)$, used by the router, and static cost $S_h(\ell)$, used for the static references, are measured on Hailo-8 and AGX Xavier in the same process, with the same engines, inputs, and timer boundary. The timer starts when a preprocessed host tensor is handed to the runtime and stops after the returned prediction is synchronized; image decoding, resizing, and normalization are outside the timer. On AGX Xavier all four TensorRT execution contexts stay resident and the route covers tiny inference, entropy, policy evaluation, dispatch, and any additional inference. The primary Hailo-8 path uses explicit Hailo network-group activation with FLOAT32 output streams, and its route includes the activation of the selected engine; the HailoRT model scheduler and UINT8 output streams are reported as sensitivity results. Each configuration uses 50 warm-up and 500 timed iterations, with Jetson power mode recorded and temperatures logged before and after each run. Table~\ref{tab:routes} reports the medians, p95, and p99 used in replay. Cold-start costs are excluded because the two runtimes have different reload semantics.
 
 \begin{table}[!t]
 \centering
@@ -301,7 +301,7 @@ Three kinds of latency are measured. Candidate-only latency, used for RQ1, times
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lcc@{}}
 \toprule
-Route & E3 TensorRT/CUDA & E1 Hailo-8 \\
+Route & AGX Xavier (TensorRT) & Hailo-8 \\
 \midrule
 tiny $\rightarrow$ tiny & 1.84 / 1.91 / 1.94 & 44.26 / 45.28 / 45.42 \\
 tiny $\rightarrow$ small & 4.24 / 4.36 / 4.42 & 58.11 / 59.56 / 60.00 \\
@@ -323,7 +323,7 @@ Accuracy and latency are combined in an offline per-image replay with measured c
 
 Segmentation quality is dataset-level \miou{}. For a routed policy, the confusion matrices of the selected candidates are accumulated over the held-out images and \miou{} is computed once. The unit of analysis is an operating cell, defined by training run, backend cost table, split, and budget; the 120 cells reuse images and predictions and are therefore correlated, and we report descriptive win/tie/loss counts alongside bootstrap intervals.
 
-Operating points are chosen on the fit half by a fixed rule. Five candidate risk targets $\tau$ are set to the 10th, 25th, 50th, 75th, and 90th percentiles of fit-half observed error, macro-aggregated across splits; one such grid is generated per run and shared by the E1 and E3 cost tables. For each budget and policy, the selected target maximizes fit-half \miou{} among targets whose mean fit-half cost meets the budget, with lower cost as the tie-break. Only then are held-out labels read, to compute routed \miou{} and budget violations. Calibrators, targets, thresholds, and operating points never see held-out labels, the entropy feature is identical at fitting and deployment, and the pooled variant combines only fit halves.
+Operating points are chosen on the fit half by a fixed rule. Five candidate risk targets $\tau$ are set to the 10th, 25th, 50th, 75th, and 90th percentiles of fit-half observed error, macro-aggregated across splits; one such grid is generated per run and shared by the two cost tables. For each budget and policy, the selected target maximizes fit-half \miou{} among targets whose mean fit-half cost meets the budget, with lower cost as the tie-break. Only then are held-out labels read, to compute routed \miou{} and budget violations. Calibrators, targets, thresholds, and operating points never see held-out labels, the entropy feature is identical at fitting and deployment, and the pooled variant combines only fit halves.
 
 A cell is violating if at least one held-out image is routed to a candidate whose tabulated route cost exceeds the budget. This is a route-selection criterion: it guarantees that the selected route's median (or, in the sensitivity analysis, p95 or p99) cost fits the budget, not that every individual frame does. Because D removes infeasible candidates before choosing, its zero violation count is partly structural, whereas A can violate a budget whenever its threshold escalates an image to an expensive route. Comparisons with A therefore use fair cells, those in which A has no held-out violation; comparisons with A-hard, T-hard, and the static references use all 120 cells, since none of them violates. Router comparisons use the four route costs as budgets; comparisons with static deployment use the union of the route and static costs of each device. Quality differences are reported in \miou{} percentage points.
 
@@ -336,7 +336,7 @@ Uncertainty is estimated with an image-level bootstrap: in each of 1,000 replica
 \subsection{RQ1: Does a FLOPs-proportional proxy reproduce measured feasibility?}
 \label{sec:rq1}
 
-No. The four candidates require 0.206, 1.168, 6.171, and 22.699 GFLOPs, a $110.2\times$ range from tiny to large, but their measured mean latency grows by only $12.3$--$18.1\times$, depending on the device: $12.3\times$ on the Hailo-8 (4.0 to 49.3~ms), $17.2\times$ on E3 (1.0 to 17.2~ms), $17.5\times$ on E5 (1.0 to 18.0~ms), and $18.1\times$ on E2 (1.6 to 29.5~ms) (Fig.~\ref{fig:flops-latency}). The dashed lines in Fig.~\ref{fig:flops-latency} show the latency that a proxy proportional to FLOPs, anchored at each device's tiny candidate, would predict; it overestimates the cost of every larger candidate, and that of large by $6$--$9\times$ (110~ms instead of 17.2~ms on E3, 441~ms instead of 49.3~ms on E1). The small candidates are memory- and launch-bound, so their latency falls far less than their compute, and the gap differs between devices because each accelerator handles memory traffic and small kernels differently.
+No. The four candidates require 0.206, 1.168, 6.171, and 22.699 GFLOPs, a $110.2\times$ range from tiny to large, but their measured mean latency grows by only $12.3$--$18.1\times$, depending on the device: $12.3\times$ on the Hailo-8 (4.0 to 49.3~ms), $17.2\times$ on AGX Xavier (1.0 to 17.2~ms), $17.5\times$ on Orin Nano (1.0 to 18.0~ms), and $18.1\times$ on Xavier NX (1.6 to 29.5~ms) (Fig.~\ref{fig:flops-latency}). The dashed lines in Fig.~\ref{fig:flops-latency} show the latency that a proxy proportional to FLOPs, anchored at each device's tiny candidate, would predict; it overestimates the cost of every larger candidate, and that of large by $6$--$9\times$ (110~ms instead of 17.2~ms on AGX Xavier, 441~ms instead of 49.3~ms on Hailo-8). The small candidates are memory- and launch-bound, so their latency falls far less than their compute, and the gap differs between devices because each accelerator handles memory traffic and small kernels differently.
 
 \begin{figure}[!t]
 \centering
@@ -345,9 +345,9 @@ No. The four candidates require 0.206, 1.168, 6.171, and 22.699 GFLOPs, a $110.2
 \label{fig:flops-latency}
 \end{figure}
 
-The mismatch changes deployment decisions. Under the illustrative 10~ms budget marked in Fig.~\ref{fig:flops-latency}, the largest feasible candidate is small on E1 and E2 and medium on E3 and E5, whereas the proxy would rule out medium on E3 and E5 and small on E1, all of which measurement shows to fit. Measuring the four routes once per device removes this error at negligible engineering cost. The result concerns a proportional proxy only; learned latency predictors may do better and are not evaluated here.
+The mismatch changes deployment decisions. Under the illustrative 10~ms budget marked in Fig.~\ref{fig:flops-latency}, the largest feasible candidate is small on Hailo-8 and Xavier NX and medium on AGX Xavier and Orin Nano, whereas the proxy would rule out medium on AGX Xavier and Orin Nano and small on Hailo-8, all of which measurement shows to fit. Measuring the four routes once per device removes this error at negligible engineering cost. The result concerns a proportional proxy only; learned latency predictors may do better and are not evaluated here.
 
-Isolated candidate latency is itself insufficient, because a deployed route also includes the probe and dispatch. On E3 the tiny route grows from 1.03~ms candidate-only p95 to a 1.84~ms complete-route median, and on E1 from 4.01~ms to 44.26~ms, where network-group activation and host-side entropy dominate the short tiny inference in the primary E1 configuration. On E1 this expansion falls from $11.0\times$ for tiny to $2.4\times$ for large as candidate inference begins to dominate, whereas on E3 it stays between $1.1\times$ and $1.9\times$. A budget defined from candidate-only latency would admit routes that are infeasible in deployment, particularly on E1. This is why the router uses complete route costs (Table~\ref{tab:routes}).
+Isolated candidate latency is itself insufficient, because a deployed route also includes the probe and dispatch. On AGX Xavier the tiny route grows from 1.03~ms candidate-only p95 to a 1.84~ms complete-route median, and on Hailo-8 from 4.01~ms to 44.26~ms, where network-group activation and host-side entropy dominate the short tiny inference in the primary Hailo-8 configuration. On Hailo-8 this expansion falls from $11.0\times$ for tiny to $2.4\times$ for large as candidate inference begins to dominate, whereas on AGX Xavier it stays between $1.1\times$ and $1.9\times$. A budget defined from candidate-only latency would admit routes that are infeasible in deployment, particularly on Hailo-8. This is why the router uses complete route costs (Table~\ref{tab:routes}).
 
 \subsection{RQ2: Does shared elastic training preserve quality?}
 
@@ -369,7 +369,7 @@ We answer RQ3 against five references: rank escalation (A), rank escalation with
 
 \begin{table*}[!t]
 \centering
-\caption{Routing comparisons in held-out replay with measured costs (three runs $\times$ two backends $\times$ five splits $\times$ four budgets = 120 cells). $\Delta$ is the macro-averaged \miou{} difference in percentage points; the 95\% interval is an image-level bootstrap, and the nested interval also refits calibrators, risk grid, and operating points on resampled fit halves (Section~\ref{sec:split}). Comparisons with A use fair cells, in which A has no violation; all other comparisons use the full grid. LOCO refits calibrators, risk targets, and operating points without the evaluated condition. ``Static, route cost'' charges the static candidate the cost of the route that ends in it; ``static, own cost'' charges it its measured static latency (Table~\ref{tab:routes}). Cells are correlated and E1/E3 share predictions. Violating cells (median / p95 / p99 tables): A 58 / 58 / 59 of 120; A-hard, T-hard, D, pooled D, static, and LOCO D 0 of 120 in every table.}
+\caption{Routing comparisons in held-out replay with measured costs (three runs $\times$ two backends $\times$ five splits $\times$ four budgets = 120 cells). $\Delta$ is the macro-averaged \miou{} difference in percentage points; the 95\% interval is an image-level bootstrap, and the nested interval also refits calibrators, risk grid, and operating points on resampled fit halves (Section~\ref{sec:split}). Comparisons with A use fair cells, in which A has no violation; all other comparisons use the full grid. LOCO refits calibrators, risk targets, and operating points without the evaluated condition. ``Static, route cost'' charges the static candidate the cost of the route that ends in it; ``static, own cost'' charges it its measured static latency (Table~\ref{tab:routes}). Cells are correlated and the two devices share predictions. Violating cells (median / p95 / p99 tables): A 58 / 58 / 59 of 120; A-hard, T-hard, D, pooled D, static, and LOCO D 0 of 120 in every table.}
 \label{tab:routerfinal}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -384,8 +384,8 @@ Median & D $-$ A-hard & 120 & 48/72/0 & +1.41 & [+1.19, +1.63] & [+0.99, +1.70] 
 Median & T-hard $-$ A-hard & 120 & 46/68/6 & +1.44 & -- & -- \\
 Median & D $-$ T-hard & 120 & 16/80/24 & $-0.03$ & [$-0.11$, +0.09] & -- \\
 Median & D $-$ best feasible static, route cost & 120 & 0/92/28 & $-0.16$ & [$-0.22$, $-0.10$] & -- \\
-Median & D $-$ best feasible static, own cost, E3 & 120 & 0/61/59 & $-2.62$ & [$-2.69$, $-2.37$] & -- \\
-Median & D $-$ best feasible static, own cost, E1 & 120 & 0/21/99 & $-7.41$ & [$-7.62$, $-6.75$] & -- \\
+Median & D $-$ best feasible static, own cost, AGX Xavier & 120 & 0/61/59 & $-2.62$ & [$-2.69$, $-2.37$] & -- \\
+Median & D $-$ best feasible static, own cost, Hailo-8 & 120 & 0/21/99 & $-7.41$ & [$-7.62$, $-6.75$] & -- \\
 \midrule
 p95 & D $-$ A & 62 & 54/6/2 & +2.87 & [+2.52, +3.26] & -- \\
 p95 & D $-$ A-hard & 120 & 48/72/0 & +1.41 & [+1.19, +1.63] & -- \\
@@ -410,16 +410,16 @@ Median, LOCO & D $-$ A-hard & 120 & 48/72/0 & +1.59 & -- & -- \\
 
 \paragraph{Robustness} Replacing the median cost table by the p95 or p99 table, for both the costs and the budget grid, leaves the conclusions unchanged: D still selects no route whose tabulated cost exceeds the budget, and its gains over A and A-hard change by at most 0.04 points. Calibrators fitted without the evaluated condition (LOCO) also keep D free of violations and ahead of A-hard by +1.59 points, so the gain does not depend on having calibrated on the test condition itself. On the held-out halves, the four candidate-specific calibrators have mean absolute errors of 0.019--0.057 in per-image pixel error, lie close to the diagonal of a reliability plot, and change by at most 0.003 when the ten equal-count bins are replaced by five bins or isotonic regression (supplement, Fig.~S5). The equivalence of D and T-hard is therefore not caused by poor calibration.
 
-\paragraph{Against static deployment} The comparison with static deployment depends on what the static model is charged. If it is charged the cost of the route that ends in it, as if it also paid for the probe, D stays within 0.16 points of the best feasible static candidate (95\% CI $-0.22$ to $-0.10$), tying in 92 of 120 cells and lowering the mean route cost by 2.0\%; the non-deployable GT pixel-error oracle exceeds that static reference by only 0.11 points, so the headroom for per-image routing under a per-frame cap is small with this candidate set. A static deployment, however, does not run the probe. Figure~\ref{fig:routestatic} shows the same-harness latency of each capacity deployed statically and reached through the tiny probe. On E3 a route costs 0.7~ms more than the static engine it ends in for tiny and 2.7~ms more for large; on E1 the overhead is 38--47~ms, comparable to the full latency of the large engine, and it does not shrink with the HailoRT scheduler or UINT8 output streams. Charged its own latency, the best feasible static model beats D by 2.62 points on E3 (0 wins, 61 ties, 59 losses) and by 7.41 (FLOAT32) to 9.15 (UINT8) points on E1 (0 wins); T-hard behaves identically. At the lowest budgets of each device no route is feasible at all, because the cheapest route, tiny plus probe, already exceeds the static tiny engine.
+\paragraph{Against static deployment} The comparison with static deployment depends on what the static model is charged. If it is charged the cost of the route that ends in it, as if it also paid for the probe, D stays within 0.16 points of the best feasible static candidate (95\% CI $-0.22$ to $-0.10$), tying in 92 of 120 cells and lowering the mean route cost by 2.0\%; the non-deployable GT pixel-error oracle exceeds that static reference by only 0.11 points, so the headroom for per-image routing under a per-frame cap is small with this candidate set. A static deployment, however, does not run the probe. Figure~\ref{fig:routestatic} shows the same-harness latency of each capacity deployed statically and reached through the tiny probe. On AGX Xavier a route costs 0.7~ms more than the static engine it ends in for tiny and 2.7~ms more for large; on Hailo-8 the overhead is 38--47~ms, comparable to the full latency of the large engine, and it does not shrink with the HailoRT scheduler or UINT8 output streams. Charged its own latency, the best feasible static model beats D by 2.62 points on AGX Xavier (0 wins, 61 ties, 59 losses) and by 7.41 (FLOAT32) to 9.15 (UINT8) points on Hailo-8 (0 wins); T-hard behaves identically. At the lowest budgets of each device no route is feasible at all, because the cheapest route, tiny plus probe, already exceeds the static tiny engine.
 
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig11_route_vs_static_v20.pdf}
-\caption{The routing overhead is small on the TensorRT GPU but comparable to a full large-model inference on the Hailo-8. Same-harness median latency of each capacity deployed statically ($S_h$, left bars) and reached through the tiny probe ($C_h$, right bars); the hatched segment is the overhead $C_h-S_h$, labelled in ms. E3 returns logits; E1 uses explicit network-group activation with FLOAT32 output streams.}
+\caption{The routing overhead is small on the TensorRT GPU but comparable to a full large-model inference on the Hailo-8. Same-harness median latency of each capacity deployed statically ($S_h$, left bars) and reached through the tiny probe ($C_h$, right bars); the hatched segment is the overhead $C_h-S_h$, labelled in ms. AGX Xavier returns logits; Hailo-8 uses explicit network-group activation with FLOAT32 output streams.}
 \label{fig:routestatic}
 \end{figure*}
 
-\paragraph{Mean-cost budgets and break-even overhead} When only the average cost is constrained, the fairer static reference is a random mixture of the two adjacent static models with the same mean cost. Charged their own latencies, candidate-specific routing still loses to this mixture by 0.3--0.5 points on E3 and 5.5--6.3 points on E1. To ask how much the overhead would have to shrink, we scale the measured per-capacity overhead by $\alpha\in[0,1]$ and repeat the comparison (Fig.~\ref{fig:breakeven}). With zero overhead, routing would gain 1.3--1.4 points over static mixing on both devices; the gain vanishes at 1.3~ms of overhead on E3 (measured: 1.9~ms) and 4.3~ms on E1 (measured: 44~ms). Under per-frame budgets routing never wins, even at zero overhead ($-0.16$ points), because any per-frame cap forces the router to stay at or below the capacity that the static model already uses.
+\paragraph{Mean-cost budgets and break-even overhead} When only the average cost is constrained, the fairer static reference is a random mixture of the two adjacent static models with the same mean cost. Charged their own latencies, candidate-specific routing still loses to this mixture by 0.3--0.5 points on AGX Xavier and 5.5--6.3 points on Hailo-8. To ask how much the overhead would have to shrink, we scale the measured per-capacity overhead by $\alpha\in[0,1]$ and repeat the comparison (Fig.~\ref{fig:breakeven}). With zero overhead, routing would gain 1.3--1.4 points over static mixing on both devices; the gain vanishes at 1.3~ms of overhead on AGX Xavier (measured: 1.9~ms) and 4.3~ms on Hailo-8 (measured: 44~ms). Under per-frame budgets routing never wins, even at zero overhead ($-0.16$ points), because any per-frame cap forces the router to stay at or below the capacity that the static model already uses.
 
 \begin{figure*}[!t]
 \centering
@@ -446,14 +446,14 @@ The small night gain is consistent with the probe. The large candidate reaches 5
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig10_stratified_v20.pdf}
-\caption{Input adaptivity on held-out images. Selection rule fixed before inspection: policy D of Run A on E3 at the budget of the large route, pooled over the five held-out splits; for each capacity that D selects, the image whose selected-capacity pixel error is closest to the median of that route class. D selected tiny for none of the 453 images at this budget, small for 27, medium for 61, and large for 365. Columns show the input, ground truth (void in black), the tiny, medium, and large candidates, and the routed output.}
+\caption{Input adaptivity on held-out images. Selection rule fixed before inspection: policy D of Run A on AGX Xavier at the budget of the large route, pooled over the five held-out splits; for each capacity that D selects, the image whose selected-capacity pixel error is closest to the median of that route class. D selected tiny for none of the 453 images at this budget, small for 27, medium for 61, and large for 365. Columns show the input, ground truth (void in black), the tiny, medium, and large candidates, and the routed output.}
 \label{fig:qualitative}
 \end{figure*}
 
 \subsection{Compiled-engine accuracy and on-device replay}
 \label{sec:compiled}
 
-The replay above uses PyTorch predictions. Compiled TensorRT FP16 engines with the trained weights reproduce PyTorch within $\pm0.02$ points on every capacity and split, with 99.7--100\% pixel agreement and a probe-entropy error below $2\times10^{-4}$. Hailo-8 INT8 engines lose up to 1.6 points on tiny (pixel agreement down to 87\% at night) and at most 0.5 points on large; the probe entropy deviates by 0.012--0.035 on average but keeps a rank correlation of at least 0.88. Replaying Run A with the on-device predictions and probe scores leaves every conclusion unchanged: on E3 D differs from the PyTorch replay by 0.01 points, and on E1 D loses a further 0.6 points but still matches T-hard ($-0.06$) and trails static deployment by 7.9 points.
+The replay above uses PyTorch predictions. Compiled TensorRT FP16 engines with the trained weights reproduce PyTorch within $\pm0.02$ points on every capacity and split, with 99.7--100\% pixel agreement and a probe-entropy error below $2\times10^{-4}$. Hailo-8 INT8 engines lose up to 1.6 points on tiny (pixel agreement down to 87\% at night) and at most 0.5 points on large; the probe entropy deviates by 0.012--0.035 on average but keeps a rank correlation of at least 0.88. Replaying Run A with the on-device predictions and probe scores leaves every conclusion unchanged: on AGX Xavier D differs from the PyTorch replay by 0.01 points, and on Hailo-8 D loses a further 0.6 points but still matches T-hard ($-0.06$) and trails static deployment by 7.9 points.
 
 %======================================================================
 \section{Discussion}
@@ -461,7 +461,7 @@ The replay above uses PyTorch predictions. Compiled TensorRT FP16 engines with t
 
 \subsection{When adaptive routing pays off}
 
-The comparison with static deployment is the central result. Routing can only pay off if choosing per image is worth more than its cost. The headroom is small: the GT pixel-error oracle exceeds the best feasible static candidate by only 0.11 points under a per-frame cap, and even at zero overhead routing gains only 1.3--1.4 points over static mixing under a mean-cost budget. Against that, every route pays for the tiny engine, the entropy and decision, and on the Hailo-8 an engine switch that dominates the cost. Routing therefore becomes worthwhile only when three conditions hold: the budget constrains mean rather than per-frame cost; the overhead stays below the break-even value (about 1.3~ms on E3 and 4.3~ms on E1 here); and the candidates differ enough per image to leave headroom. For a fixed per-frame deadline, a static model of the largest feasible capacity is the stronger choice and should always be reported as a baseline, timed in the same harness as the adaptive pipeline.
+The comparison with static deployment is the central result. Routing can only pay off if choosing per image is worth more than its cost. The headroom is small: the GT pixel-error oracle exceeds the best feasible static candidate by only 0.11 points under a per-frame cap, and even at zero overhead routing gains only 1.3--1.4 points over static mixing under a mean-cost budget. Against that, every route pays for the tiny engine, the entropy and decision, and on the Hailo-8 an engine switch that dominates the cost. Routing therefore becomes worthwhile only when three conditions hold: the budget constrains mean rather than per-frame cost; the overhead stays below the break-even value (about 1.3~ms on AGX Xavier and 4.3~ms on Hailo-8 here); and the candidates differ enough per image to leave headroom. For a fixed per-frame deadline, a static model of the largest feasible capacity is the stronger choice and should always be reported as a baseline, timed in the same harness as the adaptive pipeline.
 
 \subsection{What drives the gain among routers}
 

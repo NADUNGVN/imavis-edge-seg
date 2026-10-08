@@ -51,9 +51,9 @@ def fig_forest() -> None:
         ("D − T-hard", v2["D_vs_T_hard"]["mean_delta_points"], v2["D_vs_T_hard"]["ci95_points"], None, "ingredient", "120"),
         ("D − static, charged route cost", r["D_vs_static"]["mean_delta_points"], r["D_vs_static"]["ci95_points"], None,
          "static", "120"),
-        ("D − static, own cost, E3", sh["E3_logits"]["D_vs_static"]["mean_delta_points"],
+        ("D − static, own cost, AGX Xavier", sh["E3_logits"]["D_vs_static"]["mean_delta_points"],
          sh["E3_logits"]["D_vs_static"]["ci95_points"], None, "E3", "120"),
-        ("D − static, own cost, E1", sh["E1_explicit_float32"]["D_vs_static"]["mean_delta_points"],
+        ("D − static, own cost, Hailo-8", sh["E1_explicit_float32"]["D_vs_static"]["mean_delta_points"],
          sh["E1_explicit_float32"]["D_vs_static"]["ci95_points"], None, "E1", "120"),
     ]
     apply_style()

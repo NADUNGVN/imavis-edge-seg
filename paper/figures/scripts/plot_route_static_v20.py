@@ -22,7 +22,7 @@ import numpy as np
 from pace_style_v13 import (CANDIDATE_COLORS, CANDIDATES, FULL_WIDTH_MM, INK, MUTED, SINGLE_WIDTH_MM,
                             apply_style, mm_to_inches, save_all)
 
-DEVICES = {"E3": "E3 AGX Xavier (TensorRT FP16)", "E1": "E1 Hailo-8 (INT8)"}
+DEVICES = {"E3": "AGX Xavier (TensorRT FP16)", "E1": "Hailo-8 (INT8)"}
 
 
 def breakeven(alpha: list[float], overhead: list[float], gain: list[float]) -> float | None:
