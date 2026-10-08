@@ -1,0 +1,329 @@
+{
+  "schema_version": 2,
+  "source_per_image_dump": "reports/landscape_20261004/run_a_per_image.json",
+  "source_checkpoint": "outputs/pace_seg_landscape_supernet_seed0/checkpoints/step_00100000.pt",
+  "source_checkpoint_sha256": "f19833d5e4fa2a325335dd7a068ef58ace6805984535ab8a8d316910c065a2de",
+  "split_protocol": "alternating validation indices: even=fit, odd=held-out",
+  "selections": [
+    {
+      "split": "cityscapes",
+      "kind": "median",
+      "heldout_position": 169,
+      "dataset_index": 339,
+      "image_path": "leftImg8bit/val/munster/munster_000013_000019_leftImg8bit.png",
+      "label_path": "gtFine/val/munster/munster_000013_000019_gtFine_labelIds.png",
+      "image_sha256": "72463e1319ef741453f57e67559c64338d682e1179f35b98f4c62999d3242c18",
+      "label_sha256": "30ff4cdadb5f6471145ce793f8ab223beb51a732ed50dbb940e453b499555f27",
+      "pixel_error": {
+        "tiny": 0.0957345685531934,
+        "small": 0.07995901708750364,
+        "medium": 0.07368016111877984,
+        "large": 0.05620773864207773
+      }
+    },
+    {
+      "split": "cityscapes",
+      "kind": "gain",
+      "heldout_position": 33,
+      "dataset_index": 67,
+      "image_path": "leftImg8bit/val/frankfurt/frankfurt_000001_007857_leftImg8bit.png",
+      "label_path": "gtFine/val/frankfurt/frankfurt_000001_007857_gtFine_labelIds.png",
+      "image_sha256": "ed6263df434750b6a98fbfee9eebee4993985c871836a93c92b0a5d2ded2a093",
+      "label_sha256": "57dbcae0cbf96f9a111c35cce7f0f302273d2743b1d81e8a094bd41397b07091",
+      "pixel_error": {
+        "tiny": 0.23821614883892706,
+        "small": 0.19245530929082677,
+        "medium": 0.12465724449572158,
+        "large": 0.08257313586595416
+      }
+    },
+    {
+      "split": "cityscapes",
+      "kind": "easy",
+      "heldout_position": 20,
+      "dataset_index": 41,
+      "image_path": "leftImg8bit/val/frankfurt/frankfurt_000000_018797_leftImg8bit.png",
+      "label_path": "gtFine/val/frankfurt/frankfurt_000000_018797_gtFine_labelIds.png",
+      "image_sha256": "aa80b248fce1728f6f0e5b19f7f0d10b8f961de5836c7164bc94efca7c96272b",
+      "label_sha256": "8645e7dd7b29b6ff81048bf2feaac095b93f7d0bceaa80556e6ff413e6eca0f8",
+      "pixel_error": {
+        "tiny": 0.08665397792158358,
+        "small": 0.08307389668149157,
+        "medium": 0.08567841107982654,
+        "large": 0.08194327580411376
+      }
+    },
+    {
+      "split": "cityscapes",
+      "kind": "hard",
+      "heldout_position": 141,
+      "dataset_index": 283,
+      "image_path": "leftImg8bit/val/lindau/lindau_000016_000019_leftImg8bit.png",
+      "label_path": "gtFine/val/lindau/lindau_000016_000019_gtFine_labelIds.png",
+      "image_sha256": "c34875498e64d33471389420631b3c8ea24700e0c120f67ad94fcc92029b163d",
+      "label_sha256": "27fa5f55befc4adc2f829a307597039cfbce8c2fa49be247abe48dc6cd0e3762",
+      "pixel_error": {
+        "tiny": 0.22145872761682928,
+        "small": 0.20515250028588694,
+        "medium": 0.21122019737416664,
+        "large": 0.1901177260372663
+      }
+    },
+    {
+      "split": "acdc/fog",
+      "kind": "median",
+      "heldout_position": 1,
+      "dataset_index": 3,
+      "image_path": "rgb_anon/fog/val/GOPR0476/GOPR0476_frame_000781_rgb_anon.png",
+      "label_path": "gt/fog/val/GOPR0476/GOPR0476_frame_000781_gt_labelTrainIds.png",
+      "image_sha256": "e0d225613a2029e98b1dc85f98fcd28809297008f6548d95faf73171380b21ef",
+      "label_sha256": "f20b21458f96b6c30692225b8411006fa4e84d1fb448f275219f7c67ea3375fb",
+      "pixel_error": {
+        "tiny": 0.10961849969278892,
+        "small": 0.07401614411808632,
+        "medium": 0.06431604827894499,
+        "large": 0.05281499233882059
+      }
+    },
+    {
+      "split": "acdc/fog",
+      "kind": "gain",
+      "heldout_position": 27,
+      "dataset_index": 55,
+      "image_path": "rgb_anon/fog/val/GP010476/GP010476_frame_000058_rgb_anon.png",
+      "label_path": "gt/fog/val/GP010476/GP010476_frame_000058_gt_labelTrainIds.png",
+      "image_sha256": "cb632a6531584fd8d6dc8d83189c3e66cf40ffb8800f442ebe6261d4a6be1827",
+      "label_sha256": "6cbcecdb0a97ed3a31823e51aac0258382cd83a79b5a81b47c53ab54bbb38aa3",
+      "pixel_error": {
+        "tiny": 0.3498777645119109,
+        "small": 0.3105100636779623,
+        "medium": 0.2506416773909148,
+        "large": 0.178680802120318
+      }
+    },
+    {
+      "split": "acdc/fog",
+      "kind": "easy",
+      "heldout_position": 41,
+      "dataset_index": 83,
+      "image_path": "rgb_anon/fog/val/GP020475/GP020475_frame_000100_rgb_anon.png",
+      "label_path": "gt/fog/val/GP020475/GP020475_frame_000100_gt_labelTrainIds.png",
+      "image_sha256": "23bd5d6feeb7c5faeabbf4f0a64b5b3413a8d9c5de251ca4c9b1a1381eb3ca81",
+      "label_sha256": "9e72043019739fb347e9839860fdd820315fe88a519cf6d2c9a0f4ddcff414a7",
+      "pixel_error": {
+        "tiny": 0.045597887589588826,
+        "small": 0.04463368455013972,
+        "medium": 0.03392005313688784,
+        "large": 0.033973791525233055
+      }
+    },
+    {
+      "split": "acdc/fog",
+      "kind": "hard",
+      "heldout_position": 27,
+      "dataset_index": 55,
+      "image_path": "rgb_anon/fog/val/GP010476/GP010476_frame_000058_rgb_anon.png",
+      "label_path": "gt/fog/val/GP010476/GP010476_frame_000058_gt_labelTrainIds.png",
+      "image_sha256": "cb632a6531584fd8d6dc8d83189c3e66cf40ffb8800f442ebe6261d4a6be1827",
+      "label_sha256": "6cbcecdb0a97ed3a31823e51aac0258382cd83a79b5a81b47c53ab54bbb38aa3",
+      "pixel_error": {
+        "tiny": 0.3498777645119109,
+        "small": 0.3105100636779623,
+        "medium": 0.2506416773909148,
+        "large": 0.178680802120318
+      }
+    },
+    {
+      "split": "acdc/night",
+      "kind": "median",
+      "heldout_position": 0,
+      "dataset_index": 1,
+      "image_path": "rgb_anon/night/val/GOPR0351/GOPR0351_frame_000039_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0351/GOPR0351_frame_000039_gt_labelTrainIds.png",
+      "image_sha256": "26240fb3791b10eb009c917dc5cb8f4bc06292a7fc402ef3d007bd648cdddff0",
+      "label_sha256": "efbbb25e8aa65c4e2eb90de14aa53cd5b2b24d37397a1e1d6b9e4340decc3ec3",
+      "pixel_error": {
+        "tiny": 0.24757812499999998,
+        "small": 0.22302398551552594,
+        "medium": 0.20622055917069626,
+        "large": 0.15923025383609946
+      }
+    },
+    {
+      "split": "acdc/night",
+      "kind": "gain",
+      "heldout_position": 37,
+      "dataset_index": 75,
+      "image_path": "rgb_anon/night/val/GOPR0356/GOPR0356_frame_000378_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0356/GOPR0356_frame_000378_gt_labelTrainIds.png",
+      "image_sha256": "aca6b5ed95f9774fa67f191e5d37cd7b1a8f2359062ff51969f475a3c5c0a934",
+      "label_sha256": "02447a594aaba4e7bd195c81684ee9c96756d8d4249e2ddcf7272fa0faf64580",
+      "pixel_error": {
+        "tiny": 0.3938594350558233,
+        "small": 0.1723777003723468,
+        "medium": 0.1665916957655419,
+        "large": 0.11540852994399708
+      }
+    },
+    {
+      "split": "acdc/night",
+      "kind": "easy",
+      "heldout_position": 17,
+      "dataset_index": 35,
+      "image_path": "rgb_anon/night/val/GOPR0351/GOPR0351_frame_000143_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0351/GOPR0351_frame_000143_gt_labelTrainIds.png",
+      "image_sha256": "b5178f9376ce86db020bebdc7dbe4214ebce7c5f9fca328e46a4e1da5c15de9f",
+      "label_sha256": "8cf19d9b61a1d393d33af4f2204992ba38bcacaadb6206ed4c782581ee153f56",
+      "pixel_error": {
+        "tiny": 0.15778637556998754,
+        "small": 0.23561222349129396,
+        "medium": 0.1944930930495249,
+        "large": 0.19174273423565213
+      }
+    },
+    {
+      "split": "acdc/night",
+      "kind": "hard",
+      "heldout_position": 27,
+      "dataset_index": 55,
+      "image_path": "rgb_anon/night/val/GOPR0351/GOPR0351_frame_000825_rgb_anon.png",
+      "label_path": "gt/night/val/GOPR0351/GOPR0351_frame_000825_gt_labelTrainIds.png",
+      "image_sha256": "82eb873319b4aee13cb463f1cb75f4301235752e333a810aa7d1e9051ea1e3b9",
+      "label_sha256": "1c0dc3b7d8834280a51877db9335efdb09ae37df8f07621b2bb732ca50b5e826",
+      "pixel_error": {
+        "tiny": 0.6138657225760534,
+        "small": 0.46092739700720486,
+        "medium": 0.48073074099909274,
+        "large": 0.4705763163969324
+      }
+    },
+    {
+      "split": "acdc/rain",
+      "kind": "median",
+      "heldout_position": 9,
+      "dataset_index": 19,
+      "image_path": "rgb_anon/rain/val/GOPR0402/GOPR0402_frame_000331_rgb_anon.png",
+      "label_path": "gt/rain/val/GOPR0402/GOPR0402_frame_000331_gt_labelTrainIds.png",
+      "image_sha256": "8e2668d79c1e5ab020f8e3e422a94ac5ac90f987138b5a1d5b3eb6409f43bdd7",
+      "label_sha256": "12637108535edb37cdb73255661b3bbf4c430e84124f2f7648fd147486026b42",
+      "pixel_error": {
+        "tiny": 0.0993978027557223,
+        "small": 0.10637572180975952,
+        "medium": 0.06178727664329553,
+        "large": 0.06917786213215604
+      }
+    },
+    {
+      "split": "acdc/rain",
+      "kind": "gain",
+      "heldout_position": 36,
+      "dataset_index": 73,
+      "image_path": "rgb_anon/rain/val/GP020402/GP020402_frame_000863_rgb_anon.png",
+      "label_path": "gt/rain/val/GP020402/GP020402_frame_000863_gt_labelTrainIds.png",
+      "image_sha256": "eac86d5e982a2b3a00c6c22a0def7a60a21608656221c829a6bd2bf7c99db21c",
+      "label_sha256": "22ab2df2e36b4c08e38e486b51296fa03e1c3d071267305a7b21771d6737d53d",
+      "pixel_error": {
+        "tiny": 0.3479423643707019,
+        "small": 0.31269280945437805,
+        "medium": 0.2586162209353877,
+        "large": 0.12648110630199216
+      }
+    },
+    {
+      "split": "acdc/rain",
+      "kind": "easy",
+      "heldout_position": 11,
+      "dataset_index": 23,
+      "image_path": "rgb_anon/rain/val/GOPR0402/GOPR0402_frame_000369_rgb_anon.png",
+      "label_path": "gt/rain/val/GOPR0402/GOPR0402_frame_000369_gt_labelTrainIds.png",
+      "image_sha256": "ba67d8fabe3e8ef2e5ac643960ce6ce77d946060b7fa1139defe87812efc523e",
+      "label_sha256": "3eab22a0df82f55bc227c6061383955e082dd07a15bf7902cd75c0705f48ce61",
+      "pixel_error": {
+        "tiny": 0.06879033937122636,
+        "small": 0.0607679152903694,
+        "medium": 0.08527680604142374,
+        "large": 0.05925440034984153
+      }
+    },
+    {
+      "split": "acdc/rain",
+      "kind": "hard",
+      "heldout_position": 28,
+      "dataset_index": 57,
+      "image_path": "rgb_anon/rain/val/GP020402/GP020402_frame_000599_rgb_anon.png",
+      "label_path": "gt/rain/val/GP020402/GP020402_frame_000599_gt_labelTrainIds.png",
+      "image_sha256": "30c073d4941eab14c2eebbb9a48bce62c8749ad892de180b95c75a87c634da51",
+      "label_sha256": "01ad1d32dabc5a64eb0fb7c19fb66e7307062c57f0bb1ca96a1f1a6dd2506347",
+      "pixel_error": {
+        "tiny": 0.28065517641597026,
+        "small": 0.25480565255703147,
+        "medium": 0.23984648200008707,
+        "large": 0.21765662393729124
+      }
+    },
+    {
+      "split": "acdc/snow",
+      "kind": "median",
+      "heldout_position": 27,
+      "dataset_index": 55,
+      "image_path": "rgb_anon/snow/val/GOPR0604/GOPR0604_frame_000488_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0604/GOPR0604_frame_000488_gt_labelTrainIds.png",
+      "image_sha256": "59b3c9d4225dceab7fe786ea4108d9b98ceb2b58c2e9e5e3ccf8f98278b45a18",
+      "label_sha256": "7ca99a3682195b8e93cd3071cf0461cae15f5886eec0a6f244a795e6bb68e122",
+      "pixel_error": {
+        "tiny": 0.11453133269442572,
+        "small": 0.09287088387517406,
+        "medium": 0.07969921048114881,
+        "large": 0.07978471907851714
+      }
+    },
+    {
+      "split": "acdc/snow",
+      "kind": "gain",
+      "heldout_position": 7,
+      "dataset_index": 15,
+      "image_path": "rgb_anon/snow/val/GOPR0122/GOPR0122_frame_000306_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0122/GOPR0122_frame_000306_gt_labelTrainIds.png",
+      "image_sha256": "9dcaf303e1397c968471a07c7a3cd8b4f37f06a8f0cd8baad26cccd63b11c9ee",
+      "label_sha256": "0c753183dfb26b6a9bfc4b5672f50c9383eec52c8250b93f3cb675e0ea528056",
+      "pixel_error": {
+        "tiny": 0.4097071129707113,
+        "small": 0.3136536419985617,
+        "medium": 0.2450963981922486,
+        "large": 0.210839106214595
+      }
+    },
+    {
+      "split": "acdc/snow",
+      "kind": "easy",
+      "heldout_position": 37,
+      "dataset_index": 75,
+      "image_path": "rgb_anon/snow/val/GOPR0607/GOPR0607_frame_000474_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0607/GOPR0607_frame_000474_gt_labelTrainIds.png",
+      "image_sha256": "211b4fe705eecb74d06d20d2e5c05055625a725d25353d4074d472ae9d672ae8",
+      "label_sha256": "1969ebb15deea64b89e3237151cc311f2886d6f1939ec5b12267c2f26362b5e2",
+      "pixel_error": {
+        "tiny": 0.056215396987411514,
+        "small": 0.08935607609140017,
+        "medium": 0.09485478333487984,
+        "large": 0.08014388145003626
+      }
+    },
+    {
+      "split": "acdc/snow",
+      "kind": "hard",
+      "heldout_position": 32,
+      "dataset_index": 65,
+      "image_path": "rgb_anon/snow/val/GOPR0606/GOPR0606_frame_000220_rgb_anon.png",
+      "label_path": "gt/snow/val/GOPR0606/GOPR0606_frame_000220_gt_labelTrainIds.png",
+      "image_sha256": "c1f2a1c60a3f1fb931404c0b885a57a03f647ae88c3229fc4f0629701f670433",
+      "label_sha256": "dafb43a5f025dfec006681b2a21cc8da26fab6c960d909d9193be89d69674d4b",
+      "pixel_error": {
+        "tiny": 0.35068036656484314,
+        "small": 0.32679207549528155,
+        "medium": 0.30370483517093894,
+        "large": 0.26557715142803573
+      }
+    }
+  ]
+}
