@@ -1,0 +1,132 @@
+{
+  "cityscapes": {
+    "cells": 24,
+    "D_vs_A_fair": {
+      "cells": 6,
+      "wins": 6,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 8.81487703999019
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 6,
+      "wins": 6,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 8.871392905215282
+    },
+    "D_vs_A_hard": {
+      "cells": 24,
+      "wins": 12,
+      "ties": 12,
+      "losses": 0,
+      "mean_delta_points": 2.6188259142570125
+    },
+    "A_violating": 18,
+    "D_violating": 0
+  },
+  "acdc/fog": {
+    "cells": 24,
+    "D_vs_A_fair": {
+      "cells": 9,
+      "wins": 9,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 5.377340998510384
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 9,
+      "wins": 9,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 5.508691307877086
+    },
+    "D_vs_A_hard": {
+      "cells": 24,
+      "wins": 12,
+      "ties": 12,
+      "losses": 0,
+      "mean_delta_points": 2.1427017118286096
+    },
+    "A_violating": 15,
+    "D_violating": 0
+  },
+  "acdc/night": {
+    "cells": 24,
+    "D_vs_A_fair": {
+      "cells": 14,
+      "wins": 14,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 1.0528778487936217
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 14,
+      "wins": 14,
+      "ties": 0,
+      "losses": 0,
+      "mean_delta_points": 1.0768183915498901
+    },
+    "D_vs_A_hard": {
+      "cells": 24,
+      "wins": 6,
+      "ties": 18,
+      "losses": 0,
+      "mean_delta_points": 0.02912785266730028
+    },
+    "A_violating": 10,
+    "D_violating": 0
+  },
+  "acdc/rain": {
+    "cells": 24,
+    "D_vs_A_fair": {
+      "cells": 21,
+      "wins": 15,
+      "ties": 6,
+      "losses": 0,
+      "mean_delta_points": 2.089211716896755
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 21,
+      "wins": 15,
+      "ties": 6,
+      "losses": 0,
+      "mean_delta_points": 2.1103239838181547
+    },
+    "D_vs_A_hard": {
+      "cells": 24,
+      "wins": 12,
+      "ties": 12,
+      "losses": 0,
+      "mean_delta_points": 1.6276263102871502
+    },
+    "A_violating": 3,
+    "D_violating": 0
+  },
+  "acdc/snow": {
+    "cells": 24,
+    "D_vs_A_fair": {
+      "cells": 12,
+      "wins": 10,
+      "ties": 0,
+      "losses": 2,
+      "mean_delta_points": 1.489227456554846
+    },
+    "D_pooled_vs_A_fair": {
+      "cells": 12,
+      "wins": 10,
+      "ties": 0,
+      "losses": 2,
+      "mean_delta_points": 1.4835279497166574
+    },
+    "D_vs_A_hard": {
+      "cells": 24,
+      "wins": 6,
+      "ties": 18,
+      "losses": 0,
+      "mean_delta_points": 0.6491757472956481
+    },
+    "A_violating": 12,
+    "D_violating": 0
+  }
+}

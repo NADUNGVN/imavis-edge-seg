@@ -1,0 +1,540 @@
+\documentclass[a4paper,5p]{elsarticle}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{dblfloatfix}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+\journal{Image and Vision Computing}
+
+\newcommand{\method}{PACE-Seg}
+\newcommand{\miou}{mIoU}
+\newcommand{\etal}{et al.}
+% Marks content that still comes from the portrait-input models of V19 and must be
+% re-rendered from the landscape models before submission. Remove when resolved.
+\newcommand{\pending}[1]{\textcolor{red}{\textbf{[UPDATE PENDING: #1]}}}
+\setlength{\emergencystretch}{2em}
+\hfuzz=3pt
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{PACE-Seg: Hardware-Cost-Conditioned Elastic Semantic Segmentation with Calibrated Risk Routing for Edge Accelerators}
+
+% TODO(author): confirm author list/order, full affiliation postal addresses, and corresponding e-mail.
+\author[aff1]{Dũng Nguyễn\corref{cor1}}
+\ead{[CORRESPONDING-AUTHOR-EMAIL]}
+\cortext[cor1]{Corresponding author.}
+\affiliation[aff1]{organization={[DEPARTMENT, INSTITUTION]},
+            addressline={[STREET ADDRESS]},
+            city={[CITY]},
+            postcode={[POSTCODE]},
+            country={[COUNTRY]}}
+
+\begin{abstract}
+Edge semantic segmentation faces two coupled uncertainties: visual difficulty changes under adverse conditions, and model cost changes across accelerator architectures. We present \method, a compiler-safe elastic model with four statically deployable capacities and a runtime policy that combines measured route latency with candidate-specific error estimates from one low-cost entropy probe. Experiments use Cityscapes, four ACDC conditions, and four edge devices. The capacities span $110.2\times$ in FLOPs but only $12.3$--$18.1\times$ in measured mean candidate latency, so a FLOPs-proportional proxy does not reproduce measured budget choices. Shared elastic training costs the largest capacity 0.9 \miou{} points on Cityscapes and 1.6--2.8 points on ACDC relative to the same architecture trained alone. In held-out replay with measured complete-route costs on TensorRT and Hailo-8, the hard-budget policy never selects a route whose median, p95, or p99 cost exceeds the budget. It outperforms rank escalation by 2.87 \miou{} points on fair cells (95\% bootstrap CI 2.52--3.26) and a hard-budget variant of rank escalation by 1.41 points (1.19--1.63), and calibrators fitted without the target condition preserve both trends; a tuned three-threshold scalar router, however, matches it. When each static candidate is charged its own measured latency in the same harness, static deployment outperforms routing by 2.6 points on the TensorRT GPU and 7.4 points on the Hailo-8, because probing and engine switching add 0.7--2.7~ms and 38--47~ms per frame; routing would break even under mean-cost budgets only if this overhead fell below about 1.3 and 4.3~ms.
+\end{abstract}
+
+\begin{keyword}
+semantic segmentation \sep elastic neural networks \sep dynamic inference \sep uncertainty calibration \sep edge acceleration \sep hardware-aware deployment
+\end{keyword}
+
+\end{frontmatter}
+
+%======================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+A vehicle or mobile robot that segments its surroundings on an embedded accelerator must return a label map within a per-frame latency budget set by its control loop. Two things make that budget hard to honour with a single network. First, visual difficulty varies from frame to frame: the same 19 semantic classes appear in clear daylight, fog, rain, snow, and at night (Fig.~\ref{fig:dataset-overview}), and a model that is sufficient for a clear frame can fail on a dark one. Second, the cost of a given network depends on the accelerator that runs it: a capacity that fits the budget on one device may not fit on another. A model chosen offline must therefore be sized for the hardest condition on the slowest device, which wastes capacity on easy frames, or it must accept budget violations.
+
+Elastic networks offer several capacities from one set of trained weights~\cite{yu2019usnet,cai2020ofa}, but they leave open which capacity a given image warrants under a given device budget. Answering that question at run time usually involves two shortcuts. Compute counts such as FLOPs stand in for device latency, and a single confidence score stands in for difficulty without asking which alternative capacity would actually reduce the error. This paper examines on real edge accelerators whether each shortcut changes the deployment decision, proposes a router that replaces each with a measured or calibrated quantity, and measures what that router costs compared with simply deploying one static model.
+
+\method{} combines three elements. A compiler-safe elastic model provides four capacities, tiny to large, each exported as an independent static graph. Each target device contributes a measured table of complete route costs, including the probe and dispatch overhead. For each image, the tiny candidate produces a segmentation and a mean-entropy score, and four candidate-specific calibrators turn that score into four expected errors. A hard-budget policy then selects the cheapest feasible capacity that is expected to be accurate enough, or the most accurate feasible one. Visual risk and hardware cost are estimated independently and meet only in this final decision (Fig.~\ref{fig:condition-probe-routes}).
+
+We evaluate the design through three research questions on Cityscapes, four ACDC conditions, and four edge devices (Table~\ref{tab:study-setting}). RQ1 asks whether a FLOPs-proportional proxy reproduces measured hardware feasibility; it does not, because a $110.2\times$ compute range becomes only a $12.3$--$18.1\times$ latency range. RQ2 asks whether shared elastic training degrades quality; it does, moderately: the largest capacity is 0.9 \miou{} points below the same architecture trained alone on Cityscapes and 1.6--2.8 points below on the ACDC conditions. RQ3 asks what candidate-specific, budget-constrained routing adds over rank escalation from the same probe and over static deployment. With complete measured route costs on a TensorRT GPU and a Hailo-8 accelerator, it never selects an over-budget route and outperforms both rank escalation and its hard-budget variant, but a tuned three-threshold scalar router on the same probe is as good. Against static deployment, the answer depends on how the static model is charged: if it pays the same routed-path cost, routing stays within 0.16 points of it; if it is charged its own measured latency, it beats routing on both accelerators, and a break-even analysis shows how small the routing overhead would have to become.
+
+The contributions are:
+\begin{enumerate}
+    \item a compiler-safe elastic segmentation model whose four width--depth--resolution capacities are exported as separately compilable static graphs from one shared training process;
+    \item a measured-cost formulation that defines hardware feasibility from complete route latency, including probe and dispatch overhead, instead of from FLOPs;
+    \item a candidate-specific calibrated-risk policy that maps one inexpensive probe to per-candidate error estimates and selects capacity under an explicit hardware budget, evaluated with a fit/held-out protocol that keeps all calibration and operating-point selection away from evaluation labels;
+    \item a same-harness comparison of routing with static deployment, compiled-engine accuracy on TensorRT FP16 and Hailo-8 INT8, and a break-even analysis of the routing overhead.
+\end{enumerate}
+
+Section~\ref{sec:related} positions the work. Section~\ref{sec:method} follows one image through \method{}, Section~\ref{sec:protocol} describes the data, hardware, and evaluation protocol, and Section~\ref{sec:results} answers RQ1--RQ3. Section~\ref{sec:discussion} discusses what drives the routing gain, when routing pays off, and what the study does not establish.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_data_gt_routed.png}
+\caption{\pending{re-render with landscape models; image is from V19.} Visual domains and routed outputs. Columns show clean Cityscapes and ACDC fog, night, rain, and snow; rows show the input, 19-class ground truth, and configured policy-D output. Each image is the deterministic held-out median-error representative for its split.}
+\label{fig:dataset-overview}
+\end{figure*}
+
+\begin{table}[!t]
+\centering
+\caption{Study setting at a glance. Candidate-only latency is measured on four devices; complete routed latency, including probing and decision overhead, and static latency are measured on the two primary accelerator backends.}
+\label{tab:study-setting}
+\small
+\begin{tabularx}{\columnwidth}{@{}>{\bfseries}lX@{}}
+\toprule
+Component & Evaluated setting \\
+\midrule
+Visual domains & Cityscapes clean and ACDC fog, night, rain, and snow \\
+Prediction task & Semantic segmentation over the 19 Cityscapes train classes \\
+Elastic choices & Tiny, small, medium, and large static capacities \\
+Candidate-cost devices & E1, E2, E3, and E5 \\
+Complete-route backends & E1 Hailo-8 and E3 TensorRT/CUDA \\
+Router protocol & Alternating fit/held-out validation halves; three training seeds \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%======================================================================
+\section{Related work}
+\label{sec:related}
+
+\subsection{Efficient semantic segmentation}
+
+Fully convolutional networks established dense end-to-end prediction~\cite{long2015fcn}, and pyramid pooling and atrous encoder--decoders raised accuracy at substantial computational cost~\cite{zhao2017pspnet,chen2018deeplabv3plus}. Real-time designs reduce that cost in several ways. ENet and ERFNet use early downsampling and factorized convolutions~\cite{paszke2016enet,romera2018erfnet}, ICNet cascades low- and high-resolution branches~\cite{zhao2018icnet}, and Fast-SCNN shares a learning-to-downsample module between a global feature extractor and a high-resolution path~\cite{poudel2019fastscnn}. Fast-SCNN serves as our matched-capacity comparator because it occupies a similar sub-million-parameter regime with the depthwise-separable operators that also underlie mobile classification networks~\cite{sandler2018mobilenetv2,howard2019mobilenetv3}.
+
+Current real-time models are dominated by two-branch and multi-resolution designs. BiSeNet and BiSeNetV2 separate spatial detail from semantic context~\cite{yu2018bisenet,yu2021bisenetv2}, STDC replaces the extra spatial path with detail-guided training~\cite{fan2021stdc}, DDRNet maintains bilateral dual-resolution fusion~\cite{pan2023ddrnet}, and PIDNet adds a boundary branch inspired by PID control~\cite{xu2023pidnet}. SegFormer and OffSeg improve the accuracy--efficiency frontier through efficient attention and offset-based feature alignment~\cite{xie2021segformer,zhang2025offseg}. Despite their different mechanisms, these models share one deployment assumption: after compilation, every image passes through the same operating point. \method{} is complementary to this line. Any family of compilable candidates could replace its elastic encoder--decoder; we keep one family fixed so that routing effects are not confounded with architectural differences.
+
+\subsection{Elastic and input-adaptive networks}
+
+Slimmable networks train shared weights at several preset widths with switchable batch normalization, and US-Net extends this to arbitrary widths with the sandwich rule and in-place distillation~\cite{yu2019slimmable,yu2019usnet}. Once-for-All trains a broader depth--width--resolution--kernel space and extracts a specialized subnetwork for each target under a latency predictor~\cite{cai2020ofa}. SlimSeg brings slimmable training to segmentation with stepwise distillation~\cite{xue2022slimseg}. \method{} adopts the sandwich rule and in-place distillation, but freezes each capacity into a separate static graph instead of switching widths inside one dynamic model, which keeps the engines compatible with accelerators such as Hailo-8 that do not execute data-dependent control flow.
+
+A related line adapts computation to each input. Early-exit classifiers such as BranchyNet and MSDNet stop at an intermediate predictor once confidence is sufficient~\cite{teerapittayanon2016branchynet,huang2018msdnet}, and SkipNet and BlockDrop learn per-input layer or block execution~\cite{wang2018skipnet,wu2018blockdrop}; Han~\etal{} survey these sample-, spatial-, and temporal-wise variants~\cite{han2022dynamic}. For dense prediction, Dynamic Routing selects scale-transform paths with learned gates~\cite{li2020dynamic}, Anytime Dense Prediction refines its output through confidence-adaptive exits~\cite{liu2022anytime}, and MESS chooses among the exits of a multi-exit segmentation network~\cite{kouris2022mess}. Most of these methods express cost through FLOPs or a soft training penalty and execute their adaptivity inside one graph. \method{} moves the decision outside the graph and constrains it by measured latency, at the price of coarser granularity: it chooses among four engines rather than among layers or exits.
+
+\subsection{Hardware-aware design and latency modelling}
+
+MnasNet made measured on-device latency a search objective~\cite{tan2019mnasnet}, and ProxylessNAS and FBNet searched directly on target hardware or through latency lookup tables~\cite{cai2019proxylessnas,wu2019fbnet}. FasterSeg, AutoSegEdge, multi-objective edge NAS, RealtimeSeg, and HARD bring platform cost into segmentation architecture design~\cite{chen2020fasterseg,dou2023autosegedge,dou2024multiobjective,li2023realtimeseg,kwon2024hard}. HW-NAS-Bench documented that FLOPs and measured latency diverge across devices~\cite{li2021hwnasbench}, and nn-Meter predicts kernel-level latency for unseen models~\cite{zhang2021nnmeter}. All of these use hardware cost to choose one architecture before deployment. \method{} uses cost at run time to restrict a fixed candidate set per device; because the set is small, every complete route can be measured directly and no latency predictor is needed. RQ1 accordingly evaluates only a proportional FLOPs proxy and makes no claim about learned predictors.
+
+\subsection{Uncertainty and calibration under adverse conditions}
+
+Monte Carlo dropout, deep ensembles, and aleatoric--epistemic decompositions estimate predictive uncertainty~\cite{gal2016dropout,lakshminarayanan2017ensembles,kendall2017uncertainties}, but require multiple passes or extra heads that are costly on edge accelerators. Modern networks are often miscalibrated~\cite{guo2017calibration}, and monotone post-hoc mappings such as histogram binning and isotonic regression are standard corrections~\cite{zadrozny2002isotonic}. Selective prediction asks whether a score ranks errors correctly and summarizes this with risk--coverage curves and AURC~\cite{geifman2017selective}; conformal risk control adds distribution-free guarantees under exchangeability~\cite{angelopoulos2024crc}. In segmentation, calibration degrades under domain shift and differs across model capacities~\cite{wang2023calibrating,dejorge2023reliability}. Foggy Cityscapes and Dark Zurich target fog and night~\cite{sakaridis2018foggy,sakaridis2019darkzurich}, and ACDC provides real fog, night, rain, and snow images with Cityscapes-compatible labels~\cite{sakaridis2021acdc}. \method{} uses a single-pass entropy score and a separate binned monotone calibrator per candidate; its estimates support risk-aware selection but provide no formal risk guarantee.
+
+\subsection{Positioning}
+
+Table~\ref{tab:related-positioning} compares the closest methods by how they construct candidates, when they select, and how they represent cost and risk. The combination that \method{} targets is per-image selection with candidate-specific error estimates under a budget defined by the measured complete accelerator route. Its contribution is this integration on static compiled engines, together with a measurement of when it pays off, rather than any single new component.
+
+\begin{table*}[!t]
+\centering
+\caption{Mechanism-level positioning relative to representative primary work. Entries summarize the stated operating mechanism rather than rank methods or claim exhaustive coverage. ``Complete route'' includes the probe, risk computation, policy decision, backend dispatch or activation, and any additional candidate inference.}
+\label{tab:related-positioning}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{@{}lllll>{\raggedright\arraybackslash}X@{}}
+\toprule
+Method & Candidates & Selection & Cost & Risk & Budget; deployed form \\
+\midrule
+Once-for-All~\cite{cai2020ofa} & Elastic subnetworks & Design & Latency predictor & None & Design constraint; static subnet \\
+SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setting & None & No hard measured budget; static width \\
+MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & No complete-route constraint; multi-exit graph \\
+Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & No measured accelerator constraint; dynamic paths \\
+AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs + device latency & None & Search constraint; static architecture \\
+\method{} & Four elastic capacities & Per image & Measured complete route & Candidate-specific error & Hard measured budget; static compiled engines \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+%======================================================================
+\section{PACE-Seg}
+\label{sec:method}
+
+Figure~\ref{fig:condition-probe-routes} summarizes how \method{} processes one image. Two quantities are computed independently. Visual risk is estimated per image from a cheap probe, and hardware cost is measured once per device. They meet only in the policy, which selects one static engine. This section describes the candidate family that the policy chooses from (Section~\ref{sec:elastic}), the two estimated quantities (Sections~\ref{sec:measured-cost} and~\ref{sec:calibration}), the policy itself (Section~\ref{sec:policy}), and a complete worked decision (Section~\ref{sec:example}).
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig3_condition_probe_routes.pdf}
+\caption{\method{} inference. Visual risk (top lane) is estimated per image: the tiny engine produces a segmentation and its mean entropy $s(x)$, and four candidate-specific calibrators $g_\ell$ map that one score to expected errors $\hat r_\ell$. Hardware cost (bottom lane) is measured once per device as the complete route cost $C_h(\ell)$ of each candidate, together with the budget $B_h$. Policy D combines the two only at the final step and runs one static engine $\ell^*$. Symbols are schematic; Fig.~\ref{fig:input-output-pipeline} gives a numerical instance.}
+\label{fig:condition-probe-routes}
+\end{figure*}
+
+\subsection{Compiler-safe elastic candidate family}
+\label{sec:elastic}
+
+The four candidates, tiny, small, medium, and large, are extracted from one shared encoder--decoder by jointly varying three axes: width multiplier (0.25, 0.50, 0.75, 1.00), repeated-block depth (2, 3, 4, 6), and input resolution ($384\times192$, $512\times256$, $768\times384$, $1024\times512$, width$\times$height, matching the 2:1 aspect of Cityscapes and ACDC). The candidates share convolutional weights through active-channel slicing, while each keeps its own batch-normalization statistics, following slimmable training practice~\cite{yu2019slimmable}; activation statistics of a 0.25-width, $384\times192$ path differ substantially from those of the full-width, $1024\times512$ path. The network uses only standard operators and fixed-factor resizing, so each candidate exports as a fixed-shape ONNX graph and compiles to a static TensorRT or Hailo-8 engine (Fig.~\ref{fig:candidate-family}). Routing therefore chooses an engine before execution and never introduces data-dependent control flow into a graph.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_architecture_v20.pdf}
+\caption{Elastic architecture and static extraction. (a) One shared encoder--decoder: a stem, three downsampling depthwise-separable encoder stages, three top-down decoder stages with additive encoder skips, and a 19-class head; input resolution $R_\ell$, active channel prefix $w_\ell$, and active block prefix $d_\ell$ define elasticity. (b) Tiny through large freeze those axes into four static graphs, exported through fixed-shape ONNX to TensorRT GPU or Hailo-8. Card values are input size (width$\times$height), parameters, GFLOPs, and candidate-only p95 latency on E3 and E1; complete route costs are measured separately (Table~\ref{tab:routes}).}
+\label{fig:candidate-family}
+\end{figure*}
+
+All candidates are trained together with the sandwich rule~\cite{yu2019usnet}. Each step samples the smallest level, the largest level, and one randomly chosen intermediate level; every sampled level receives the batch resized to its own resolution. Each level is supervised with a boundary-aware cross-entropy, $\mathcal{L}_{\mathrm{seg}}=\mathrm{CE}+\lambda_b\,\mathrm{CE}_w$, where $\mathrm{CE}_w$ reweights label-boundary pixels by three and $\lambda_b=1$. Every level except the largest additionally receives in-place distillation~\cite{hinton2015distilling} from the detached, resized logits of the largest level, $\alpha\,T^2\,\mathrm{KL}(p_{\mathrm{large}}^{T}\,\|\,p_\ell^{T})$ over non-ignore pixels, with $\alpha=0.5$ and $T=1$; the step loss sums all sampled levels. Training runs for 100,000 steps with batch size 8 and AdamW (initial learning rate $3\times10^{-4}$, weight decay $10^{-4}$), 500 warm-up steps followed by cosine decay, gradient clipping at 5.0, and FP16 mixed precision. The Cityscapes and ACDC training sets are concatenated without reweighting, and augmentation applies random scaling in $[0.75,1.25]$, padding and cropping, horizontal flipping with probability 0.5, and colour jitter of 0.3 in brightness, contrast, and saturation.
+
+\subsection{Measured route cost}
+\label{sec:measured-cost}
+
+For a target device $h$ and candidate $\ell$, the policy uses the measured complete route cost $C_h(\ell)$, the time from receiving the image to returning the selected candidate's output. A route always begins with the tiny probe, so $C_h(\ell)$ includes tiny inference, entropy, calibrator and policy evaluation, backend dispatch or activation, and, unless tiny itself is selected, inference of the chosen candidate. When tiny is selected, its probe prediction is returned directly. Because cost enters only after training, deploying to a new device requires compiling the four graphs and measuring their four routes, with no change to weights or calibrators. Section~\ref{sec:rq1} shows why this measurement cannot be replaced by FLOPs. For comparison with static deployment we also measure the static cost $S_h(\ell)$ of running candidate $\ell$ alone, without the probe, in the same harness.
+
+\subsection{Candidate-specific visual risk}
+\label{sec:calibration}
+
+Let the tiny candidate produce logits $z(x)$ for image $x$, with softmax probabilities $p_{u,c}$ at pixel $u$ for class $c$. The probe score is mean pixel entropy,
+\begin{equation}
+s(x)=\frac{1}{|\Omega|}\sum_{u\in\Omega}-\sum_{c=1}^{C}p_{u,c}\log\max(p_{u,c},10^{-12}),
+\label{eq:entropy}
+\end{equation}
+over all output pixels $\Omega$, with $C=19$. For each candidate $\ell$, a monotone calibrator $g_\ell$ maps the shared score to that candidate's expected per-image pixel error,
+\begin{equation}
+\widehat{r}_\ell(x)=g_\ell(s(x)).
+\label{eq:risk}
+\end{equation}
+Each $g_\ell$ is fitted on the fit half of the data only: fit-half scores are divided into ten equal-count bins, the mean observed error of candidate $\ell$ is computed in each bin over non-ignore pixels, and a cumulative-maximum pass enforces monotonicity. The primary configuration fits one calibrator set per visual condition; a pooled variant fits one set on all five fit halves and removes the need to know the condition at run time.
+
+Three properties motivate this design. The probe costs no extra network, because the tiny engine is itself a deployable route and its entropy needs only one softmax and one reduction, a cost already contained in every measured route. Multi-pass estimators such as Monte Carlo dropout or ensembles~\cite{gal2016dropout,lakshminarayanan2017ensembles} would multiply that cost. A single score cannot rank candidates by itself, since the same image can be hard for tiny yet easy for large; fitting one calibrator per candidate converts the shared score into a vector of expected errors, and the differences within that vector drive the decision. Finally, binned monotone calibration~\cite{zadrozny2002isotonic} has few parameters per candidate and cannot reverse the ordering implied by the score, which limits overfitting on fit halves of 50--250 images per split.
+
+\subsection{Hardware-cost-conditioned policy}
+\label{sec:policy}
+
+Given the risk vector $\widehat{r}_\ell(x)$, the cost table $C_h(\ell)$, a budget $B_h$, and a risk target $\tau$, policy D first forms the feasible set
+\begin{equation}
+\mathcal{S}_h=\{\ell : C_h(\ell)\leq B_h\}.
+\label{eq:feasible}
+\end{equation}
+If some feasible candidate satisfies $\widehat{r}_\ell(x)\leq\tau$, D selects the cheapest such candidate; otherwise it selects the feasible candidate with the lowest predicted error, breaking ties by cost. If $\mathcal{S}_h$ is empty, that is, $B_h<C_h(\mathrm{tiny})$, D returns the tiny probe output, the cheapest possible route. With four candidates the decision costs four table lookups and four comparisons, independent of image resolution. A new device changes only $C_h$; a new visual domain changes only $g_\ell$.
+
+The main comparator, policy A, uses the same calibrated probe score $\widehat{r}_{\mathrm{tiny}}(x)$ but escalates by latency rank: it selects the cheapest candidate if the score is at most $\tau$ and otherwise the candidate at latency rank $\lfloor \widehat{r}_{\mathrm{tiny}}(x)/\tau\rfloor$, counting the cheapest as rank 0 and capping at large. A has neither candidate-specific risk nor a hard budget. To separate these two ingredients, A-hard applies D's feasibility mask to A: whenever A's choice exceeds $B_h$, it is replaced by the most expensive feasible candidate. A-hard therefore has a hard budget but no candidate-specific risk. T-hard asks whether candidate-specific calibration is needed at all: it applies three monotone thresholds directly to $s(x)$, fitted on the fit half to maximize fit-half \miou{} under the budget, with the same feasibility mask. Table~\ref{tab:policy-summary} lists all evaluated policies and the information each may access. Two static references run one capacity without the probe: the best feasible static candidate, the largest whose cost fits the budget, and, for mean-cost budgets, a random mixture of two adjacent static candidates. A per-image ground-truth oracle provides a non-deployable upper bound.
+
+\begin{table*}[!t]
+\centering
+\caption{Routing policies and information access. ``Per condition'' means that the deployment domain is configured before inference; pooled D removes that requirement. The oracle uses held-out ground truth and is not deployable.}
+\label{tab:policy-summary}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccc l@{}}
+\toprule
+Policy & Candidate risk & Hard budget & Calibrator & Deployable & Purpose \\
+\midrule
+Best feasible static & No & Yes & None & Yes & Non-adaptive reference \\
+Static mixture & No & Mean cost & None & Yes & Reference under mean-cost budgets \\
+Policy A: rank escalation & No & No & Per condition & Yes & Rank-based comparator \\
+Policy A-hard & No & Yes & Per condition & Yes & Isolates the hard budget \\
+Policy T-hard & No & Yes & Thresholds on $s(x)$ & Yes & Isolates candidate-specific calibration \\
+Policy D: configured & Yes & Yes & Per condition & Yes & Primary method \\
+Policy D: pooled & Yes & Yes & Pooled & Yes & Condition-agnostic check \\
+Oracle & GT error & Yes & None & No & Upper bound only \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\subsection{A worked decision}
+\label{sec:example}
+
+\pending{numbers below are from V19 (portrait models); recompute risk vector and route costs for a landscape held-out rain image.} Figure~\ref{fig:input-output-pipeline} follows one held-out ACDC rain image through policy D on E3. The tiny probe yields $s(x)=0.461$~nats. The four calibrators turn this score into expected errors of 0.106, 0.080, 0.068, and 0.058 for tiny, small, medium, and large, so only large would meet the risk target $\tau=0.066$. On E3, however, the large route is infeasible at the evaluated budget. Because no feasible candidate meets $\tau$, D falls back to the feasible candidate with the lowest predicted error and runs medium. The example shows the property that distinguishes D from rank escalation: the decision uses the full risk vector, and infeasible candidates are removed before risk is consulted.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig4_input_output_pipeline.pdf}
+\caption{\pending{re-render with landscape models; figure is from V19.} One complete policy-D decision on a held-out rain image, read left to right. (1) The tiny engine produces a segmentation and its mean entropy. (2) Candidate-specific calibrators map that score to four expected errors. (3) Measured E3 complete-route costs are compared with the budget; infeasible candidates are grey and hatched. (4) No feasible candidate meets $\tau$, so the lowest-risk feasible candidate is run; orange in the bottom image marks disagreement with ground truth. The case illustrates the policy and is not an additional evaluation trial.}
+\label{fig:input-output-pipeline}
+\end{figure*}
+
+%======================================================================
+\section{Experimental setup}
+\label{sec:protocol}
+
+\subsection{Data and fit/held-out split}
+
+Cityscapes provides 2,975 training and 500 validation images~\cite{cordts2016cityscapes}, and ACDC provides 1,600 training and 406 validation images across fog, night, rain, and snow~\cite{sakaridis2021acdc}; both use the 19 Cityscapes training classes. All models are trained on the training sets at the native 2:1 aspect ratio. Each validation split is then divided by alternating index (Table~\ref{tab:dataset-splits}): even-index images form the fit half, used for calibration and operating-point selection, and odd-index images form the held-out half, used only for evaluation. The study does not use an external test server.
+
+\begin{table}[!t]
+\centering
+\caption{Dataset composition and alternating-index router split. Fit and held-out counts partition each validation subset exactly.}
+\label{tab:dataset-splits}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Dataset/condition & Train & Validation & Fit & Held-out \\
+\midrule
+Cityscapes clean & 2,975 & 500 & 250 & 250 \\
+ACDC fog   & 400 & 100 & 50 & 50 \\
+ACDC night & 400 & 106 & 53 & 53 \\
+ACDC rain  & 400 & 100 & 50 & 50 \\
+ACDC snow  & 400 & 100 & 50 & 50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Models and training runs}
+
+Three elastic supernets are trained with seeds 0--2 (Runs A--C) under the recipe of Section~\ref{sec:elastic}, and every router experiment is repeated on all three. For RQ2, two references are trained with the same recipe and three seeds each: Fast-SCNN~\cite{poudel2019fastscnn}, and the large \method{} architecture trained alone, without weight sharing or distillation (PACE-Large). Checkpoint and configuration hashes are listed in the supplement.
+
+\subsection{Hardware and latency measurement}
+
+Table~\ref{tab:hardware} lists the four devices. NVIDIA devices run TensorRT FP16 engines built from the fixed-shape ONNX graphs, and E1 runs INT8 HEF files compiled from the same graphs with the Hailo Dataflow Compiler and quantized with 200 real fit-half images. All four candidates execute on both primary paths. The Jetson DLA is excluded because decoder layers fall back to the GPU, which would make the measured route a mixed-device path.
+
+\begin{table}[!t]
+\centering
+\caption{Hardware and compiler stacks used for latency measurement.}
+\label{tab:hardware}
+\scriptsize
+\begin{tabularx}{\columnwidth}{@{}l>{\raggedright\arraybackslash}p{2.1cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+ID & Hardware & Runtime and system versions \\
+\midrule
+E1 & Raspberry Pi 5 + Hailo-8 M.2 & HailoRT 4.23.0; Dataflow Compiler 3.34.0; Model Zoo 2.19.0 \\
+E2 & Jetson Xavier NX & L4T R35.4.1; CUDA 11.4.19; cuDNN 8.6.0.166; TensorRT 8.5.2.2 \\
+E3 & Jetson AGX Xavier & L4T R35.6.4; CUDA 11.4.19; TensorRT 8.5.2.2 \\
+E5 & Jetson Orin Nano Super & L4T R36.5.0; CUDA 12.6.68; cuDNN 9.3.0; TensorRT 10.3.0.30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three kinds of latency are measured. Candidate-only latency, used for RQ1, times each candidate in isolation at batch size one on all four devices with the trtexec/hailortcli protocol; RQ1 uses the mean, and the cards of Fig.~\ref{fig:candidate-family} report p95. Complete route cost $C_h(\ell)$, used by the router, and static cost $S_h(\ell)$, used for the static references, are measured on E1 and E3 in the same process, with the same engines, inputs, and timer boundary. The timer starts when a preprocessed host tensor is handed to the runtime and stops after the returned prediction is synchronized; image decoding, resizing, and normalization are outside the timer. On E3 all four TensorRT execution contexts stay resident and the route covers tiny inference, entropy, policy evaluation, dispatch, and any additional inference. On E1 the route also includes the mandatory Hailo network-group activation; we measured both explicit activation and the HailoRT model scheduler, and both FLOAT32 and UINT8 output streams, and report explicit activation with FLOAT32 streams as the primary E1 table. Each configuration uses 50 warm-up and 500 timed iterations, with Jetson power mode recorded and temperatures logged before and after each run. Table~\ref{tab:routes} reports the medians, p95, and p99 used in replay. Cold-start costs are excluded because the two runtimes have different reload semantics.
+
+\begin{table}[!t]
+\centering
+\caption{Warm complete-route cost and static cost in ms (median / p95 / p99 over 500 timed iterations, same harness). A route includes the tiny probe, risk and policy computation, dispatch or activation, and any additional candidate inference; a static deployment runs only its own engine. The median is the primary cost table; p95 and p99 tables are used for the sensitivity analysis in Section~\ref{sec:rq3}.}
+\label{tab:routes}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Route & E3 TensorRT/CUDA & E1 Hailo-8 \\
+\midrule
+tiny $\rightarrow$ tiny & 1.84 / 1.91 / 1.94 & 44.26 / 45.28 / 45.42 \\
+tiny $\rightarrow$ small & 4.24 / 4.36 / 4.42 & 58.11 / 59.56 / 60.00 \\
+tiny $\rightarrow$ medium & 9.44 / 9.78 / 9.87 & 76.18 / 78.23 / 80.16 \\
+tiny $\rightarrow$ large & 19.50 / 19.59 / 19.63 & 116.26 / 118.02 / 118.93 \\
+\midrule
+static tiny & 1.18 / 1.21 / 1.24 & 6.27 / 6.57 / 6.61 \\
+static small & 2.56 / 2.71 / 2.76 & 12.07 / 12.67 / 12.82 \\
+static medium & 7.11 / 7.42 / 7.51 & 30.91 / 31.82 / 32.07 \\
+static large & 16.76 / 16.92 / 17.26 & 69.39 / 70.51 / 70.98 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Accuracy and latency are combined in an offline per-image replay with measured costs. Every candidate prediction is computed once per image from the trained PyTorch models and cached, and each routing decision is scored against these cached predictions while its cost is taken from the measured table. Section~\ref{sec:compiled} checks this replay against the compiled TensorRT and Hailo-8 engines with the trained weights.
+
+\subsection{Evaluation protocol}
+\label{sec:split}
+
+Segmentation quality is dataset-level \miou{}. For a routed policy, the confusion matrices of the selected candidates are accumulated over the held-out images and \miou{} is computed once. The unit of analysis is an operating cell, defined by training run, backend cost table, split, and budget; the 120 cells reuse images and predictions and are therefore correlated, and we report descriptive win/tie/loss counts alongside bootstrap intervals.
+
+Operating points are chosen on the fit half by a fixed rule. Five candidate risk targets $\tau$ are set to the 10th, 25th, 50th, 75th, and 90th percentiles of fit-half observed error, macro-aggregated across splits; one such grid is generated per run and shared by the E1 and E3 cost tables. For each budget and policy, the selected target maximizes fit-half \miou{} among targets whose mean fit-half cost meets the budget, with lower cost as the tie-break. Only then are held-out labels read, to compute routed \miou{} and budget violations. Calibrators, targets, thresholds, and operating points never see held-out labels, the entropy feature is identical at fitting and deployment, and the pooled variant combines only fit halves.
+
+A cell is violating if at least one held-out image is routed to a candidate whose tabulated route cost exceeds the budget. This is a route-selection criterion: it guarantees that the selected route's median (or, in the sensitivity analysis, p95 or p99) cost fits the budget, not that every individual frame does. Because D removes infeasible candidates before choosing, its zero violation count is partly structural, whereas A can violate a budget whenever its threshold escalates an image to an expensive route. Comparisons with A therefore use fair cells, those in which A has no held-out violation; comparisons with A-hard, T-hard, and the static references use all 120 cells, since none of them violates. Router comparisons use the four route costs as budgets; comparisons with static deployment use the union of the route and static costs of each device. Quality differences are reported in \miou{} percentage points.
+
+Uncertainty is estimated with an image-level bootstrap: in each of 1,000 replicates, the held-out images of every split are resampled with replacement, the same resample is applied to every run, backend, and budget of that split, routed \miou{} is recomputed, and the macro-averaged difference is recorded. We report percentile 95\% intervals. A nested bootstrap (200 replicates) additionally resamples the fit halves and refits calibrators, risk grid, and operating points in every replicate. Three further analyses address robustness. The cost-statistic sensitivity rebuilds both the cost table and the budget grid from the p95 or p99 costs. The leave-one-condition-out (LOCO) analysis refits the calibrators, the risk-target grid, and the operating points on the fit halves of the other four conditions only and evaluates on the held-out half of the remaining condition. Finally, a break-even analysis scales the measured routing overhead $C_h(\ell)-S_h(\ell)$ by a factor $\alpha\in[0,1]$ and repeats the comparison with static deployment.
+
+%======================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{RQ1: Does a FLOPs-proportional proxy reproduce measured feasibility?}
+\label{sec:rq1}
+
+No. The four candidates require 0.206, 1.168, 6.171, and 22.699 GFLOPs, a $110.2\times$ range from tiny to large, but their measured mean latency grows by only $12.3$--$18.1\times$, depending on the device: $12.3\times$ on the Hailo-8 (4.0 to 49.3~ms), $17.2\times$ on E3 (1.0 to 17.2~ms), $17.5\times$ on E5 (1.0 to 18.0~ms), and $18.1\times$ on E2 (1.6 to 29.5~ms) (Fig.~\ref{fig:flops-latency}). The dashed lines in Fig.~\ref{fig:flops-latency} show the latency that a proxy proportional to FLOPs, anchored at each device's tiny candidate, would predict; it overestimates the cost of every larger candidate, and that of large by $6$--$9\times$ (110~ms instead of 17.2~ms on E3, 441~ms instead of 49.3~ms on E1). The small candidates are memory- and launch-bound, so their latency falls far less than their compute, and the gap differs between devices because each accelerator handles memory traffic and small kernels differently.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig5_flops_latency_v20.pdf}
+\caption{Measured latency versus compute. Solid lines show measured mean latency of the four candidates on each device; dashed lines in the same colour show the latency a FLOPs-proportional proxy anchored at tiny would predict. Filled markers indicate the largest candidate that fits an illustrative 10~ms budget on each device. The $110.2\times$ compute range becomes only $12.3$--$18.1\times$ measured latency.}
+\label{fig:flops-latency}
+\end{figure}
+
+The mismatch changes deployment decisions. Under the illustrative 10~ms budget marked in Fig.~\ref{fig:flops-latency}, the largest feasible candidate is small on E1 and E2 and medium on E3 and E5, whereas the proxy would rule out medium on E3 and E5 and small on E1, all of which measurement shows to fit. Measuring the four routes once per device removes this error at negligible engineering cost. The result concerns a proportional proxy only; learned latency predictors may do better and are not evaluated here.
+
+Isolated candidate latency is itself insufficient, because a deployed route also includes the probe and dispatch. On E3 the tiny route grows from 1.03~ms candidate-only p95 to a 1.84~ms complete-route median, and on E1 from 4.01~ms to 44.26~ms, where Hailo network-group activation and host-side entropy dominate the short tiny inference. On E1 this expansion falls from $11.0\times$ for tiny to $2.4\times$ for large as candidate inference begins to dominate, whereas on E3 it stays between $1.1\times$ and $1.9\times$. A budget defined from candidate-only latency would admit routes that are infeasible in deployment, particularly on E1. This is why the router uses complete route costs (Table~\ref{tab:routes}).
+
+\subsection{RQ2: Does shared elastic training preserve quality?}
+
+Only partly. Figure~\ref{fig:rq2} compares the largest elastic capacity with the same architecture trained alone (PACE-Large) and with Fast-SCNN, each over three seeds. Shared training costs the large capacity 0.9 \miou{} points on Cityscapes ($59.0\pm0.3$ versus $60.0\pm0.5$) and 1.6--2.8 points on the ACDC conditions, 2.0 points on the ACDC mean ($49.8$ versus $51.8$); the gap is largest at night ($-2.8$). Against Fast-SCNN, the elastic large capacity is 0.8 points better on Cityscapes and 0.8--1.8 points worse on night, snow, and fog, but 4.0 points worse on rain. Our study plan had set a practical band of 1.5 points relative to an independently trained model of similar size; the elastic large capacity stays within it on Cityscapes, night, and snow but not on fog or rain. In exchange, the same weights also provide the tiny, small, and medium capacities (33.8, 40.8, and 49.3 \miou{} on Cityscapes).
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.82\textwidth]{figures/fig6_rq2_shared_vs_alone_v20.pdf}
+\caption{Matched-capacity comparison. Absolute \miou{} of the largest elastic capacity (shared training), the same architecture trained alone (PACE-Large), and Fast-SCNN, mean $\pm$ standard deviation over three seeds. Short ticks on the elastic bars mark the tiny (orange), small (light blue), and medium (green) capacities of the same supernets.}
+\label{fig:rq2}
+\end{figure*}
+
+This result matters for interpreting RQ3. A router can only choose among the candidates it is given, and the cost of weight sharing grows under adverse conditions, which is exactly where a router would most want the large capacity. All routing comparisons below are made within one supernet, so they are not affected by this gap, but a deployment that needs only the large capacity would be better served by training it alone.
+
+\subsection{RQ3: What does candidate-specific routing add?}
+\label{sec:rq3}
+
+We answer RQ3 against five references: rank escalation (A), rank escalation with the same hard budget (A-hard), a three-threshold scalar router (T-hard), the best feasible static candidate, and, under mean-cost budgets, the static mixture. Table~\ref{tab:routerfinal} summarizes all comparisons in the replay with measured costs.
+
+\begin{table*}[!t]
+\centering
+\caption{Routing comparisons in held-out replay with measured costs (three runs $\times$ two backends $\times$ five splits $\times$ four budgets = 120 cells). $\Delta$ is the macro-averaged \miou{} difference in percentage points; the 95\% interval is an image-level bootstrap, and the nested interval also refits calibrators, risk grid, and operating points on resampled fit halves (Section~\ref{sec:split}). Comparisons with A use fair cells, in which A has no violation; all other comparisons use the full grid. LOCO refits calibrators, risk targets, and operating points without the evaluated condition. ``Static, route cost'' charges the static candidate the cost of the route that ends in it; ``static, own cost'' charges it its measured static latency (Table~\ref{tab:routes}). Cells are correlated and E1/E3 share predictions.}
+\label{tab:routerfinal}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrcc@{}}
+\toprule
+Cost table & Comparison & Cells & W/T/L & Mean $\Delta$ & 95\% CI & Nested CI \\
+\midrule
+Median & D $-$ A & 62 & 54/6/2 & +2.87 & [+2.52, +3.26] & [+1.85, +3.28] \\
+Median & Pooled D $-$ A & 62 & 54/6/2 & +2.90 & -- & -- \\
+Median & A-hard $-$ A & 62 & 22/38/2 & +0.47 & -- & -- \\
+Median & D $-$ A-hard & 120 & 48/72/0 & +1.41 & [+1.19, +1.63] & [+0.99, +1.70] \\
+Median & T-hard $-$ A-hard & 120 & 46/68/6 & +1.44 & -- & -- \\
+Median & D $-$ T-hard & 120 & 16/80/24 & $-0.03$ & [$-0.11$, +0.09] & -- \\
+Median & D $-$ best feasible static, route cost & 120 & 0/92/28 & $-0.16$ & [$-0.22$, $-0.10$] & -- \\
+Median & D $-$ best feasible static, own cost, E3 & 120 & 0/61/59 & $-2.62$ & [$-2.69$, $-2.37$] & -- \\
+Median & D $-$ best feasible static, own cost, E1 & 120 & 0/21/99 & $-7.41$ & [$-7.62$, $-6.75$] & -- \\
+\midrule
+p95 & D $-$ A & 62 & 54/6/2 & +2.87 & [+2.52, +3.26] & -- \\
+p95 & D $-$ A-hard & 120 & 48/72/0 & +1.41 & [+1.19, +1.63] & -- \\
+p99 & D $-$ A & 61 & 53/6/2 & +2.83 & -- & -- \\
+\midrule
+Median, LOCO & D $-$ A & 41 & 29/12/0 & +4.15 & -- & -- \\
+Median, LOCO & D $-$ A-hard & 120 & 48/72/0 & +1.59 & -- & -- \\
+\midrule
+\multicolumn{7}{@{}l}{Violating cells (median / p95 / p99 tables): A 58 / 58 / 59 of 120; A-hard, T-hard, D, pooled D, static, and LOCO D 0 of 120 in every table.} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Against rank escalation} Configured D outperforms or matches A in 60 of 62 fair cells, with a mean gain of +2.87 \miou{} points (95\% CI +2.52 to +3.26; nested +1.85 to +3.28), and it never selects an over-budget route, whereas A does so in 58 of 120 cells. Pooled D, which uses one calibrator set for all conditions, records 54/6/2 and +2.90 points. Figure~\ref{fig:router-frontier} shows the comparison as quality--cost curves.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig8_router_deployment_matched.pdf}
+\caption{\pending{re-plot from the landscape replay; figure is from V19.} Quality versus measured complete warm-route cost in held-out replay (median cost tables). Points macro-average five held-out splits within each run and then Runs A--C; whiskers show the run-level range, not confidence intervals. Operating cells are correlated and E1/E3 share predictions.}
+\label{fig:router-frontier}
+\end{figure*}
+
+\paragraph{Separating the hard budget from candidate-specific risk} D differs from A in two ways, a hard budget and candidate-specific risk. A-hard adds only the first. Adding the hard budget removes all of A's violations but improves fair-cell quality by only +0.47 points. Adding candidate-specific risk on top, which turns A-hard into D, gains a further +1.41 points (95\% CI +1.19 to +1.63; nested +0.99 to +1.70) with 48 wins, 72 ties, and no losses over all 120 cells. The same gain, however, is obtained without candidate-specific calibration: T-hard, which places three tuned thresholds directly on the entropy score, improves on A-hard by +1.44 points and is statistically indistinguishable from D ($-0.03$ points, CI $-0.11$ to +0.09) at about 1\% lower cost. The advantage over rank escalation therefore comes from choosing the operating point under the hard budget on the fit half, and with a single scalar probe a monotone threshold rule already captures the information that the four calibrators add.
+
+\paragraph{Robustness} Replacing the median cost table by the p95 or p99 table, for both the costs and the budget grid, leaves the conclusions unchanged: D still selects no over-budget route, and its gains over A and A-hard change by at most 0.04 points. Calibrators fitted without the evaluated condition (LOCO) also keep D free of violations and ahead of A-hard by +1.59 points, so the gain does not depend on having calibrated on the test condition itself. On the held-out halves, the four candidate-specific calibrators have mean absolute errors of 0.019--0.057 in per-image pixel error, lie close to the diagonal of a reliability plot, and change by at most 0.003 when the ten equal-count bins are replaced by five bins or isotonic regression (supplement, Fig.~S5). The equivalence of D and T-hard is therefore not caused by poor calibration.
+
+\paragraph{Against static deployment} The comparison with static deployment depends on what the static model is charged. If it is charged the cost of the route that ends in it, as if it also paid for the probe, D stays within 0.16 points of the best feasible static candidate (95\% CI $-0.22$ to $-0.10$), tying in 92 of 120 cells and lowering the mean route cost by 2.0\%; the non-deployable per-image oracle exceeds that static reference by only 0.11 points, so the headroom for per-image routing under a per-frame cap is small with this candidate set. A static deployment, however, does not run the probe. Figure~\ref{fig:routestatic} shows the same-harness latency of each capacity deployed statically and reached through the tiny probe. On E3 a route costs 0.7~ms more than the static engine it ends in for tiny and 2.7~ms more for large; on E1 the overhead is 38--47~ms, comparable to the full latency of the large engine, and it does not shrink with the HailoRT scheduler or UINT8 output streams. Charged its own latency, the best feasible static model beats D by 2.62 points on E3 (0 wins, 61 ties, 59 losses) and by 7.41 (FLOAT32) to 9.15 (UINT8) points on E1 (0 wins); T-hard behaves identically. At the lowest budgets of each device no route is feasible at all, because the cheapest route, tiny plus probe, already exceeds the static tiny engine.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig11_route_vs_static_v20.pdf}
+\caption{Same-harness median latency of each capacity deployed statically (left bars) and reached through the tiny probe (right bars). Hatched: routing overhead. E3 returns logits; E1 uses explicit network-group activation with FLOAT32 output streams.}
+\label{fig:routestatic}
+\end{figure*}
+
+\paragraph{Mean-cost budgets and break-even overhead} When only the average cost is constrained, the fairer static reference is a random mixture of the two adjacent static models with the same mean cost. Charged their own latencies, candidate-specific routing still loses to this mixture by 0.3--0.5 points on E3 and 5.5--6.3 points on E1. To ask how much the overhead would have to shrink, we scale the measured per-capacity overhead by $\alpha\in[0,1]$ and repeat the comparison (Fig.~\ref{fig:breakeven}). With zero overhead, routing would gain 1.3--1.4 points over static mixing on both devices; the gain vanishes at 1.3~ms of overhead on E3 (measured: 1.9~ms) and 4.3~ms on E1 (measured: 44~ms). Under per-frame budgets routing never wins, even at zero overhead ($-0.16$ points), because any per-frame cap forces the router to stay at or below the capacity that the static model already uses.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig12_breakeven_v20.pdf}
+\caption{Routing minus static \miou{} as the measured routing overhead is scaled from zero to its measured value (circle). Blue: mean-cost budgets against static mixing; orange: per-frame budgets against the best feasible static model. Dotted: break-even overhead.}
+\label{fig:breakeven}
+\end{figure*}
+
+Figure~\ref{fig:routing-decision-example} isolates the role of the cost table. It applies the risk vector of the worked example in Section~\ref{sec:example} to both backends under one illustrative budget. Because the two devices have different route costs, the same image and risk estimate lead to different feasible sets and therefore different actions.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig7_routing_decision_example.pdf}
+\caption{\pending{re-render with landscape models and the landscape cost table; figure is from V19.} Same image and risk vector, different measured hardware. (1) The risk vector of Fig.~\ref{fig:input-output-pipeline}. (2) Under an illustrative budget, the feasible E3 routes and the selected candidate. (3) The feasible E1 routes and the selected candidate; infeasible routes are grey and hatched. Bottom row: the input and each backend's selected output. The example illustrates the policy and is not an evaluation cell.}
+\label{fig:routing-decision-example}
+\end{figure*}
+
+Table~\ref{tab:router-condition} breaks the comparison with A down by condition, with 24 cells per row from three runs and two cost tables. The gain over A is largest on clean Cityscapes (+8.81 points), although only 6 of its 24 cells are fair because A violates the budget in the other 18. Rain is the opposite case: A violates a budget in only 3 cells, and configured D records 15 wins, 6 ties, and no losses over 21 fair cells with a +2.09-point gain. Night has the smallest gain, +1.05 points, despite winning all 14 fair cells. The only two losses occur on snow, for both configured and pooled D. No single condition drives the aggregate result, and fair-cell counts and violation counts must be read together.
+
+\begin{table}[!t]
+\centering
+\caption{Condition-level comparison against policy A (median cost tables). W/T/L and mean $\Delta$ use fair cells; violation counts use all 24 cells per condition. Configured and pooled D each have zero violations.}
+\label{tab:router-condition}
+\scriptsize
+\setlength{\tabcolsep}{2.0pt}
+\resizebox{\columnwidth}{!}{%
+\input{tables/router_by_condition_table_points.tex}%
+}
+\end{table}
+
+The small night gain is consistent with the probe. The large candidate reaches 59.0 \miou{} on Cityscapes but only 38.2 on ACDC night, and the night calibrators have the largest held-out errors (0.051--0.057) and the weakest score--error rank correlation (Spearman 0.35--0.67, against 0.74--0.81 on Cityscapes). The entropy score thus ranks errors least reliably exactly where errors are most frequent. Figure~\ref{fig:qualitative} shows the five deterministic median-error examples, placing tiny, medium, and large side by side with the routed output and its error map.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig9_qualitative_grid.png}
+\caption{\pending{re-render with landscape models; image is from V19.} Qualitative capacity comparison on the five held-out examples from Fig.~\ref{fig:dataset-overview}; rows are clean, fog, night, rain, and snow, as tagged on each input. The first five columns compare input, ground truth, tiny, medium, and large predictions; the last two show the configured policy-D output and its error overlay, where orange marks disagreement with ground truth. Image selection was fixed by median large-candidate pixel error before visual inspection.}
+\label{fig:qualitative}
+\end{figure*}
+
+\subsection{Compiled-engine accuracy and on-device replay}
+\label{sec:compiled}
+
+The replay above uses PyTorch predictions. Compiled TensorRT FP16 engines with the trained weights reproduce PyTorch within $\pm0.02$ points on every capacity and split, with 99.7--100\% pixel agreement and a probe-entropy error below $2\times10^{-4}$. Hailo-8 INT8 engines lose up to 1.6 points on tiny (pixel agreement down to 87\% at night) and at most 0.5 points on large; the probe entropy deviates by 0.012--0.035 on average but keeps a rank correlation of at least 0.88. Replaying Run A with the on-device predictions and probe scores leaves every conclusion unchanged: on E3 D differs from the PyTorch replay by 0.01 points, and on E1 D loses a further 0.6 points but still matches T-hard ($-0.06$) and trails static deployment by 7.9 points.
+
+%======================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What drives the routing gain}
+
+Policies A and D read the same probe score, yet they diverge at tight budgets. A maps the score to a latency rank and escalates whenever the score crosses its threshold; nothing in that rule prevents escalation to a route whose measured cost exceeds the budget, so A's operating point must be chosen conservatively, or it violates the budget, as it does in 18 of 24 Cityscapes cells. The A-hard ablation separates the two ingredients. Imposing the budget alone repairs the violations but improves fair-cell quality by only +0.47 points, whereas the remaining +1.41 points come from choosing, within the feasible set, an operating point tuned on the fit half. T-hard obtains the same gain with three thresholds on the raw score, so with one scalar probe the four candidate-specific calibrators are an interpretable but not a necessary way to make that choice. A richer probe, for example per-class or spatial uncertainty, would be needed for candidate-specific calibration to carry information that a threshold rule cannot.
+
+\subsection{When adaptive routing pays off}
+
+The comparison with static deployment clarifies what a router can and cannot deliver on these accelerators. Routing can only pay off if choosing per image is worth more than its cost. The headroom is small: the per-image oracle exceeds the best feasible static candidate by only 0.11 points under a per-frame cap, and even at zero overhead routing gains only 1.3--1.4 points over static mixing under a mean-cost budget. Against that, every route pays for the tiny engine, the entropy and decision, and on the Hailo-8 a network-group switch that dominates the cost. Routing therefore becomes worthwhile only when three conditions hold: the budget constrains mean rather than per-frame cost; the overhead stays below the break-even value (about 1.3~ms on E3 and 4.3~ms on E1 here); and the candidates differ enough per image to leave headroom. For a fixed per-frame deadline, a static model of the largest feasible capacity is the stronger choice and should always be reported as a baseline.
+
+\subsection{Deployment guidance}
+
+For a new accelerator, the results suggest a simple procedure: compile the fixed candidate set, measure complete routes and static deployments with the production runtime in the same harness, preferably reporting tail percentiles as well as the median, and compare the routing overhead with the break-even value before deploying a router. Designs that reuse the probe computation inside the selected candidate, keep all candidates resident without switching (multi-context compilation on Hailo, one engine with shared early layers on TensorRT), or route among models with more complementary errors attack exactly the terms that make routing lose here. If a router is used, pooled calibration produced the same result as configured calibration (54/6/2 against A) and, in the LOCO analysis, transferred to a condition it had not seen, so it is the simpler default; a threshold router is simpler still. Because the probe is the tiny candidate, its quality bounds the information available to the router; the smallest gains occurred at night, where the probe ranks errors worst.
+
+\subsection{Relation to latency predictors and dynamic networks}
+
+The study does not compare against learned latency predictors~\cite{zhang2021nnmeter}, and RQ1 is not evidence against them. With four candidates, measuring every route is cheap and exact; with a large search space such as Once-for-All~\cite{cai2020ofa}, measurement becomes impractical and a predictor is needed, at the cost of predictor error in the feasibility test. Likewise, \method{} gives up the fine granularity of in-graph dynamic networks for compatibility with static compilers. In-graph methods avoid the engine switch that dominates the Hailo-8 overhead, but they also need an accelerator that supports data-dependent control flow; whether a larger static candidate set would increase per-image headroom without weakening calibration remains open.
+
+\subsection{Limitations and threats to validity}
+\label{sec:limitations}
+
+\emph{Data.} Calibration is evaluated on Cityscapes and four ACDC conditions. The LOCO analysis withholds one condition at a time, but all five conditions come from the same two datasets and camera setups, so transfer to new sensors or cities is untested. The fit and held-out halves alternate by image index rather than by sequence or location, so correlated neighbouring frames may fall on both sides; the alternating halves are not an external test set. Fit halves of 50--250 images per split leave about five images per calibration bin on the smaller ACDC splits, although five bins and isotonic regression gave nearly identical held-out errors. The calibration target is per-image pixel error, which agrees only moderately with per-image $1-$\miou{} (Spearman 0.23--0.58 across splits); routing on a class-balanced target may favour rare classes more.
+
+\emph{Statistics.} The 120 operating cells reuse images, predictions, and thresholds and are not independent samples. The image-level bootstrap intervals capture image sampling variation but not training-run variation; the nested bootstrap adds fit-half resampling, and three seeds per model are too few to estimate seed variance precisely.
+
+\emph{Measurement.} Accuracy under routing is replayed offline from recorded predictions with measured costs rather than in a closed-loop deployment, and compiled-engine accuracy and the on-device replay cover one of the three supernets. The zero-violation result is a route-selection guarantee with respect to tabulated median, p95, or p99 costs, not a measured per-frame deadline guarantee, and it is partly structural.
+
+\emph{Scope.} The study has four candidates, one entropy probe, two complete-route backends, and no energy measurement. Cold-start behaviour, temporal routing across video frames, and class-level error analysis are left to future work.
+
+%======================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+\method{} addresses elastic semantic segmentation when both visual difficulty and accelerator cost vary. On four edge devices, a FLOPs-proportional proxy did not reproduce measured budget choices, so feasibility should come from measured complete routes. Shared elastic training cost the largest capacity 0.9 \miou{} points on Cityscapes and 1.6--2.8 points on ACDC relative to training it alone. Given these candidates, routing under a hard measured budget never selected an over-budget route under median, p95, or p99 cost tables and outperformed rank escalation by 2.87 \miou{} points and its hard-budget variant by 1.41 points, including when the target condition was withheld from calibration; a tuned three-threshold scalar router on the same probe matched it. Charged its own measured latency, however, static deployment beat routing on both a TensorRT GPU and a Hailo-8, and routing would break even under mean-cost budgets only if its overhead fell below about 1.3 and 4.3~ms. Adaptive-inference studies on edge hardware should therefore report a static baseline timed in the same harness and the break-even overhead of their routing pipeline. Offline replay, an index-based split, and the absence of energy measurement bound these claims.
+
+\section*{CRediT authorship contribution statement}
+
+% TODO(author): adjust roles if co-authors are added.
+\textbf{Dũng Nguyễn:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing -- original draft, Writing -- review \& editing.
+
+\section*{Declaration of competing interest}
+
+% TODO(author): confirm. Replace with a disclosure if any financial or personal relationship could be perceived as influencing this work.
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Funding}
+
+% TODO(author): replace with funder names and grant numbers, or keep the standard no-funding sentence.
+[FUNDING STATEMENT TO BE PROVIDED.]
+
+\section*{Data availability}
+
+The implementation, experiment reports, canonical result artifacts, and a separate supplement containing detailed provenance, runtime versions, and extended qualitative and routing analyses are recorded in the project repository [REPOSITORY URL OR DOI]. Cityscapes and ACDC are publicly available from their providers and are subject to their respective licenses; they are not redistributed.
+
+\section*{Acknowledgements}
+
+% TODO(author): add individuals who helped with the research, or remove this section.
+[ACKNOWLEDGEMENTS TO BE PROVIDED.]
+
+\section*{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
+
+During the preparation of this work the author used Claude (Anthropic) in order to assist with language editing, manuscript structuring, LaTeX formatting, analysis scripts, and scripts that render figures from the recorded experimental results. After using this tool, the author reviewed and edited the content as needed and takes full responsibility for the content of the published article.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}
