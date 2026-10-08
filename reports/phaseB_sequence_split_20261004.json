@@ -1,0 +1,110 @@
+{
+  "_definition": "Phase B robustness: sequence-grouped fit/held-out split (replay from stored predictions).\n\nThe per-image dumps store the alternating-index halves separately (fit = even manifest\nindex 2i, held-out = odd index 2i+1). We reassemble each validation split in manifest\norder, assign every image a sequence group, and re-split by WHOLE GROUPS:\n  Cityscapes: city + sequence id (e.g. frankfurt_000001);  ACDC: recording id (e.g. GOPR0351).\nGroups are assigned greedily, largest first, to whichever half is currently smaller, so\nno sequence contributes frames to both halves. Everything that the main analysis fits on\nthe fit half is refitted on the new fit half only: per-condition and pooled calibrators,\nrisk-target grid, T-hard thresholds, and operating points. Held-out labels are used only\nfor scoring. No re-inference, no new training, no new measurements.\n\nCaveat (reported, not hidden): some splits have very few groups (ACDC night: 2, fog: 3),\nso the new held-out half of these conditions is a different recording, i.e. a harder\ncross-sequence test, and the split is coarse.\nOutput: reports/phaseB_sequence_split_20261004.json\n",
+  "split_info": {
+    "cityscapes": {
+      "groups": 235,
+      "fit_images": 250,
+      "heldout_images": 250,
+      "fit_groups": 34,
+      "heldout_groups": 201
+    },
+    "acdc/fog": {
+      "groups": 3,
+      "fit_images": 46,
+      "heldout_images": 54,
+      "fit_groups": 1,
+      "heldout_groups": 2
+    },
+    "acdc/night": {
+      "groups": 2,
+      "fit_images": 56,
+      "heldout_images": 50,
+      "fit_groups": 1,
+      "heldout_groups": 1
+    },
+    "acdc/rain": {
+      "groups": 8,
+      "fit_images": 51,
+      "heldout_images": 49,
+      "fit_groups": 4,
+      "heldout_groups": 4
+    },
+    "acdc/snow": {
+      "groups": 8,
+      "fit_images": 51,
+      "heldout_images": 49,
+      "fit_groups": 4,
+      "heldout_groups": 4
+    }
+  },
+  "route_grid": {
+    "cells": 120,
+    "A_violating_cells": 65,
+    "D_violating_cells": 0,
+    "D_vs_A_fair": {
+      "cells": 55,
+      "wins": 49,
+      "ties": 6,
+      "losses": 0,
+      "mean_delta_points": 3.381688567731865
+    },
+    "D_vs_A_hard": {
+      "cells": 120,
+      "wins": 50,
+      "ties": 70,
+      "losses": 0,
+      "mean_delta_points": 1.7107902790106335
+    },
+    "D_vs_T_hard": {
+      "cells": 120,
+      "wins": 8,
+      "ties": 80,
+      "losses": 32,
+      "mean_delta_points": -0.04085318247610131,
+      "mean_cost_ratio_x_over_y": 0.9897200187892236
+    },
+    "D_vs_static_route_cost": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 84,
+      "losses": 36,
+      "mean_delta_points": -0.2007310911061935
+    }
+  },
+  "static_own_E3_logits": {
+    "feasible": {
+      "cells": 105,
+      "wins": 0,
+      "ties": 42,
+      "losses": 63,
+      "mean_delta_points": -2.9836255169026127,
+      "mean_cost_ratio_x_over_y": 1.0550615388302633
+    },
+    "all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 57,
+      "losses": 63,
+      "mean_delta_points": -2.610672327289786,
+      "mean_cost_ratio_x_over_y": 1.1189334885058453
+    }
+  },
+  "static_own_E1_explicit_float32": {
+    "feasible": {
+      "cells": 75,
+      "wins": 0,
+      "ties": 4,
+      "losses": 71,
+      "mean_delta_points": -8.391894520041093,
+      "mean_cost_ratio_x_over_y": 1.3536340069217978
+    },
+    "all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 19,
+      "losses": 101,
+      "mean_delta_points": -7.548154106057549,
+      "mean_cost_ratio_x_over_y": 2.366506754902636
+    }
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "_note": "per-run summaries; Run A/B/C = seeds 0/1/2",
+  "a": {
+    "D_vs_A_fair": {
+      "cells": 21,
+      "wins": 17,
+      "ties": 2,
+      "losses": 2,
+      "mean_delta_points": 2.6959007071087386
+    },
+    "D_vs_A_hard": {
+      "cells": 40,
+      "wins": 16,
+      "ties": 24,
+      "losses": 0,
+      "mean_delta_points": 1.325456128114687
+    },
+    "D_vs_static_route_cost": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 32,
+      "losses": 8,
+      "mean_delta_points": -0.18813891180149478
+    },
+    "D_vs_static_own_E3_logits_feasible": {
+      "cells": 35,
+      "wins": 0,
+      "ties": 16,
+      "losses": 19,
+      "mean_delta_points": -3.0459744502360135,
+      "mean_cost_ratio_x_over_y": 1.0657703596341808
+    },
+    "D_vs_static_own_E3_logits_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 21,
+      "losses": 19,
+      "mean_delta_points": -2.6652276439565115,
+      "mean_cost_ratio_x_over_y": 1.1283037067092727
+    },
+    "D_vs_static_own_E1_explicit_float32_feasible": {
+      "cells": 25,
+      "wins": 0,
+      "ties": 2,
+      "losses": 23,
+      "mean_delta_points": -8.424958011622758,
+      "mean_cost_ratio_x_over_y": 1.3631052210876802
+    },
+    "D_vs_static_own_E1_explicit_float32_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 7,
+      "losses": 33,
+      "mean_delta_points": -7.635041323851241,
+      "mean_cost_ratio_x_over_y": 2.3724262637563123
+    },
+    "D_vs_T_hard": {
+      "cells": 40,
+      "wins": 4,
+      "ties": 28,
+      "losses": 8,
+      "mean_delta_points": -0.11073321071728842,
+      "mean_cost_ratio_x_over_y": 0.9933162166528294
+    }
+  },
+  "b": {
+    "D_vs_A_fair": {
+      "cells": 23,
+      "wins": 21,
+      "ties": 2,
+      "losses": 0,
+      "mean_delta_points": 3.1257576847917696
+    },
+    "D_vs_A_hard": {
+      "cells": 40,
+      "wins": 16,
+      "ties": 24,
+      "losses": 0,
+      "mean_delta_points": 1.5617897787635349
+    },
+    "D_vs_static_route_cost": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 30,
+      "losses": 10,
+      "mean_delta_points": -0.17864547131277636
+    },
+    "D_vs_static_own_E3_logits_feasible": {
+      "cells": 35,
+      "wins": 0,
+      "ties": 15,
+      "losses": 20,
+      "mean_delta_points": -3.001916394694387,
+      "mean_cost_ratio_x_over_y": 1.0627502689128205
+    },
+    "D_vs_static_own_E3_logits_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 20,
+      "losses": 20,
+      "mean_delta_points": -2.6266768453575886,
+      "mean_cost_ratio_x_over_y": 1.1256611273280825
+    },
+    "D_vs_static_own_E1_explicit_float32_feasible": {
+      "cells": 25,
+      "wins": 0,
+      "ties": 2,
+      "losses": 23,
+      "mean_delta_points": -8.182101651854083,
+      "mean_cost_ratio_x_over_y": 1.367809196586856
+    },
+    "D_vs_static_own_E1_explicit_float32_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 7,
+      "losses": 33,
+      "mean_delta_points": -7.3830395693991555,
+      "mean_cost_ratio_x_over_y": 2.375366248443297
+    },
+    "D_vs_T_hard": {
+      "cells": 40,
+      "wins": 4,
+      "ties": 28,
+      "losses": 8,
+      "mean_delta_points": -0.06300924728590757,
+      "mean_cost_ratio_x_over_y": 1.0070014239064782
+    }
+  },
+  "c": {
+    "D_vs_A_fair": {
+      "cells": 18,
+      "wins": 16,
+      "ties": 2,
+      "losses": 0,
+      "mean_delta_points": 2.736858613535616
+    },
+    "D_vs_A_hard": {
+      "cells": 40,
+      "wins": 16,
+      "ties": 24,
+      "losses": 0,
+      "mean_delta_points": 1.3532286149232102
+    },
+    "D_vs_static_route_cost": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 30,
+      "losses": 10,
+      "mean_delta_points": -0.1251386119400652
+    },
+    "D_vs_static_own_E3_logits_feasible": {
+      "cells": 35,
+      "wins": 0,
+      "ties": 15,
+      "losses": 20,
+      "mean_delta_points": -2.9426506503191048,
+      "mean_cost_ratio_x_over_y": 1.0642005037737403
+    },
+    "D_vs_static_own_E3_logits_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 20,
+      "losses": 20,
+      "mean_delta_points": -2.5748193190292166,
+      "mean_cost_ratio_x_over_y": 1.1269300828313873
+    },
+    "D_vs_static_own_E1_explicit_float32_feasible": {
+      "cells": 25,
+      "wins": 0,
+      "ties": 2,
+      "losses": 23,
+      "mean_delta_points": -7.945840889707388,
+      "mean_cost_ratio_x_over_y": 1.366500596733581
+    },
+    "D_vs_static_own_E1_explicit_float32_all": {
+      "cells": 40,
+      "wins": 0,
+      "ties": 7,
+      "losses": 33,
+      "mean_delta_points": -7.200913587817967,
+      "mean_cost_ratio_x_over_y": 2.374548373535
+    },
+    "D_vs_T_hard": {
+      "cells": 40,
+      "wins": 8,
+      "ties": 24,
+      "losses": 8,
+      "mean_delta_points": 0.0938328249701495,
+      "mean_cost_ratio_x_over_y": 1.0249177393791786
+    }
+  }
+}
