@@ -30,9 +30,8 @@ for name, (rc, sc) in configurations("median").items():
             D = run_policy("D", sp, grids[run][s], budgets, rc, sp.cal)
             ST = static_fair(sp, budgets, sc)
             for b in budgets:
-                per_b[b].append((D[b]["miou"] - ST[b]["miou"]) * 100 > 0 and 1 or
-                                (abs(D[b]["miou"] - ST[b]["miou"]) * 100 <= 1e-10 and 0 or -1))
-                per_b[b][-1] = (per_b[b][-1], float(D[b]["violation"] > 0), (D[b]["miou"] - ST[b]["miou"]) * 100)
+                d = (D[b]["miou"] - ST[b]["miou"]) * 100
+                per_b[b].append((1 if d > 1e-10 else (-1 if d < -1e-10 else 0), float(D[b]["violation"] > 0), d))
     rows, feas = [], []
     for b in budgets:
         v = per_b[b]

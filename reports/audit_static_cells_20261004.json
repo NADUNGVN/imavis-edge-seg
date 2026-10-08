@@ -6,8 +6,8 @@
         "no_feasible_route": true,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 15,
+        "losses": 0,
         "D_violating_cells": 15,
         "mean_delta_points": 0.0
       },
@@ -16,8 +16,8 @@
         "no_feasible_route": false,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 15,
+        "losses": 0,
         "D_violating_cells": 0,
         "mean_delta_points": 0.0
       },
@@ -36,8 +36,8 @@
         "no_feasible_route": false,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 15,
+        "losses": 0,
         "D_violating_cells": 0,
         "mean_delta_points": 0.0
       },
@@ -56,8 +56,8 @@
         "no_feasible_route": false,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 10,
+        "losses": 5,
         "D_violating_cells": 0,
         "mean_delta_points": -0.21912316244579602
       },
@@ -76,8 +76,8 @@
         "no_feasible_route": false,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 6,
+        "losses": 9,
         "D_violating_cells": 0,
         "mean_delta_points": -0.4367741642933191
       }
@@ -97,8 +97,8 @@
         "no_feasible_route": true,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 15,
+        "losses": 0,
         "D_violating_cells": 15,
         "mean_delta_points": 0.0
       },
@@ -167,8 +167,8 @@
         "no_feasible_route": false,
         "cells": 15,
         "wins": 0,
-        "ties": 0,
-        "losses": 15,
+        "ties": 6,
+        "losses": 9,
         "D_violating_cells": 0,
         "mean_delta_points": -0.4367741642933191
       }
