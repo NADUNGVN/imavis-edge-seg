@@ -371,10 +371,15 @@ def sample_stratified(name: str = "G_stratified"):
                              gridspec_kw=dict(wspace=0.02, hspace=0.06, bottom=0.12))
     for r, e in enumerate(rows):
         aid, ch = e["asset_id"], e["routed_to"]
-        imgs = [load(aid, "rgb"), colorize(load(aid, "gt")), colorize(load(aid, "tiny")),
-                colorize(load(aid, "medium")), colorize(load(aid, "large")), colorize(load(aid, ch))]
+        gt = load(aid, "gt")
+        pr = {lv: load(aid, lv) for lv in ("tiny", "medium", "large")}
+        pr.setdefault(ch, load(aid, ch))
+        box = zoom_box(pr["tiny"], pr["large"], gt)
+        imgs = [load(aid, "rgb"), colorize(gt), colorize(pr["tiny"]),
+                colorize(pr["medium"]), colorize(pr["large"]), colorize(pr[ch])]
         for c, img in enumerate(imgs):
-            show(axes[r, c], img, cols[c] if r == 0 else None)
+            show(axes[r, c], img, cols[c] if r == 0 else None, box=box,
+                 inset=img if c > 0 else None, badge=ch.capitalize() if c == 5 else None)
         axes[r, 0].text(-0.06, 0.5, f"→ {ch.capitalize()}", transform=axes[r, 0].transAxes, rotation=90,
                         va="center", ha="center", fontsize=6.5)
         axes[r, 0].text(0.02, 0.04, COND[e["split"]], transform=axes[r, 0].transAxes, fontsize=5.5, color="white",
