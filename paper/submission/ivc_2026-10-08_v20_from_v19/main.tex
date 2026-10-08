@@ -29,7 +29,7 @@
 \title{PACE-Seg: When Does Input-Adaptive Semantic Segmentation Pay Off on Edge Accelerators?}
 
 % TODO(author): confirm author list/order, full affiliation postal addresses, and corresponding e-mail.
-\author[aff1]{Dũng Nguyễn\corref{cor1}}
+\author[aff1]{D\~ung Nguy\~{\^e}n\corref{cor1}}
 \ead{[CORRESPONDING-AUTHOR-EMAIL]}
 \cortext[cor1]{Corresponding author.}
 \affiliation[aff1]{organization={[DEPARTMENT, INSTITUTION]},
@@ -139,7 +139,7 @@ SlimSeg~\cite{xue2022slimseg} & Slimmable widths & Configured & Efficiency setti
 MESS~\cite{kouris2022mess} & Multi-exit network & Per image & Exit latency & Exit confidence & No complete-route constraint; multi-exit graph \\
 Dynamic Routing~\cite{li2020dynamic} & Multi-scale paths & Per image & Compute penalty & Learned gates & No measured accelerator constraint; dynamic paths \\
 AutoSegEdge~\cite{dou2023autosegedge} & Searched architecture & Design & FLOPs + device latency & None & Search constraint; static architecture \\
-\method{} & Four elastic capacities & Per image & Measured complete route & Candidate-specific error & Hard measured budget; static compiled engines \\
+\method{} & Four elastic capacities & Per image & Measured complete route & Entropy probe; calibration evaluated & Hard measured budget; static compiled engines \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -191,7 +191,7 @@ over all output pixels $\Omega$, with $C=19$. For each candidate $\ell$, a monot
 \end{equation}
 Each $g_\ell$ is fitted on the fit half of the data only: fit-half scores are divided into ten equal-count bins, the mean observed error of candidate $\ell$ is computed in each bin over non-ignore pixels, and a cumulative-maximum pass enforces monotonicity. The primary configuration fits one calibrator set per visual condition; a pooled variant fits one set on all five fit halves and removes the need to know the condition at run time.
 
-Three properties motivate this design. The probe costs no extra network, because the tiny engine is itself a deployable route and its entropy needs only one softmax and one reduction, a cost already contained in every measured route. Multi-pass estimators such as Monte Carlo dropout or ensembles~\cite{gal2016dropout,lakshminarayanan2017ensembles} would multiply that cost. A single score cannot rank candidates by itself, since the same image can be hard for tiny yet easy for large; fitting one calibrator per candidate converts the shared score into a vector of expected errors, and the differences within that vector drive the decision. Finally, binned monotone calibration~\cite{zadrozny2002isotonic} has few parameters per candidate and cannot reverse the ordering implied by the score, which limits overfitting on fit halves of 50--250 images per split.
+Three properties motivate this design. The probe costs no extra network, because the tiny engine is itself a deployable route and its entropy needs only one softmax and one reduction, a cost already contained in every measured route. Multi-pass estimators such as Monte Carlo dropout or ensembles~\cite{gal2016dropout,lakshminarayanan2017ensembles} would multiply that cost. A scalar score does not directly provide candidate-specific error estimates; the calibrators convert it into an interpretable risk vector, and Section~\ref{sec:rq3} tests whether this additional structure improves routing over tuned scalar thresholds. Finally, binned monotone calibration~\cite{zadrozny2002isotonic} has few parameters per candidate and cannot reverse the ordering implied by the score, which limits overfitting on fit halves of 50--250 images per split.
 
 \subsection{Hardware-cost-conditioned policy}
 \label{sec:policy}
@@ -362,7 +362,7 @@ Only partly. Figure~\ref{fig:rq2} compares the largest elastic capacity with the
 
 This result matters for interpreting RQ3. A router can only choose among the candidates it is given, and the cost of weight sharing grows under adverse conditions, which is exactly where a router would most want the large capacity. All routing comparisons below are made within one supernet, so they are not affected by this gap, but a deployment that needs only the large capacity would be better served by training it alone.
 
-\subsection{RQ3: What does candidate-specific routing add?}
+\subsection{RQ3: Which routing ingredients matter, and does routing beat static deployment?}
 \label{sec:rq3}
 
 We answer RQ3 against five references: rank escalation (A), rank escalation with the same hard budget (A-hard), a three-threshold scalar router (T-hard), the best feasible static candidate, and, under mean-cost budgets, the static mixture. Table~\ref{tab:routerfinal} summarizes all comparisons in the replay with measured costs.
@@ -402,7 +402,7 @@ Median, LOCO & D $-$ A-hard & 120 & 48/72/0 & +1.59 & -- & -- \\
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig7_forest_v20.pdf}
-\caption{Routing gains come from the hard budget, not from candidate-specific calibration, and vanish against static deployment charged its own latency. Mean \miou{} difference of policy D against each reference with image-level 95\% bootstrap intervals (solid) and nested intervals that refit calibrators and operating points (dashed, where computed); median cost tables, 120 cells except the 62 fair cells of D $-$ A.}
+\caption{Routing gains over rank escalation come from budget-constrained operating-point tuning, not from candidate-specific calibration, and vanish against static deployment charged its own latency. Mean \miou{} difference of policy D against each reference with image-level 95\% bootstrap intervals (solid) and nested intervals that refit calibrators and operating points (dashed, where computed); median cost tables, 120 cells except the 62 fair cells of D $-$ A.}
 \label{fig:router-frontier}
 \end{figure}
 
@@ -495,7 +495,7 @@ We measured when input-adaptive semantic segmentation pays off on edge accelerat
 \section*{CRediT authorship contribution statement}
 
 % TODO(author): adjust roles if co-authors are added.
-\textbf{Dũng Nguyễn:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing -- original draft, Writing -- review \& editing.
+\textbf{D\~ung Nguy\~{\^e}n:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing -- original draft, Writing -- review \& editing.
 
 \section*{Declaration of competing interest}
 

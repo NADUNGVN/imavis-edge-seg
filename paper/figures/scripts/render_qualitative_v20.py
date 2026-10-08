@@ -341,19 +341,18 @@ def sample_teaser(name: str = "F_teaser"):
     ax.barh([0], [S], color=CAP_COLOR["large"], alpha=0.45, height=0.5)
     ax.barh([0], [C - S], left=[S], color="white", ec="k", hatch="////", lw=0.5, height=0.5)
     ax.set_yticks([1, 0], ["static $S$", "routed $C$"])
-    ax.text(S + 1.5, 1, f"{S:.1f} ms", va="center", fontsize=6)
-    ax.text(C + 1.5, 0, f"{C:.1f} ms", va="center", fontsize=6)
-    ax.text(S + (C - S) / 2, 0.36, f"+{C - S:.1f} ms probe + decision + switch", ha="center", va="bottom",
-            fontsize=5.8, color="#B4442C")
+    ax.text(S + 1.5, 1, f"{S:.1f} ms", va="center", fontsize=7)
+    ax.text(C + 1.5, 0, f"{C:.1f} ms", va="center", fontsize=7)
+    ax.text(S + (C - S) / 2, 0.36, f"+{C - S:.1f} ms overhead", ha="center", va="bottom",
+            fontsize=7, color="#B4442C")
     ax.set_xlim(0, C * 1.18)
-    ax.set_xlabel("median latency (ms)", fontsize=6.5, labelpad=1)
-    ax.tick_params(labelsize=6, width=0.5, length=2)
+    ax.set_xlabel("median latency (ms)", fontsize=7, labelpad=1)
+    ax.tick_params(labelsize=6.8, width=0.5, length=2)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    fig.text(0.575, 0.06, "Under mean-cost budgets routing pays off only if this overhead falls below\n"
-             "about 4.3 ms on Hailo-8 and 1.3 ms on AGX Xavier (measured: 44 and 1.9 ms);\n"
-             "under per-frame budgets static deployment wins at any overhead.",
-             fontsize=6, va="bottom", color="#1F2937", linespacing=1.3)
+    fig.text(0.575, 0.05, "Break-even overhead: 4.3 ms (Hailo-8), 1.3 ms (AGX).\n"
+             "Per-frame budgets: static wins at any overhead.",
+             fontsize=7, va="bottom", color="#1F2937", linespacing=1.35)
     save(fig, name)
 
 

@@ -14,8 +14,8 @@ html, body { margin: 0; padding: 0; background: #fff; }
 .t { position: absolute; text-align: center; line-height: 1.2; }
 .b { font-weight: 700; }
 .m { color: var(--muted); }
-.s { font-size: 13px; }
-.xs { font-size: 12px; }
+.s { font-size: 15px; }
+.xs { font-size: 14px; }
 
 /* extruded 3-D layer: --w width, --h height, --d depth (px), --c colour */
 .layer { position: absolute; width: var(--w); height: var(--h); background: var(--c);
@@ -39,5 +39,5 @@ html, body { margin: 0; padding: 0; background: #fff; }
   display: flex; align-items: center; justify-content: center; line-height: 1.15; }
 svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .legend { position: absolute; border: 1.6px solid #1F2937; border-radius: 16px; background: #fff; padding: 10px 16px; }
-.legend .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
+.legend .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 16px; }
 .sw { display: inline-block; width: 14px; height: 18px; border: 1px solid #1F2937; }
