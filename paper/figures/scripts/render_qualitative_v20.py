@@ -262,12 +262,34 @@ def d_choice_for(d, cost, budget):
     return d_choice(d["risk"], d["target"], budget, cost, ordered_levels(cost))
 
 
+def sample_plain(name: str, budget_route: str = "medium"):
+    """Conventional grid (SegFormer/DDRNet/ACDC style): plain panels, column headers only,
+    no boxes/insets/badges; the routed capacity is written under the routed panel."""
+    dec = d_decisions(budget_route)
+    rows = pick("median")
+    cols = ["Image", "Ground truth", "Tiny", "Medium", "Large", "Routed (D)"]
+    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FULL, FULL * 0.47),
+                             gridspec_kw=dict(wspace=0.02, hspace=0.04, bottom=0.08))
+    for r, e in enumerate(rows):
+        aid = e["asset_id"]
+        ch = dec[(e["split"], e["heldout_position"])]["choice"]
+        imgs = [load(aid, "rgb"), colorize(load(aid, "gt")), colorize(load(aid, "tiny")),
+                colorize(load(aid, "medium")), colorize(load(aid, "large")), colorize(load(aid, ch))]
+        for c, img in enumerate(imgs):
+            show(axes[r, c], img, cols[c] if r == 0 else None)
+        axes[r, 0].text(-0.06, 0.5, COND[e["split"]], transform=axes[r, 0].transAxes, rotation=90, va="center", ha="center")
+        axes[r, 5].text(1.02, 0.5, ch, transform=axes[r, 5].transAxes, rotation=90, va="center", ha="left", fontsize=6)
+    legend_strip(fig, [0.125, 0.0, 0.78, 0.05])
+    save(fig, name)
+
+
 def main():
     dec = d_decisions()
     sample_grid("gain", dec, with_error=False, name="A_grid_zoom")
     sample_grid("gain", dec, with_error=True, name="B_grid_error")
     sample_overview(dec, name="C_overview")
     sample_decision(dec, name="D_decision")
+    sample_plain("E_grid_plain")
 
 
 if __name__ == "__main__":
