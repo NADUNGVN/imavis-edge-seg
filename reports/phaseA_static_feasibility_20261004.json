@@ -1,0 +1,599 @@
+{
+  "_definition": "Phase A (V21 revision): static-own-cost comparison with explicit route feasibility.\n\nFor each same-harness device configuration the budget grid is the union of the four\ncomplete-route costs C_h and the four static costs S_h (8 budgets). A budget is\nroute-infeasible when it is below min_l C_h(l) = C_h(tiny): every route starts with the\ntiny probe, so no routed policy can meet it, while the static tiny engine (S_h(tiny) <\nC_h(tiny)) can. In such cells run_policy/d_choice falls back to tiny and records a\nviolation.\n\nReports, per configuration and policy (D, T-hard):\n  all cells (as in V20 Table 7, recomputed here with a fresh bootstrap),\n  route-feasible cells only (conditional comparison, fresh bootstrap),\n  number and share of cells where static is feasible but routing is not.\nImage-level bootstrap only (1000 reps, held-out images resampled per split, shared\nacross runs and budgets); it does NOT include training-seed variability.\nOutput: reports/phaseA_static_feasibility_20261004.json\n",
+  "E3_logits": {
+    "route_ms": {
+      "tiny": 1.8414905644021928,
+      "small": 4.240045964252204,
+      "medium": 9.443814924452454,
+      "large": 19.496089546009898
+    },
+    "static_ms": {
+      "tiny": 1.175892015453428,
+      "small": 2.5628989678807557,
+      "medium": 7.111982966307551,
+      "large": 16.763311985414475
+    },
+    "budgets_ms": [
+      1.175892015453428,
+      1.8414905644021928,
+      2.5628989678807557,
+      4.240045964252204,
+      7.111982966307551,
+      9.443814924452454,
+      16.763311985414475,
+      19.496089546009898
+    ],
+    "cheapest_route_ms": 1.8414905644021928,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      1.175892015453428
+    ],
+    "cells_static_feasible_route_infeasible": 15,
+    "share_static_feasible_route_infeasible": 0.125,
+    "D_violations_all": 15,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 15,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 61,
+      "losses": 59,
+      "mean_delta_points": -2.6222412694477724,
+      "mean_cost_ratio_x_over_y": 1.1269649722895807,
+      "ci95_points": [
+        -2.685431912173145,
+        -2.376025140692815
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 105,
+      "wins": 0,
+      "ties": 46,
+      "losses": 59,
+      "mean_delta_points": -2.9968471650831687,
+      "mean_cost_ratio_x_over_y": 1.064240377440247,
+      "ci95_points": [
+        -3.069065042483594,
+        -2.7154573036489307
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 15,
+      "wins": 0,
+      "ties": 15,
+      "losses": 0,
+      "mean_delta_points": 0.0,
+      "mean_cost_ratio_x_over_y": 1.5660371362349184
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 64,
+      "losses": 55,
+      "mean_delta_points": -2.6203177201086283,
+      "mean_cost_ratio_x_over_y": 1.1212101399976993,
+      "ci95_points": [
+        -2.7020347688693316,
+        -2.375012008790173
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 105,
+      "wins": 1,
+      "ties": 49,
+      "losses": 55,
+      "mean_delta_points": -2.9946488229812886,
+      "mean_cost_ratio_x_over_y": 1.057663426249525,
+      "ci95_points": [
+        -3.088039735850665,
+        -2.7142994386173407
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 15,
+      "wins": 0,
+      "ties": 15,
+      "losses": 0,
+      "mean_delta_points": 0.0,
+      "mean_cost_ratio_x_over_y": 1.5660371362349184
+    }
+  },
+  "E3_none": {
+    "route_ms": {
+      "tiny": 1.6088400152511895,
+      "small": 3.8840940105728805,
+      "medium": 8.311092504300177,
+      "large": 17.55797106307
+    },
+    "static_ms": {
+      "tiny": 0.9444429888390005,
+      "small": 2.224307449068874,
+      "medium": 6.618776475079358,
+      "large": 15.711375977844
+    },
+    "budgets_ms": [
+      0.9444429888390005,
+      1.6088400152511895,
+      2.224307449068874,
+      3.8840940105728805,
+      6.618776475079358,
+      8.311092504300177,
+      15.711375977844,
+      17.55797106307
+    ],
+    "cheapest_route_ms": 1.6088400152511895,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      0.9444429888390005
+    ],
+    "cells_static_feasible_route_infeasible": 15,
+    "share_static_feasible_route_infeasible": 0.125,
+    "D_violations_all": 15,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 15,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 61,
+      "losses": 59,
+      "mean_delta_points": -2.6222412694477724,
+      "mean_cost_ratio_x_over_y": 1.1540015382781472,
+      "ci95_points": [
+        -2.685431912173145,
+        -2.376025140692815
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 105,
+      "wins": 0,
+      "ties": 46,
+      "losses": 59,
+      "mean_delta_points": -2.9968471650831687,
+      "mean_cost_ratio_x_over_y": 1.0755045739377591,
+      "ci95_points": [
+        -3.069065042483594,
+        -2.7154573036489307
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 15,
+      "wins": 0,
+      "ties": 15,
+      "losses": 0,
+      "mean_delta_points": 0.0,
+      "mean_cost_ratio_x_over_y": 1.7034802886608635
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 64,
+      "losses": 55,
+      "mean_delta_points": -2.6203177201086283,
+      "mean_cost_ratio_x_over_y": 1.1483284485889802,
+      "ci95_points": [
+        -2.7020347688693316,
+        -2.375012008790173
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 105,
+      "wins": 1,
+      "ties": 49,
+      "losses": 55,
+      "mean_delta_points": -2.9946488229812886,
+      "mean_cost_ratio_x_over_y": 1.0690210428644253,
+      "ci95_points": [
+        -3.088039735850665,
+        -2.7142994386173407
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 15,
+      "wins": 0,
+      "ties": 15,
+      "losses": 0,
+      "mean_delta_points": 0.0,
+      "mean_cost_ratio_x_over_y": 1.7034802886608635
+    }
+  },
+  "E1_explicit_float32": {
+    "route_ms": {
+      "tiny": 44.262392475502566,
+      "small": 58.11092400108464,
+      "medium": 76.1750910023693,
+      "large": 116.25956997158937
+    },
+    "static_ms": {
+      "tiny": 6.265040981816128,
+      "small": 12.070886499714106,
+      "medium": 30.908806511433795,
+      "large": 69.3880014878232
+    },
+    "budgets_ms": [
+      6.265040981816128,
+      12.070886499714106,
+      30.908806511433795,
+      44.262392475502566,
+      58.11092400108464,
+      69.3880014878232,
+      76.1750910023693,
+      116.25956997158937
+    ],
+    "cheapest_route_ms": 44.262392475502566,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      6.265040981816128,
+      12.070886499714106,
+      30.908806511433795
+    ],
+    "cells_static_feasible_route_infeasible": 45,
+    "share_static_feasible_route_infeasible": 0.375,
+    "D_violations_all": 45,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 45,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 21,
+      "losses": 99,
+      "mean_delta_points": -7.406331493689455,
+      "mean_cost_ratio_x_over_y": 2.374113628578203,
+      "ci95_points": [
+        -7.608349375151268,
+        -6.755077398215231
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 0,
+      "ties": 6,
+      "losses": 69,
+      "mean_delta_points": -8.184300184394742,
+      "mean_cost_ratio_x_over_y": 1.3658050048027057,
+      "ci95_points": [
+        -8.42453252756174,
+        -7.400650418019394
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 4.054628001537366
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 24,
+      "losses": 95,
+      "mean_delta_points": -7.396844071682026,
+      "mean_cost_ratio_x_over_y": 2.371408628725295,
+      "ci95_points": [
+        -7.6026222857002415,
+        -6.746366688976018
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 1,
+      "ties": 9,
+      "losses": 65,
+      "mean_delta_points": -8.169120309182858,
+      "mean_cost_ratio_x_over_y": 1.3614770050380522,
+      "ci95_points": [
+        -8.394150271955612,
+        -7.401933844824145
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 4.054628001537366
+    }
+  },
+  "E1_explicit_uint8": {
+    "route_ms": {
+      "tiny": 46.7431784782093,
+      "small": 58.01328449160792,
+      "medium": 70.08266050252132,
+      "large": 98.4078555193264
+    },
+    "static_ms": {
+      "tiny": 4.1492739983368665,
+      "small": 8.272826496977359,
+      "medium": 20.931409031618387,
+      "large": 50.007718498818576
+    },
+    "budgets_ms": [
+      4.1492739983368665,
+      8.272826496977359,
+      20.931409031618387,
+      46.7431784782093,
+      50.007718498818576,
+      58.01328449160792,
+      70.08266050252132,
+      98.4078555193264
+    ],
+    "cheapest_route_ms": 46.7431784782093,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      4.1492739983368665,
+      8.272826496977359,
+      20.931409031618387
+    ],
+    "cells_static_feasible_route_infeasible": 45,
+    "share_static_feasible_route_infeasible": 0.375,
+    "D_violations_all": 45,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 45,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 21,
+      "losses": 99,
+      "mean_delta_points": -9.150498553971527,
+      "mean_cost_ratio_x_over_y": 3.3443024357167173,
+      "ci95_points": [
+        -9.387786301608932,
+        -8.333384593520623
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 0,
+      "ties": 6,
+      "losses": 69,
+      "mean_delta_points": -10.974967480846061,
+      "mean_cost_ratio_x_over_y": 1.5211331988991597,
+      "ci95_points": [
+        -11.256491442644329,
+        -9.944572387877708
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 6.382917830412644
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 24,
+      "losses": 95,
+      "mean_delta_points": -9.137180281799354,
+      "mean_cost_ratio_x_over_y": 3.3418689190332005,
+      "ci95_points": [
+        -9.358482907821534,
+        -8.336690328923032
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 1,
+      "ties": 9,
+      "losses": 65,
+      "mean_delta_points": -10.95365824537058,
+      "mean_cost_ratio_x_over_y": 1.5172395722055336,
+      "ci95_points": [
+        -11.215491561484827,
+        -9.927510612088287
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 6.382917830412644
+    }
+  },
+  "E1_scheduler_float32": {
+    "route_ms": {
+      "tiny": 42.66218247357756,
+      "small": 58.75083297723904,
+      "medium": 78.06139346212149,
+      "large": 118.11233399203047
+    },
+    "static_ms": {
+      "tiny": 6.24635600252077,
+      "small": 12.12084901635535,
+      "medium": 30.507545481668785,
+      "large": 68.85166550637223
+    },
+    "budgets_ms": [
+      6.24635600252077,
+      12.12084901635535,
+      30.507545481668785,
+      42.66218247357756,
+      58.75083297723904,
+      68.85166550637223,
+      78.06139346212149,
+      118.11233399203047
+    ],
+    "cheapest_route_ms": 42.66218247357756,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      6.24635600252077,
+      12.12084901635535,
+      30.507545481668785
+    ],
+    "cells_static_feasible_route_infeasible": 45,
+    "share_static_feasible_route_infeasible": 0.375,
+    "D_violations_all": 45,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 45,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 21,
+      "losses": 99,
+      "mean_delta_points": -7.406331493689455,
+      "mean_cost_ratio_x_over_y": 2.3348031449863393,
+      "ci95_points": [
+        -7.608349375151268,
+        -6.755077398215231
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 0,
+      "ties": 6,
+      "losses": 69,
+      "mean_delta_points": -8.184300184394742,
+      "mean_cost_ratio_x_over_y": 1.3860688456928636,
+      "ci95_points": [
+        -8.42453252756174,
+        -7.400650418019394
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 3.916026977142132
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 24,
+      "losses": 95,
+      "mean_delta_points": -7.396844071682026,
+      "mean_cost_ratio_x_over_y": 2.3312884546742008,
+      "ci95_points": [
+        -7.6026222857002415,
+        -6.746366688976018
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 1,
+      "ties": 9,
+      "losses": 65,
+      "mean_delta_points": -8.169120309182858,
+      "mean_cost_ratio_x_over_y": 1.380445341193441,
+      "ci95_points": [
+        -8.394150271955612,
+        -7.401933844824145
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 3.916026977142132
+    }
+  },
+  "E1_scheduler_uint8": {
+    "route_ms": {
+      "tiny": 45.42313652927987,
+      "small": 58.10390447732061,
+      "medium": 70.0128084863536,
+      "large": 97.7370105101727
+    },
+    "static_ms": {
+      "tiny": 4.192941007204354,
+      "small": 8.073750999756157,
+      "medium": 20.741584012284875,
+      "large": 49.19769649859518
+    },
+    "budgets_ms": [
+      4.192941007204354,
+      8.073750999756157,
+      20.741584012284875,
+      45.42313652927987,
+      49.19769649859518,
+      58.10390447732061,
+      70.0128084863536,
+      97.7370105101727
+    ],
+    "cheapest_route_ms": 45.42313652927987,
+    "grid": "3 runs x 5 splits x 8 budgets = 120 cells",
+    "route_infeasible_budgets_ms": [
+      4.192941007204354,
+      8.073750999756157,
+      20.741584012284875
+    ],
+    "cells_static_feasible_route_infeasible": 45,
+    "share_static_feasible_route_infeasible": 0.375,
+    "D_violations_all": 45,
+    "D_violations_feasible": 0,
+    "T_hard_violations_all": 45,
+    "D_vs_static_all": {
+      "cells": 120,
+      "wins": 0,
+      "ties": 21,
+      "losses": 99,
+      "mean_delta_points": -9.150498553971527,
+      "mean_cost_ratio_x_over_y": 3.2826691389592213,
+      "ci95_points": [
+        -9.387786301608932,
+        -8.333384593520623
+      ]
+    },
+    "D_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 0,
+      "ties": 6,
+      "losses": 69,
+      "mean_delta_points": -10.974967480846061,
+      "mean_cost_ratio_x_over_y": 1.5224263131961178,
+      "ci95_points": [
+        -11.256491442644329,
+        -9.944572387877708
+      ]
+    },
+    "D_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 6.216407181897727
+    },
+    "T_hard_vs_static_all": {
+      "cells": 120,
+      "wins": 1,
+      "ties": 24,
+      "losses": 95,
+      "mean_delta_points": -9.137180281799354,
+      "mean_cost_ratio_x_over_y": 3.2796838655935647,
+      "ci95_points": [
+        -9.358482907821534,
+        -8.336690328923032
+      ]
+    },
+    "T_hard_vs_static_route_feasible": {
+      "cells": 75,
+      "wins": 1,
+      "ties": 9,
+      "losses": 65,
+      "mean_delta_points": -10.95365824537058,
+      "mean_cost_ratio_x_over_y": 1.5176498758110673,
+      "ci95_points": [
+        -11.215491561484827,
+        -9.927510612088287
+      ]
+    },
+    "T_hard_vs_static_route_infeasible": {
+      "cells": 45,
+      "wins": 0,
+      "ties": 15,
+      "losses": 30,
+      "mean_delta_points": -6.109717009180642,
+      "mean_cost_ratio_x_over_y": 6.216407181897727
+    }
+  }
+}
