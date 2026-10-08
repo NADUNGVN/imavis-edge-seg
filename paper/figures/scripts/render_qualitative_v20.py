@@ -361,27 +361,33 @@ if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "teaser":
 
 
 def sample_stratified(name: str = "G_stratified"):
-    """Route-class stratified grid (selection_v20_stratified.json; rule in that file)."""
+    """Route-class stratified grid (selection_v20_stratified.json; rule in that file).
+    Columns: input, GT, all four candidates, routed output. Route-class counts are read from
+    the selection file and printed above the grid."""
     global ASSETS
     ASSETS = Path("reports/qualitative_assets_v20_stratified")
     rows = manifest()
-    cols = ["Image", "Ground truth", "Tiny", "Medium", "Large", "Routed (D)"]
-    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FULL, FULL * 0.105 * len(rows) + 0.25),
-                             gridspec_kw=dict(wspace=0.02, hspace=0.06, bottom=0.12))
+    sel = json.loads(Path("paper/figures/qualitative/selection_v20_stratified.json").read_text())
+    counts = sel["route_class_counts"]
+    cols = ["Image", "Ground truth", "Tiny", "Small", "Medium", "Large", "Routed (D)"]
+    fig, axes = plt.subplots(len(rows), len(cols), figsize=(FULL, FULL * 0.092 * len(rows) + 0.42),
+                             gridspec_kw=dict(wspace=0.02, hspace=0.06, bottom=0.13, top=0.84))
     for r, e in enumerate(rows):
         aid, ch = e["asset_id"], e["routed_to"]
         gt = load(aid, "gt")
-        pr = {lv: load(aid, lv) for lv in ("tiny", "medium", "large")}
-        pr.setdefault(ch, load(aid, ch))
+        pr = {lv: load(aid, lv) for lv in LEVELS}
         box = zoom_box(pr["tiny"], pr["large"], gt)
-        imgs = [load(aid, "rgb"), colorize(gt), colorize(pr["tiny"]),
-                colorize(pr["medium"]), colorize(pr["large"]), colorize(pr[ch])]
+        imgs = [load(aid, "rgb"), colorize(gt)] + [colorize(pr[lv]) for lv in LEVELS] + [colorize(pr[ch])]
         for c, img in enumerate(imgs):
             show(axes[r, c], img, cols[c] if r == 0 else None, box=box,
-                 inset=img if c > 0 else None, badge=ch.capitalize() if c == 5 else None)
-        axes[r, 0].text(-0.06, 0.5, f"→ {ch.capitalize()}", transform=axes[r, 0].transAxes, rotation=90,
+                 inset=img if c > 0 else None, badge=ch.capitalize() if c == 6 else None)
+        axes[r, 0].text(-0.06, 0.5, f"\u2192 {ch.capitalize()}", transform=axes[r, 0].transAxes, rotation=90,
                         va="center", ha="center", fontsize=6.5)
         axes[r, 0].text(0.02, 0.04, COND[e["split"]], transform=axes[r, 0].transAxes, fontsize=5.5, color="white",
                         bbox=dict(boxstyle="round,pad=0.15", fc="black", alpha=0.6, ec="none"))
+    total = sum(counts.values())
+    txt = "Policy D selections at this budget (n = %d held-out images):  " % total + "   ".join(
+        f"{lv.capitalize()} {counts[lv]} ({counts[lv] / total:.0%})" for lv in LEVELS)
+    fig.text(0.5, 0.975, txt, ha="center", va="top", fontsize=7)
     legend_strip(fig, [0.125, 0.0, 0.78, 0.07])
     save(fig, name)

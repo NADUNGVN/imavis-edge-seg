@@ -158,6 +158,23 @@ Table~\ref{tab:router-condition} disaggregates the comparison with policy A by c
 }
 \end{table}
 
+\section{Robustness analyses}
+
+These analyses replay stored predictions and measured cost tables; no model was retrained and no device was re-measured. They are robustness checks and do not replace the primary results.
+
+\paragraph{Per training seed and sequence-grouped split} Table~\ref{tab:robust} repeats the main comparisons for each training run separately and for a fit/held-out split by whole recording (ACDC) or city sequence (Cityscapes) instead of alternating index; calibrators, risk-target grid, T-hard thresholds, and operating points are refitted on the new fit half only. Night and fog contain only two and three recordings, so their sequence split places different recordings in the two halves. Every conclusion holds in every seed and under the sequence split; the sign of D $-$ T-hard changes across seeds, consistent with no detectable difference.
+
+\begin{table}[H]
+\centering
+\caption{Mean \miou{} difference (points) with the number of cells in parentheses, per training run (seeds 0--2), pooled (as in the manuscript), and with a sequence-grouped fit/held-out split. Static rows use route-feasible cells of the static-own-cost grid.}
+\label{tab:robust}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\input{tables/robustness_table.tex}
+\end{table}
+
+\paragraph{Break-even interval} An image-level bootstrap (200 replicates, fixed seed) of the counterfactual mean-cost break-even overhead gives 1.27~ms [0.57, 1.50] on AGX Xavier and 4.26~ms [2.13, 5.15] on Hailo-8, against measured overheads of 1.9~ms and 44~ms; every replicate crossed zero. The interval covers image sampling only; the overhead grid is coarse, and seed and timing variability are not included.
+
 \section{Additional qualitative examples}
 
 All examples are held-out images of Run A, fixed by rules applied to the recorded per-image errors before visual inspection: per split, the image with the largest tiny-minus-large pixel error (Fig.~\ref{fig:s-gain}), the image nearest the median large-candidate error (Fig.~\ref{fig:s-median}), the image with the largest large-candidate error (Fig.~\ref{fig:s-hard}), and, among images with below-median tiny error, the one with the smallest tiny-minus-large difference (Fig.~\ref{fig:s-easy}). The routed output is policy D on AGX Xavier at the budget of the large route. Dashed boxes mark the window where tiny and large disagree most; insets enlarge it; orange in the error column marks disagreement with ground truth.

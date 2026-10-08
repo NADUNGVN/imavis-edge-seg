@@ -1,0 +1,104 @@
+note: "version 2" Tectonic command-line interface activated
+note: Running TeX ...
+Fontconfig error: Cannot load default config file: No such file: (null)
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:112: Underfull \hbox (badness 1038) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+note: Running BibTeX on main.aux ...
+note: warnings were issued by BibTeX; use --print and/or --keep-logs for details.
+note: Rerunning TeX because bibtex was run ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:112: Underfull \hbox (badness 1038) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+note: Rerunning TeX because "main.bbl" changed ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:482: Underfull \hbox (badness 1024) in paragraph at lines 481--482
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+note: Rerunning TeX because "main.bbl" changed ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:482: Underfull \hbox (badness 1024) in paragraph at lines 481--482
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+note: Rerunning TeX because "main.bbl" changed ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:482: Underfull \hbox (badness 1024) in paragraph at lines 481--482
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+note: Rerunning TeX because "main.bbl" changed ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:482: Underfull \hbox (badness 1024) in paragraph at lines 481--482
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+note: Rerunning TeX because "main.bbl" changed ...
+warning: main.tex:66: Underfull \hbox (badness 4060) in paragraph at lines 65--66
+warning: main.tex:68: Underfull \hbox (badness 1348) in paragraph at lines 67--68
+warning: main.tex:96: Underfull \hbox (badness 2547) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 3098) in paragraph at lines 96--96
+warning: main.tex:96: Underfull \hbox (badness 4229) in paragraph at lines 96--96
+warning: main.tex:112: Underfull \hbox (badness 1902) in paragraph at lines 111--112
+warning: main.tex:122: Underfull \hbox (badness 6236) in paragraph at lines 121--122
+warning: main.tex:317: Overfull \hbox (1.51643pt too wide) in paragraph at lines 302--317
+warning: main.tex:482: Underfull \hbox (badness 1024) in paragraph at lines 481--482
+warning: main.tex:504: Underfull \hbox (badness 1199) in paragraph at lines 503--504
+warning: main.bbl:160: Underfull \hbox (badness 1460) in paragraph at lines 155--160
+warning: main.bbl:179: Underfull \hbox (badness 1127) in paragraph at lines 176--179
+warning: internal consistency problem when checking if main.bbl changed
+warning: TeX rerun seems needed, but stopping at 6 passes
+warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
+note: Running xdvipdfmx ...
+note: Writing `main.pdf` (1.99 MiB)
+note: Skipped writing 4 intermediate files (use --keep-intermediates to keep them)

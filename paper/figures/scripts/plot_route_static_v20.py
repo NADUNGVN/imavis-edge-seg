@@ -49,8 +49,8 @@ def fig_route_vs_static(data: dict, stem: Path) -> None:
         for i in range(len(x)):
             ax.text(x[i] - 0.19, s[i], f"{s[i]:.1f}", ha="center", va="bottom", fontsize=6, color=INK)
             ax.text(x[i] + 0.19, r[i], f"{r[i]:.1f}", ha="center", va="bottom", fontsize=6, color=INK)
-            ax.text(x[i] - 0.19, -0.025, "S", transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=5.6, color=MUTED)
-            ax.text(x[i] + 0.19, -0.025, "C", transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=5.6, color=MUTED)
+            ax.text(x[i] - 0.19, -0.025, "static", transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=6, color=INK)
+            ax.text(x[i] + 0.19, -0.025, "route", transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=6, color=INK)
             ax.annotate(f"+{r[i] - s[i]:.1f}", (x[i] + 0.38, s[i] + (r[i] - s[i]) / 2), fontsize=5.6, color="#B4442C",
                         va="center", ha="left")
         ax.set_xticks(x, [lv.title() for lv in CANDIDATES]); ax.tick_params(axis="x", pad=9)
@@ -96,7 +96,7 @@ def fig_breakeven(data: dict, stem: Path) -> dict:
             ax.plot(be, 0, "D", ms=4.5, color=INK, zorder=4)
             ax.annotate(f"break-even\n{be:.1f} ms", (be, 0), xytext=(6, 12), textcoords="offset points",
                         fontsize=6.4, color=INK, fontweight="bold")
-        ax.set_xlabel("Routing overhead per frame (ms)")
+        ax.set_xlabel("Counterfactual routing overhead per frame (ms)")
         ax.set_ylabel("Routing − static (mIoU points)")
         ax.set_title(DEVICES[dev], fontsize=7.5)
     axes[0].legend(loc="upper center", bbox_to_anchor=(1.12, 1.25), ncol=2, frameon=False, fontsize=6.6)

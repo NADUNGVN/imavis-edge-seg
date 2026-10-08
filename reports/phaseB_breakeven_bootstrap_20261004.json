@@ -1,0 +1,84 @@
+{
+  "_definition": "Phase B: image-level bootstrap interval for the counterfactual break-even overhead.\n\nRe-implements the mean-cost part of router_breakeven.py (mixture_gain over the same\nalpha grid, same 25-target dense grid, same calibrators) but evaluates it on bootstrap\nresamples of the held-out images (per split, shared across runs and devices, seed 0,\nREPS replicates). Choices depend only on probe scores and calibrators, never on labels,\nso they are computed once; each replicate re-sums the resampled confusion matrices and\nlatencies. The break-even overhead is where the mean gain crosses zero, linearly\ninterpolated between alpha grid points, in ms of mean overhead (as in the main analysis).\nPoint estimate = full-sample value; interval = percentile 2.5/97.5. Image sampling only.\nOutput: reports/phaseB_breakeven_bootstrap_20261004.json\n",
+  "reps": 200,
+  "E3": {
+    "alphas": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "mean_overhead_ms": [
+      0.0,
+      0.18518387660151348,
+      0.37036775320302695,
+      0.5555516298045404,
+      0.9259193830075674,
+      1.388879074511351,
+      1.8518387660151348
+    ],
+    "point_gain_curve": [
+      1.3351696964256368,
+      1.1207422626756924,
+      0.9047505841095096,
+      0.703548476395626,
+      0.31575632358433536,
+      -0.11350240213040294,
+      -0.5188732391038354
+    ],
+    "breakeven_ms": 1.2664656349528745,
+    "breakeven_ci95_ms": [
+      0.5725258839971066,
+      1.5048603294415412
+    ],
+    "replicates_with_crossing": 200,
+    "replicates_no_gain_even_at_zero": 0,
+    "zero_overhead_gain_ci95": [
+      0.645889681209821,
+      1.5762479139222492
+    ]
+  },
+  "E1": {
+    "alphas": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "mean_overhead_ms": [
+      0.0,
+      4.404381049243966,
+      8.808762098487932,
+      13.213143147731898,
+      22.02190524621983,
+      33.032857869329746,
+      44.04381049243966
+    ],
+    "point_gain_curve": [
+      1.3769700190893832,
+      -0.045190043795557897,
+      -1.1035180901947508,
+      -1.9553801443111576,
+      -3.3008570953937335,
+      -4.618448765358332,
+      -5.518346820267974
+    ],
+    "breakeven_ms": 4.26442902998679,
+    "breakeven_ci95_ms": [
+      2.1287250595781306,
+      5.151458852952481
+    ],
+    "replicates_with_crossing": 200,
+    "replicates_no_gain_even_at_zero": 0,
+    "zero_overhead_gain_ci95": [
+      0.6850809121900487,
+      1.6142749399387273
+    ]
+  }
+}

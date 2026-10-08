@@ -114,7 +114,7 @@ def build_figure(gflops: dict[str, float], latency: dict[str, dict[str, float]])
     axis.set_xticks(x, [f"{level.title()}\n{value:.2f}" for level, value in zip(LEVELS, x, strict=True)])
     axis.minorticks_off()
     axis.set_xlabel("Candidate compute (GFLOPs)")
-    axis.set_ylabel("Measured mean latency (ms)")
+    axis.set_ylabel("Candidate-only mean latency (ms)")
     axis.grid(True, which="major", linestyle="--", alpha=0.7)
     return figure
 
